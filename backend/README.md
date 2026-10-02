@@ -52,5 +52,5 @@ http://127.0.0.1:8000/
 
 API schema:
 
-[API Schema](backend/api_schema.md)
+[API Schema](api_schema.md)
 
