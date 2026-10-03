@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class TemporaryRoute(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='temporary_routes')
     distance = models.PositiveIntegerField(null=False, blank=False)
     briefing = models.CharField(max_length=255, null=False, blank=False)
     route = models.JSONField(null=False, blank=False) 

@@ -9,6 +9,12 @@ from api.route_algorithm.classes import GeoJSONPoint
 
 @api_view(["POST"])
 def generate_route_api(request):
+    if not request.user.is_authenticated:
+        user = None
+    else:
+        user = request.user
+
+
     starting_point = request.data.get("starting_point")
     distance = request.data.get("distance")
 
@@ -120,13 +126,16 @@ def generate_route_api(request):
         distance=route.distance,
         briefing=route.briefing,
         route=route.to_dict()['route'],
+        user=user,
     )
 
 
     return Response(
         {
             "status": "success",
-            "temporary_route_id": temporary_route.id,
-            'route': {**route.to_dict()},
+            'data': {
+                "temporary_route_id": temporary_route.id,
+                'route': {**route.to_dict()},
+            }
         }
     )

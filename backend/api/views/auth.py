@@ -20,18 +20,14 @@ def register_user(request):
 
     if not username or not email or not password:
         return Response(
-            {
-                "message": "All fields are required"
-            },
+            {'status': 'error', "message": "All fields are required"},    
             status=status.HTTP_400_BAD_REQUEST
         )
 
 
     if User.objects.filter(username=username).exists():
         return Response(
-            {
-                "message": "Username already exists"
-            },
+            {'status': 'error', "message": "Username already exists"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -49,10 +45,12 @@ def register_user(request):
 
 
     return Response(
-        {
-            "username": user.username,
-            "email": user.email,
-            "token": token.key,
+        {'status': 'success',
+        'data': {
+                "username": user.username,
+                "email": user.email,
+                "token": token.key,
+            },
         },
         status=status.HTTP_201_CREATED
     )
@@ -66,9 +64,7 @@ def login_user(request):
 
     if not username or not password:
         return Response(
-            {
-                "message": "Username and password are required"
-            },
+            {'status': 'error',"message": "Username and password are required"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -78,9 +74,7 @@ def login_user(request):
 
     if user is None or not user.check_password(password):
         return Response(
-            {
-                "message": "Invalid username or password"
-            },
+            {'status': 'error', 'message': 'Invalid username or password'},
             status=status.HTTP_401_UNAUTHORIZED
         )
 
@@ -89,10 +83,12 @@ def login_user(request):
 
 
     return Response(
-        {
-            "username": user.username,
-            "email": user.email,
-            "token": token.key,
+        {   'status': 'success',
+            'data': { 
+                "username": user.username,
+                "email": user.email,
+                "token": token.key,
+            },
         },
         status=status.HTTP_200_OK
     )
@@ -103,16 +99,16 @@ def my_profile(request):
 
     if not user.is_authenticated:
         return Response(
-            {
-                "message": "Authentication credentials were not provided."
-            },
+            {'status': 'error', 'message': 'Authentication credentials were not provided.'},
             status=status.HTTP_401_UNAUTHORIZED
         )
 
     return Response(
-        {
-            "username": user.username,
-            "email": user.email,
+        {   'status': 'success',
+            'data': {   
+                "username": user.username,
+                "email": user.email,
+            },
         },
         status=status.HTTP_200_OK
     )
