@@ -3,6 +3,15 @@
 ```
 /api/v1/
 ```
+
+## Response format
+
+All API responses use JSON.
+
+status — "success" or "error".
+message — describes the result or error.
+data — contains the requested or created data when applicable.
+
 ---
 
 # GeoJSON Format
