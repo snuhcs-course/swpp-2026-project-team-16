@@ -41,7 +41,7 @@ fun RunTimeApp() {
     Scaffold(
         bottomBar = {
             // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
-            if (currentScreen != "splash" && currentScreen != "generating") {
+            if (currentScreen != "splash" && currentScreen != "generating" && currentScreen != "login") {
                 NavigationBar {
                     NavigationBarItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
@@ -143,6 +143,7 @@ fun RouteInputScreen(onGenerate: () -> Unit) {
             value = startPoint,
             onValueChange = { startPoint = it },
             label = { Text("Start point (e.g. Samgakji)") },
+            // TODO: I was considering geocoding here, but open to other methods 
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
