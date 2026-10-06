@@ -13,11 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.ui.auth.AuthViewModel
+import com.example.runtime.ui.route.RouteViewModel
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +44,7 @@ class MainActivity : ComponentActivity() {
 fun RunTimeApp() {
     var currentScreen by remember { mutableStateOf("splash") }
     val authViewModel: AuthViewModel = viewModel()
+    val routeViewModel: RouteViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -73,8 +77,15 @@ fun RunTimeApp() {
                     authViewModel = authViewModel,
                     onLoginSuccess = { currentScreen = "route_input" }
                 )
-                "route_input" -> RouteInputScreen(onGenerate = { currentScreen = "generating" })
-                "generating" -> GeneratingScreen(onComplete = { currentScreen = "route_result" })
+                "route_input" -> RouteInputScreen(
+                    routeViewModel = routeViewModel,
+                    onGenerate = { currentScreen = "generating" }
+                )
+                "generating" -> GeneratingScreen(
+                    routeViewModel = routeViewModel,
+                    onComplete = { currentScreen = "route_result" },
+                    onFailure = { currentScreen = "route_input" }
+                )
                 "route_result" -> RouteResultScreen()
                 "MyPage" -> MyPageScreen()
             }
@@ -177,18 +188,15 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
 
 // 4. Route Input Screen (화면 4)
 @Composable
-fun RouteInputScreen(onGenerate: () -> Unit) {
-    var startPoint by remember { mutableStateOf("") }
-    var distance by remember { mutableStateOf("") }
-
+fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(32.dp))
         OutlinedTextField(
-            value = startPoint,
-            onValueChange = { startPoint = it },
+            value = routeViewModel.startPointInput,
+            onValueChange = { routeViewModel.startPointInput = it },
             label = { Text("Start point (e.g. Samgakji)") },
             // TODO: I was considering geocoding here, but open to other methods 
             modifier = Modifier.fillMaxWidth()
@@ -200,17 +208,22 @@ fun RouteInputScreen(onGenerate: () -> Unit) {
         ) {
             Text("distance : ", fontSize = 18.sp)
             OutlinedTextField(
-                value = distance,
-                onValueChange = { distance = it },
+                value = routeViewModel.distanceInput,
+                onValueChange = { routeViewModel.distanceInput = it },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.width(100.dp)
             )
             Text(" km", fontSize = 18.sp)
         }
+        routeViewModel.error?.let {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
         Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = {
-                // TODO : user 입력 startpoint, distance -> backend 전달
-                onGenerate()
+                if (routeViewModel.prepare()) onGenerate()
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -221,11 +234,9 @@ fun RouteInputScreen(onGenerate: () -> Unit) {
 
 // 5. Generating Screen (화면 5)
 @Composable
-fun GeneratingScreen(onComplete: () -> Unit) {
+fun GeneratingScreen(routeViewModel: RouteViewModel, onComplete: () -> Unit, onFailure: () -> Unit) {
     LaunchedEffect(Unit) {
-        // TODO : 백엔드 API 요청 후 success response 받으면 onComplete() 호출로 변경
-        delay(2000) // 일단은 2초 후 자동으로 결과 화면으로 이동
-        onComplete()
+        routeViewModel.generate(onComplete, onFailure)
     }
     Column(
         modifier = Modifier.fillMaxSize(),
