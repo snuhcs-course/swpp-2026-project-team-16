@@ -19,12 +19,13 @@ import com.example.runtime.ui.route.RouteInputScreen
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
 import com.example.runtime.ui.splash.SplashScreen
+import com.example.runtime.ui.theme.RunTimeTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            RunTimeTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

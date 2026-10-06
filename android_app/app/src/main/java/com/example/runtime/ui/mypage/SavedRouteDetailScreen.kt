@@ -38,7 +38,7 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .background(Color.LightGray)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             RouteCanvas(lines = route.route, modifier = Modifier.fillMaxSize())
         }
