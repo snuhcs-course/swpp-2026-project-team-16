@@ -9,7 +9,7 @@ data class ApiResponse<T>(
     val message: String? = null,
     val data: T? = null,
 ) {
-    fun requireData(): T = data ?: throw IllegalStateException(message ?: "Empty response from server.")
+    fun requireData(): T = data ?: throw EmptyResponseException(message)
 }
 
 @Serializable

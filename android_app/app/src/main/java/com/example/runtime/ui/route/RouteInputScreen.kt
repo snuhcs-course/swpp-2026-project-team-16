@@ -6,9 +6,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.runtime.R
+import com.example.runtime.ui.common.asString
 
 // 4. Route Input Screen (화면 4)
 @Composable
@@ -21,7 +24,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
         OutlinedTextField(
             value = routeViewModel.startPointInput,
             onValueChange = { routeViewModel.startPointInput = it },
-            label = { Text("Start point (e.g. Samgakji)") },
+            label = { Text(stringResource(R.string.label_start_point)) },
             // TODO: I was considering geocoding here, but open to other methods
             modifier = Modifier.fillMaxWidth()
         )
@@ -30,7 +33,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("distance : ", fontSize = 18.sp)
+            Text(stringResource(R.string.label_distance), fontSize = 18.sp)
             OutlinedTextField(
                 value = routeViewModel.distanceInput,
                 onValueChange = { routeViewModel.distanceInput = it },
@@ -38,11 +41,11 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.width(100.dp)
             )
-            Text(" km", fontSize = 18.sp)
+            Text(stringResource(R.string.unit_km), fontSize = 18.sp)
         }
         routeViewModel.error?.let {
             Spacer(modifier = Modifier.height(12.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
+            Text(it.asString(), color = MaterialTheme.colorScheme.error)
         }
         Spacer(modifier = Modifier.height(32.dp))
         Button(
@@ -51,7 +54,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Generate")
+            Text(stringResource(R.string.action_generate))
         }
     }
 }

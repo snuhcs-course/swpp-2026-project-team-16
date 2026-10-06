@@ -6,9 +6,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.data.remote.SavedRoute
-import com.example.runtime.data.remote.toUserMessage
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.data.repository.UserRepository
+import com.example.runtime.ui.common.UiText
+import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -28,13 +29,13 @@ class MyPageViewModel(
     var isLoading by mutableStateOf(false)
         private set
 
-    var error by mutableStateOf<String?>(null)
+    var error by mutableStateOf<UiText?>(null)
         private set
 
     var detail by mutableStateOf<SavedRoute?>(null)
         private set
 
-    var detailError by mutableStateOf<String?>(null)
+    var detailError by mutableStateOf<UiText?>(null)
         private set
 
     var isDeleting by mutableStateOf(false)
@@ -56,7 +57,7 @@ class MyPageViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                error = e.toUserMessage()
+                error = e.toUiText()
             } finally {
                 isLoading = false
             }
@@ -72,7 +73,7 @@ class MyPageViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                detailError = e.toUserMessage()
+                detailError = e.toUiText()
             }
         }
     }
@@ -90,7 +91,7 @@ class MyPageViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                detailError = e.toUserMessage()
+                detailError = e.toUiText()
             } finally {
                 isDeleting = false
             }

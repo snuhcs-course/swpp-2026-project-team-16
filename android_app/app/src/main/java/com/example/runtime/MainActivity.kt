@@ -10,8 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.ui.auth.AuthViewModel
 import com.example.runtime.ui.auth.LoginScreen
@@ -57,11 +59,11 @@ class MainActivity : ComponentActivity() {
 // 1. Main Navigation & Screen Manager
 @Composable
 fun RunTimeApp() {
-    var currentScreen by remember { mutableStateOf("splash") }
+    var currentScreen by rememberSaveable { mutableStateOf("splash") }
     val authViewModel: AuthViewModel = viewModel()
     val routeViewModel: RouteViewModel = viewModel()
     val myPageViewModel: MyPageViewModel = viewModel()
-    var selectedRouteId by remember { mutableStateOf<Int?>(null) }
+    var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -72,13 +74,13 @@ fun RunTimeApp() {
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
                         onClick = { currentScreen = "route_input" },
                         icon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) },
-                        label = { Text("Route") }
+                        label = { Text(stringResource(R.string.nav_route)) }
                     )
                     NavigationBarItem(
                         selected = currentScreen == "MyPage" || currentScreen == "saved_detail",
                         onClick = { currentScreen = "MyPage" },
                         icon = { Icon(painterResource(R.drawable.ic_account_circle), contentDescription = null) },
-                        label = { Text("My Page") }
+                        label = { Text(stringResource(R.string.nav_my_page)) }
                     )
                 }
             }

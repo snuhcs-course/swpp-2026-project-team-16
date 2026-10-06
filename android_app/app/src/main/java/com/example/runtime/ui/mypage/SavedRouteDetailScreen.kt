@@ -8,9 +8,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.runtime.R
+import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.route.RouteCanvas
 
@@ -30,7 +33,7 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
         val route = myPageViewModel.detail
         if (route == null) {
             myPageViewModel.detailError?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
+                Text(it.asString(), color = MaterialTheme.colorScheme.error)
             } ?: CircularProgressIndicator()
             return@Column
         }
@@ -44,16 +47,16 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "distance : ${formatDistance(route.distance)}",
+            stringResource(R.string.distance_value, formatDistance(route.distance)),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
-        Text("saved : ${route.savedAt.take(10)}", color = Color.Gray)
+        Text(stringResource(R.string.saved_date, route.savedAt.take(10)), color = Color.Gray)
         Spacer(modifier = Modifier.height(8.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("LLM briefing:", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.llm_briefing), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(route.briefing)
             }
@@ -64,38 +67,38 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             OutlinedButton(onClick = onBack) {
-                Text("Back")
+                Text(stringResource(R.string.action_back))
             }
             Button(
                 onClick = { showDeleteDialog = true },
                 enabled = !myPageViewModel.isDeleting,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text(if (myPageViewModel.isDeleting) "Deleting..." else "Delete")
+                Text(stringResource(if (myPageViewModel.isDeleting) R.string.deleting else R.string.action_delete))
             }
         }
         myPageViewModel.detailError?.let {
             Spacer(modifier = Modifier.height(12.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
+            Text(it.asString(), color = MaterialTheme.colorScheme.error)
         }
     }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete route?") },
-            text = { Text("This removes the route from My Page.") },
+            title = { Text(stringResource(R.string.delete_dialog_title)) },
+            text = { Text(stringResource(R.string.delete_dialog_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     myPageViewModel.delete(routeId, onBack)
                 }) {
-                    Text("Delete")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

@@ -1,5 +1,6 @@
 package com.example.runtime.ui.mypage
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,15 +9,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.runtime.R
+import com.example.runtime.ui.common.LanguageMenu
+import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 
 // 7. My Page Screen (화면 7)
 @Composable
 fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) {
+    var showMenu by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         myPageViewModel.refresh()
     }
@@ -27,18 +34,26 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("≡", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Box {
+                Text(
+                    "≡",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { showMenu = true }
+                )
+                LanguageMenu(expanded = showMenu, onDismiss = { showMenu = false })
+            }
             Text(myPageViewModel.username ?: "", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(24.dp))
         myPageViewModel.error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error)
+            Text(it.asString(), color = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.height(12.dp))
         }
         if (myPageViewModel.isLoading && myPageViewModel.routes.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else if (myPageViewModel.routes.isEmpty() && myPageViewModel.error == null) {
-            Text("No saved routes yet.", color = Color.Gray)
+            Text(stringResource(R.string.no_saved_routes), color = Color.Gray)
         }
         LazyColumn {
             items(myPageViewModel.routes, key = { it.id }) { route ->

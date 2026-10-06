@@ -6,9 +6,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.runtime.R
+import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 
 // 6. Route Result Screen (화면 6)
@@ -34,7 +37,7 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "distance : ${formatDistance(generated.route.distance)}",
+            stringResource(R.string.distance_value, formatDistance(generated.route.distance)),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
@@ -43,7 +46,7 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
         // LLM Briefing
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("LLM briefing:", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.llm_briefing), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(generated.route.briefing)
             }
@@ -54,24 +57,26 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(onClick = { /* TODO : Share 링크 공유 기능 */ }) {
-                Text("Share")
+                Text(stringResource(R.string.action_share))
             }
             Button(
                 onClick = { routeViewModel.save() },
                 enabled = saveState == SaveState.Idle || saveState is SaveState.Failed
             ) {
                 Text(
-                    when (saveState) {
-                        SaveState.Saving -> "Saving..."
-                        SaveState.Saved -> "Saved"
-                        else -> "Save"
-                    }
+                    stringResource(
+                        when (saveState) {
+                            SaveState.Saving -> R.string.saving
+                            SaveState.Saved -> R.string.saved
+                            else -> R.string.action_save
+                        }
+                    )
                 )
             }
         }
         if (saveState is SaveState.Failed) {
             Spacer(modifier = Modifier.height(12.dp))
-            Text(saveState.message, color = MaterialTheme.colorScheme.error)
+            Text(saveState.message.asString(), color = MaterialTheme.colorScheme.error)
         }
     }
 }

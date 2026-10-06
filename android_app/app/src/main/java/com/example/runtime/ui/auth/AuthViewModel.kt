@@ -7,14 +7,15 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.data.auth.TokenStorage
-import com.example.runtime.data.remote.toUserMessage
 import com.example.runtime.data.repository.AuthRepository
+import com.example.runtime.ui.common.UiText
+import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
 )
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
@@ -53,7 +54,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                uiState = AuthUiState(error = e.toUserMessage())
+                uiState = AuthUiState(error = e.toUiText())
             }
         }
     }
