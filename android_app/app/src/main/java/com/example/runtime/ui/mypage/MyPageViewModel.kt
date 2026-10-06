@@ -5,14 +5,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.runtime.data.remote.ApiClient
 import com.example.runtime.data.remote.SavedRoute
 import com.example.runtime.data.remote.toUserMessage
+import com.example.runtime.data.repository.RouteRepository
+import com.example.runtime.data.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
-class MyPageViewModel : ViewModel() {
+class MyPageViewModel(
+    private val routeRepository: RouteRepository = RouteRepository(),
+    private val userRepository: UserRepository = UserRepository(),
+) : ViewModel() {
 
     var username by mutableStateOf<String?>(null)
         private set
@@ -41,9 +45,9 @@ class MyPageViewModel : ViewModel() {
         error = null
         viewModelScope.launch {
             try {
-                val profile = async { ApiClient.api.myProfile() }
-                val saved = async { ApiClient.api.savedRoutes() }
-                username = profile.await().data?.username
+                val profile = async { userRepository.profile() }
+                val saved = async { routeRepository.savedRoutes() }
+                username = profile.await().username
                 routes = saved.await()
             } catch (e: CancellationException) {
                 throw e
@@ -60,8 +64,7 @@ class MyPageViewModel : ViewModel() {
         detailError = null
         viewModelScope.launch {
             try {
-                detail = ApiClient.api.savedRoute(routeId).data
-                    ?: throw IllegalStateException("Empty response from server.")
+                detail = routeRepository.savedRoute(routeId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -76,7 +79,7 @@ class MyPageViewModel : ViewModel() {
         detailError = null
         viewModelScope.launch {
             try {
-                ApiClient.api.deleteSavedRoute(routeId)
+                routeRepository.deleteSavedRoute(routeId)
                 routes = routes.filterNot { it.id == routeId }
                 detail = null
                 onDeleted()

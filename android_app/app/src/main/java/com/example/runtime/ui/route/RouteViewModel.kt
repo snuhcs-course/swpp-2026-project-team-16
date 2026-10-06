@@ -5,18 +5,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.runtime.data.remote.ApiClient
-import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonPoint
-import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.toUserMessage
+import com.example.runtime.data.repository.RouteRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import java.util.Locale
 import kotlin.math.roundToInt
 
-class RouteViewModel : ViewModel() {
+class RouteViewModel(
+    private val repository: RouteRepository = RouteRepository(),
+) : ViewModel() {
 
     var startPointInput by mutableStateOf("")
     var distanceInput by mutableStateOf("")
@@ -30,7 +29,7 @@ class RouteViewModel : ViewModel() {
     var saveState by mutableStateOf<SaveState>(SaveState.Idle)
         private set
 
-    private var pendingRequest: GenerateRouteRequest? = null
+    private var pendingDistanceMeters: Int? = null
     private var isGenerating = false
 
     fun prepare(): Boolean {
@@ -42,18 +41,17 @@ class RouteViewModel : ViewModel() {
             return false
         }
         error = null
-        pendingRequest = GenerateRouteRequest(startingPoint = SNU, distance = meters)
+        pendingDistanceMeters = meters
         return true
     }
 
     fun generate(onSuccess: () -> Unit, onFailure: () -> Unit) {
-        val request = pendingRequest ?: return onFailure()
+        val distanceMeters = pendingDistanceMeters ?: return onFailure()
         if (isGenerating) return
         isGenerating = true
         viewModelScope.launch {
             try {
-                generated = ApiClient.api.generateRoute(request).data
-                    ?: throw IllegalStateException("Empty response from server.")
+                generated = repository.generate(SNU, distanceMeters)
                 saveState = SaveState.Idle
                 onSuccess()
             } catch (e: CancellationException) {
@@ -73,7 +71,7 @@ class RouteViewModel : ViewModel() {
         saveState = SaveState.Saving
         viewModelScope.launch {
             saveState = try {
-                ApiClient.api.saveRoute(SaveRouteRequest(temporaryRouteId = route.temporaryRouteId))
+                repository.saveTemporaryRoute(route.temporaryRouteId)
                 SaveState.Saved
             } catch (e: CancellationException) {
                 throw e
@@ -95,6 +93,3 @@ sealed interface SaveState {
     data object Saved : SaveState
     data class Failed(val message: String) : SaveState
 }
-
-fun formatDistance(meters: Int): String =
-    "%.2f".format(Locale.US, meters / 1000.0).trimEnd('0').trimEnd('.') + "km"

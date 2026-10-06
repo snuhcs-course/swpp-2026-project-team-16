@@ -8,7 +8,9 @@ data class ApiResponse<T>(
     val status: String,
     val message: String? = null,
     val data: T? = null,
-)
+) {
+    fun requireData(): T = data ?: throw IllegalStateException(message ?: "Empty response from server.")
+}
 
 @Serializable
 data class GeoJsonPoint(
