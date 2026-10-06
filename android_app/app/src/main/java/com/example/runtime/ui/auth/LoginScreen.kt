@@ -25,7 +25,7 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
         OutlinedTextField(
             value = id,
             onValueChange = { id = it },
-            label = { Text("login:") },
+            label = { Text("Name:") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -43,7 +43,7 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
         OutlinedTextField(
             value = pass,
             onValueChange = { pass = it },
-            label = { Text("Pass:") },
+            label = { Text("Password:") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
