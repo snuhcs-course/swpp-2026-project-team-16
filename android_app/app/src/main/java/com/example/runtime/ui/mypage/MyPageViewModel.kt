@@ -11,6 +11,7 @@ import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.data.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 class MyPageViewModel(
@@ -45,10 +46,13 @@ class MyPageViewModel(
         error = null
         viewModelScope.launch {
             try {
-                val profile = async { userRepository.profile() }
-                val saved = async { routeRepository.savedRoutes() }
-                username = profile.await().username
-                routes = saved.await()
+                val (profile, saved) = coroutineScope {
+                    val profile = async { userRepository.profile() }
+                    val saved = async { routeRepository.savedRoutes() }
+                    profile.await() to saved.await()
+                }
+                username = profile.username
+                routes = saved
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
