@@ -1,8 +1,12 @@
 package com.example.runtime
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,8 +26,13 @@ import com.example.runtime.ui.splash.SplashScreen
 import com.example.runtime.ui.theme.RunTimeTheme
 
 class MainActivity : ComponentActivity() {
+
+    private val requestLocalNetwork =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestLocalNetworkIfNeeded()
         setContent {
             RunTimeTheme {
                 Surface(
@@ -33,6 +42,14 @@ class MainActivity : ComponentActivity() {
                     RunTimeApp()
                 }
             }
+        }
+    }
+
+    private fun requestLocalNetworkIfNeeded() {
+        if (!BuildConfig.DEBUG || Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return
+        val permission = Manifest.permission.ACCESS_LOCAL_NETWORK
+        if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            requestLocalNetwork.launch(permission)
         }
     }
 }
