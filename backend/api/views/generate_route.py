@@ -4,6 +4,7 @@ from rest_framework import status
 
 from api.models import TemporaryRoute
 from api.route_algorithm.algorithm import create_route
+from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
 
 
@@ -107,6 +108,18 @@ def generate_route_api(request):
         )
 
 
+    language = request.data.get("language", DEFAULT_LANGUAGE)
+
+    if language not in SUPPORTED_LANGUAGES:
+        return Response(
+            {
+                "status": "error",
+                "message": f"language must be one of: {', '.join(SUPPORTED_LANGUAGES)}",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
     start_point = GeoJSONPoint(
         coordinates=(
             longitude,
@@ -120,6 +133,7 @@ def generate_route_api(request):
     route = create_route(
         starting_point=start_point,
         distance=distance,
+        language=language,
     )
 
     temporary_route = TemporaryRoute.objects.create(

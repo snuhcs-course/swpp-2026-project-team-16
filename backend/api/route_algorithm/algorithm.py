@@ -1,7 +1,8 @@
+from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.route_algorithm.classes import GeoJSONPoint, GeoJSONLineString, RunningRoute
 
 
-def create_route(starting_point: GeoJSONPoint, distance: int) -> RunningRoute:
+def create_route(starting_point: GeoJSONPoint, distance: int, language: str = DEFAULT_LANGUAGE) -> RunningRoute:
     # Mock route generation logic
     # In a real implementation, this would generate a route based on the starting point and distance
     route=[        
@@ -23,5 +24,8 @@ def create_route(starting_point: GeoJSONPoint, distance: int) -> RunningRoute:
             ),
         ]
     
-    briefing = f"Mock route of {distance} meters starting from {starting_point.coordinates}"
+    if language == "ko":
+        briefing = f"{distance}m 모의 경로입니다. 출발 좌표: {starting_point.coordinates}"
+    else:
+        briefing = f"Mock route of {distance} meters starting from {starting_point.coordinates}"
     return RunningRoute(distance=distance, briefing=briefing, route=route)

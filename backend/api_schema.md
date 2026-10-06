@@ -263,11 +263,15 @@ so send the token if the route may be saved.
             37.4600
         ]
     },
-    "distance": 5000
+    "distance": 5000,
+    "language": "ko"
 }
 ```
 
 `distance` is in meters and must be an integer greater than 100.
+
+`language` is optional: `"ko"` (default) or `"en"`. The `briefing` is written in this language.
+Any other value returns `400 Bad Request`.
 
 ### Response
 
