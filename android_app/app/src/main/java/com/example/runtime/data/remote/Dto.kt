@@ -3,9 +3,6 @@ package com.example.runtime.data.remote
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// Request/response models for backend/api_schema.md.
-
-// Common wrapper: {"status": "success" | "error", "message": ..., "data": ...}
 @Serializable
 data class ApiResponse<T>(
     val status: String,
@@ -13,7 +10,6 @@ data class ApiResponse<T>(
     val data: T? = null,
 )
 
-// GeoJSON coordinates are [longitude, latitude] (longitude first).
 @Serializable
 data class GeoJsonPoint(
     val coordinates: List<Double>,
@@ -29,8 +25,6 @@ data class GeoJsonLineString(
     val coordinates: List<List<Double>>,
     val type: String = "LineString",
 )
-
-// Auth
 
 @Serializable
 data class RegisterRequest(
@@ -58,12 +52,10 @@ data class ProfileData(
     val email: String,
 )
 
-// Route generation
-
 @Serializable
 data class GenerateRouteRequest(
     @SerialName("starting_point") val startingPoint: GeoJsonPoint,
-    val distance: Int, // meters, must be > 100
+    val distance: Int,
 )
 
 @Serializable
@@ -79,16 +71,12 @@ data class RouteBody(
     val route: List<GeoJsonLineString>,
 )
 
-// Saved routes
-
-// Send exactly one of the two ids.
 @Serializable
 data class SaveRouteRequest(
     @SerialName("temporary_route_id") val temporaryRouteId: Int? = null,
     @SerialName("route_id") val routeId: Int? = null,
 )
 
-// Not wrapped in "data"; route_id is only returned when saving a temporary route.
 @Serializable
 data class SaveRouteResponse(
     val status: String,

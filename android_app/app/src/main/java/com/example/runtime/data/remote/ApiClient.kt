@@ -10,13 +10,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
-// Holds the auth token in memory for now. Set it after login/register.
 object TokenStore {
     @Volatile
     var token: String? = null
 }
 
-// Adds "Authorization: Token <token>" when a token is set.
 class AuthInterceptor(private val tokenProvider: () -> String?) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = tokenProvider()
@@ -35,8 +33,8 @@ object ApiClient {
 
     val json = Json {
         ignoreUnknownKeys = true
-        encodeDefaults = true // so GeoJSON "type" is sent
-        explicitNulls = false // so unused ids in SaveRouteRequest are not sent
+        encodeDefaults = true
+        explicitNulls = false
     }
 
     val api: ApiService by lazy { create(BuildConfig.BASE_URL) }

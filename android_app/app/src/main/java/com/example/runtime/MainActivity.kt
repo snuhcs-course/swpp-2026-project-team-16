@@ -13,8 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.runtime.ui.auth.AuthViewModel
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -37,6 +40,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RunTimeApp() {
     var currentScreen by remember { mutableStateOf("splash") }
+    val authViewModel: AuthViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -61,8 +65,14 @@ fun RunTimeApp() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentScreen) {
-                "splash" -> SplashScreen(onNext = { currentScreen = "login" })
-                "login" -> LoginScreen(onLoginSuccess = { currentScreen = "route_input" })
+                "splash" -> SplashScreen(
+                    authViewModel = authViewModel,
+                    onNext = { loggedIn -> currentScreen = if (loggedIn) "route_input" else "login" }
+                )
+                "login" -> LoginScreen(
+                    authViewModel = authViewModel,
+                    onLoginSuccess = { currentScreen = "route_input" }
+                )
                 "route_input" -> RouteInputScreen(onGenerate = { currentScreen = "generating" })
                 "generating" -> GeneratingScreen(onComplete = { currentScreen = "route_result" })
                 "route_result" -> RouteResultScreen()
@@ -74,11 +84,11 @@ fun RunTimeApp() {
 
 // 2. Splash Screen (화면 2)
 @Composable
-fun SplashScreen(onNext: () -> Unit) {
+fun SplashScreen(authViewModel: AuthViewModel, onNext: (Boolean) -> Unit) {
     LaunchedEffect(Unit) {
         delay(2000) // 2초 후 자동으로 로그인 화면 이동
         // TODO: health check
-        onNext()
+        authViewModel.restoreSession(onNext)
     }
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -93,9 +103,12 @@ fun SplashScreen(onNext: () -> Unit) {
 
 // 3. Login Screen (화면 3)
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
     var id by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    var isRegister by remember { mutableStateOf(false) }
+    val uiState = authViewModel.uiState
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -106,24 +119,58 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             value = id,
             onValueChange = { id = it },
             label = { Text("login:") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        if (isRegister) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email:") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
             value = pass,
             onValueChange = { pass = it },
             label = { Text("Pass:") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
+        uiState.error?.let {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = {
-                //TODO: Auth API 연동
-                onLoginSuccess()
+                if (isRegister) {
+                    authViewModel.register(id, email, pass, onLoginSuccess)
+                } else {
+                    authViewModel.login(id, pass, onLoginSuccess)
+                }
             },
+            enabled = !uiState.isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Log-in")
+            if (uiState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+                Text(if (isRegister) "Sign up" else "Log-in")
+            }
+        }
+        TextButton(
+            onClick = {
+                isRegister = !isRegister
+                authViewModel.clearError()
+            },
+            enabled = !uiState.isLoading
+        ) {
+            Text(if (isRegister) "Already have an account? Log in" else "Create an account")
         }
     }
 }

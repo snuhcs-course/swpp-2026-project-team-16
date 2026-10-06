@@ -19,8 +19,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // 10.0.2.2 is the host machine's localhost from the emulator.
-        // On a real device, pass -PRUNTIME_BASE_URL=http://<mac-ip>:8000/ or set it in ~/.gradle/gradle.properties.
         val baseUrl = providers.gradleProperty("RUNTIME_BASE_URL").getOrElse("http://10.0.2.2:8000/")
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
     }
@@ -57,6 +55,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.datastore.preferences)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

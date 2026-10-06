@@ -6,7 +6,6 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-// Non-2xx responses throw retrofit2.HttpException; the error body is {"status": "error", "message": ...}.
 interface ApiService {
 
     @POST("api/v1/auth/register/")
@@ -18,11 +17,9 @@ interface ApiService {
     @GET("api/v1/users/my_profile/")
     suspend fun myProfile(): ApiResponse<ProfileData>
 
-    // Send the token too, otherwise the generated route can't be saved later.
     @POST("api/v1/routes/generate/")
     suspend fun generateRoute(@Body body: GenerateRouteRequest): ApiResponse<GeneratedRouteData>
 
-    // Returns a bare array, not wrapped in ApiResponse.
     @GET("api/v1/routes/saved/")
     suspend fun savedRoutes(): List<SavedRoute>
 
