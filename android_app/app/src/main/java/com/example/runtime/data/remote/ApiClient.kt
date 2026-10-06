@@ -9,6 +9,7 @@ import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.util.concurrent.TimeUnit
 
 object TokenStore {
     @Volatile
@@ -37,10 +38,13 @@ object ApiClient {
         explicitNulls = false
     }
 
+    private const val READ_TIMEOUT_SECONDS = 45L
+
     val api: ApiService by lazy { create(BuildConfig.BASE_URL) }
 
     fun create(baseUrl: String, tokenProvider: () -> String? = { TokenStore.token }): ApiService {
         val client = OkHttpClient.Builder()
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .addInterceptor(AuthInterceptor(tokenProvider))
             .apply {
                 if (BuildConfig.DEBUG) {
