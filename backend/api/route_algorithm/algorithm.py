@@ -1,4 +1,9 @@
-from api.route_algorithm.briefing import DEFAULT_LANGUAGE
+from api.route_algorithm.briefing import (
+    DEFAULT_LANGUAGE,
+    RouteFeatures,
+    UphillSegment,
+    generate_briefing,
+)
 from api.route_algorithm.classes import GeoJSONPoint, GeoJSONLineString, RunningRoute
 
 
@@ -24,8 +29,15 @@ def create_route(starting_point: GeoJSONPoint, distance: int, language: str = DE
             ),
         ]
     
-    if language == "ko":
-        briefing = f"{distance}m 모의 경로입니다. 출발 좌표: {starting_point.coordinates}"
-    else:
-        briefing = f"Mock route of {distance} meters starting from {starting_point.coordinates}"
+    briefing = generate_briefing(mock_route_features(distance), language)
     return RunningRoute(distance=distance, briefing=briefing, route=route)
+
+
+def mock_route_features(distance: int) -> RouteFeatures:
+    uphills = [UphillSegment(start_km=2.0, length_m=300, elevation_gain_m=20)] if distance > 2000 else []
+    return RouteFeatures(
+        distance_m=distance,
+        total_elevation_gain_m=45,
+        traffic_light_count=3,
+        uphill_segments=uphills,
+    )
