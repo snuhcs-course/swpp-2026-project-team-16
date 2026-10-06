@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.ui.auth.AuthViewModel
 import com.example.runtime.ui.auth.LoginScreen
@@ -71,13 +71,13 @@ fun RunTimeApp() {
                     NavigationBarItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
                         onClick = { currentScreen = "route_input" },
-                        icon = { Text("Route", fontWeight = FontWeight.Bold) },
-                        label = { Text("Generate") }
+                        icon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) },
+                        label = { Text("Route") }
                     )
                     NavigationBarItem(
                         selected = currentScreen == "MyPage" || currentScreen == "saved_detail",
                         onClick = { currentScreen = "MyPage" },
-                        icon = { Text("My", fontWeight = FontWeight.Bold) },
+                        icon = { Icon(painterResource(R.drawable.ic_account_circle), contentDescription = null) },
                         label = { Text("My Page") }
                     )
                 }
