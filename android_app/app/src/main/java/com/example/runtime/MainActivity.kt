@@ -2,6 +2,7 @@ package com.example.runtime
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,11 +16,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.ui.auth.AuthViewModel
+import com.example.runtime.ui.mypage.MyPageViewModel
 import com.example.runtime.ui.route.RouteCanvas
 import com.example.runtime.ui.route.RouteViewModel
 import com.example.runtime.ui.route.SaveState
@@ -48,6 +51,8 @@ fun RunTimeApp() {
     var currentScreen by remember { mutableStateOf("splash") }
     val authViewModel: AuthViewModel = viewModel()
     val routeViewModel: RouteViewModel = viewModel()
+    val myPageViewModel: MyPageViewModel = viewModel()
+    var selectedRouteId by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -61,7 +66,7 @@ fun RunTimeApp() {
                         label = { Text("Generate") }
                     )
                     NavigationBarItem(
-                        selected = currentScreen == "MyPage",
+                        selected = currentScreen == "MyPage" || currentScreen == "saved_detail",
                         onClick = { currentScreen = "MyPage" },
                         icon = { Text("My", fontWeight = FontWeight.Bold) },
                         label = { Text("My Page") }
@@ -90,7 +95,20 @@ fun RunTimeApp() {
                     onFailure = { currentScreen = "route_input" }
                 )
                 "route_result" -> RouteResultScreen(routeViewModel = routeViewModel)
-                "MyPage" -> MyPageScreen()
+                "MyPage" -> MyPageScreen(
+                    myPageViewModel = myPageViewModel,
+                    onRouteClick = { routeId ->
+                        selectedRouteId = routeId
+                        currentScreen = "saved_detail"
+                    }
+                )
+                "saved_detail" -> selectedRouteId?.let { routeId ->
+                    SavedRouteDetailScreen(
+                        myPageViewModel = myPageViewModel,
+                        routeId = routeId,
+                        onBack = { currentScreen = "MyPage" }
+                    )
+                }
             }
         }
     }
@@ -319,9 +337,10 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
 
 // 7. My Page Screen (화면 7)
 @Composable
-fun MyPageScreen() {
-    //TODO : 서버에서 route list 불러오기로 대체되지 않을까
-    val savedRoutes = listOf("Route 1", "Route 2", "Route 3")
+fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) {
+    LaunchedEffect(Unit) {
+        myPageViewModel.refresh()
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -330,23 +349,131 @@ fun MyPageScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("≡", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("SoonYoung", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(myPageViewModel.username ?: "", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(24.dp))
+        myPageViewModel.error?.let {
+            Text(it, color = MaterialTheme.colorScheme.error)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        if (myPageViewModel.isLoading && myPageViewModel.routes.isEmpty()) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else if (myPageViewModel.routes.isEmpty() && myPageViewModel.error == null) {
+            Text("No saved routes yet.", color = Color.Gray)
+        }
         LazyColumn {
-            items(savedRoutes) { route ->
+            items(myPageViewModel.routes, key = { it.id }) { route ->
                 Card(
+                    onClick = { onRouteClick(route.id) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
                 ) {
-                    Text(
-                        text = route,
-                        modifier = Modifier.padding(16.dp),
-                        fontSize = 18.sp
-                    )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = formatDistance(route.distance),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = route.briefing,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = route.savedAt.take(10), color = Color.Gray, fontSize = 13.sp)
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBack: () -> Unit) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(routeId) {
+        myPageViewModel.loadDetail(routeId)
+    }
+    BackHandler(onBack = onBack)
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val route = myPageViewModel.detail
+        if (route == null) {
+            myPageViewModel.detailError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+            } ?: CircularProgressIndicator()
+            return@Column
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .background(Color.LightGray)
+        ) {
+            RouteCanvas(lines = route.route, modifier = Modifier.fillMaxSize())
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "distance : ${formatDistance(route.distance)}",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("saved : ${route.savedAt.take(10)}", color = Color.Gray)
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text("LLM briefing:", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(route.briefing)
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            OutlinedButton(onClick = onBack) {
+                Text("Back")
+            }
+            Button(
+                onClick = { showDeleteDialog = true },
+                enabled = !myPageViewModel.isDeleting,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(if (myPageViewModel.isDeleting) "Deleting..." else "Delete")
+            }
+        }
+        myPageViewModel.detailError?.let {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete route?") },
+            text = { Text("This removes the route from My Page.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    myPageViewModel.delete(routeId, onBack)
+                }) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
