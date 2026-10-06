@@ -12,6 +12,17 @@ status — "success" or "error".
 message — describes the result or error.
 data — contains the requested or created data when applicable.
 
+Error responses use this shape:
+
+```json
+{
+    "status": "error",
+    "message": "Invalid username or password"
+}
+```
+
+Note: `GET /api/v1/routes/saved/` is the only endpoint that returns a bare JSON array without `status`/`data`.
+
 ---
 
 # GeoJSON Format
@@ -104,11 +115,16 @@ POST /api/v1/auth/register/
 
 ### Response
 
+`201 Created`
+
 ```json
 {
-    "username": "anton",
-    "email": "anton@test.com",
-    "token": "189a95d9..."
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com",
+        "token": "189a95d9..."
+    }
 }
 ```
 
@@ -146,11 +162,16 @@ POST /api/v1/auth/login/
 
 ```json
 {
-    "username": "anton",
-    "email": "anton@test.com",
-    "token": "189a95d9..."
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com",
+        "token": "189a95d9..."
+    }
 }
 ```
+
+Wrong username or password returns `401 Unauthorized`.
 
 ### Description
 
@@ -171,7 +192,7 @@ The endpoint:
 ### Endpoint
 
 ```
-GET /api/v1/users/profile/
+GET /api/v1/users/my_profile/
 ```
 
 ### Authentication
@@ -188,8 +209,11 @@ Authorization: Token <user_token>
 
 ```json
 {
-    "username": "anton",
-    "email": "anton@test.com"
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com"
+    }
 }
 ```
 
@@ -216,13 +240,17 @@ POST /api/v1/routes/generate/
 
 ### Authentication
 
-Not required.
+Optional.
 
 Header:
 
 ```http
 Authorization: Token <user_token>
 ```
+
+If the token is sent, the temporary route is linked to that user.
+Only a temporary route linked to the user can be saved later with `POST /api/v1/routes/saved/`,
+so send the token if the route may be saved.
 
 ### Request
 
@@ -239,30 +267,33 @@ Authorization: Token <user_token>
 }
 ```
 
+`distance` is in meters and must be an integer greater than 100.
+
 ### Response
 
 ```json
 {
     "status": "success",
-    "distance": 5000,
-    "briefing": "A running route around Seoul National University.",
-    "route": [
-        {
-            "type": "LineString",
-            "coordinates": [
-                [
-                    126.9520,
-                    37.4600
-                ],
-                [
-                    126.9535,
-                    37.4615
-                ]
+    "data": {
+        "temporary_route_id": 1,
+        "route": {
+            "distance": 5000,
+            "briefing": "A running route around Seoul National University.",
+            "route": [
+                {
+                    "type": "LineString",
+                    "coordinates": [
+                        [126.9520, 37.4600],
+                        [126.9535, 37.4615]
+                    ]
+                }
             ]
         }
-    ]
+    }
 }
 ```
+
+Use `temporary_route_id` to save the route.
 
 ### Description
 
@@ -302,6 +333,8 @@ Authorization: Token <user_token>
 
 ### Response
 
+Bare JSON array (no `status`/`data` wrapper).
+
 ```json
 [
     {
@@ -309,7 +342,8 @@ Authorization: Token <user_token>
         "distance": 5000,
         "briefing": "Running route around Seoul National University.",
         "route": [],
-        "saved_at": "2026-10-02T12:00:00"
+        "created_by": "anton",
+        "saved_at": "2026-10-02T12:00:00Z"
     }
 ]
 ```
@@ -362,12 +396,29 @@ or:
 
 ### Response
 
+`201 Created`
+
+With `temporary_route_id`:
+
 ```json
 {
-    "message": "Route saved successfully.",
+    "status": "success",
+    "message": "Temporary route saved successfully.",
     "route_id": 5
 }
 ```
+
+With `route_id` (no `route_id` in the response):
+
+```json
+{
+    "status": "success",
+    "message": "Route saved successfully."
+}
+```
+
+A temporary route that doesn't exist or isn't linked to the user returns `404 Not Found`.
+After saving, the temporary route is deleted.
 
 ### Description
 
@@ -404,11 +455,15 @@ Authorization: Token <user_token>
 
 ```json
 {
-    "id": 5,
-    "distance": 5000,
-    "briefing": "Running route around Seoul National University.",
-    "route": [],
-    "saved_at": "2026-10-02T12:00:00"
+    "status": "success",
+    "data": {
+        "id": 5,
+        "distance": 5000,
+        "briefing": "Running route around Seoul National University.",
+        "route": [],
+        "created_by": "anton",
+        "saved_at": "2026-10-02T12:00:00Z"
+    }
 }
 ```
 
@@ -446,6 +501,7 @@ Authorization: Token <user_token>
 
 ```json
 {
+    "status": "success",
     "message": "Route deleted successfully."
 }
 ```
