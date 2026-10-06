@@ -20,7 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.ui.auth.AuthViewModel
+import com.example.runtime.ui.route.RouteCanvas
 import com.example.runtime.ui.route.RouteViewModel
+import com.example.runtime.ui.route.SaveState
+import com.example.runtime.ui.route.formatDistance
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -86,7 +89,7 @@ fun RunTimeApp() {
                     onComplete = { currentScreen = "route_result" },
                     onFailure = { currentScreen = "route_input" }
                 )
-                "route_result" -> RouteResultScreen()
+                "route_result" -> RouteResultScreen(routeViewModel = routeViewModel)
                 "MyPage" -> MyPageScreen()
             }
         }
@@ -251,7 +254,10 @@ fun GeneratingScreen(routeViewModel: RouteViewModel, onComplete: () -> Unit, onF
 
 // 6. Route Result Screen (화면 6)
 @Composable
-fun RouteResultScreen() {
+fun RouteResultScreen(routeViewModel: RouteViewModel) {
+    val generated = routeViewModel.generated ?: return
+    val saveState = routeViewModel.saveState
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -265,10 +271,14 @@ fun RouteResultScreen() {
             contentAlignment = Alignment.Center
         ) {
             // TODO : map 연동해서 생성된 route 렌더링
-            Text("[ Map Route View ]", color = Color.DarkGray)
+            RouteCanvas(lines = generated.route.route, modifier = Modifier.fillMaxSize())
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text("distance : 5km", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "distance : ${formatDistance(generated.route.distance)}",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         // LLM Briefing
@@ -276,7 +286,7 @@ fun RouteResultScreen() {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text("LLM briefing:", fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Good weather to run. Blah Blah Blah")
+                Text(generated.route.briefing)
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -287,9 +297,22 @@ fun RouteResultScreen() {
             Button(onClick = { /* TODO : Share 링크 공유 기능 */ }) {
                 Text("Share")
             }
-            Button(onClick = { /* TODO : mypage 저장 기능(서버 db에 경로 저장?) */ }) {
-                Text("Save")
+            Button(
+                onClick = { routeViewModel.save() },
+                enabled = saveState == SaveState.Idle || saveState is SaveState.Failed
+            ) {
+                Text(
+                    when (saveState) {
+                        SaveState.Saving -> "Saving..."
+                        SaveState.Saved -> "Saved"
+                        else -> "Save"
+                    }
+                )
             }
+        }
+        if (saveState is SaveState.Failed) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(saveState.message, color = MaterialTheme.colorScheme.error)
         }
     }
 }
