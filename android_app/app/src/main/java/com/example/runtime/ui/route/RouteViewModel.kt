@@ -32,9 +32,10 @@ class RouteViewModel(
         private set
 
     private var pendingDistanceMeters: Int? = null
+    private var pendingLanguage: String = DEFAULT_LANGUAGE
     private var isGenerating = false
 
-    fun prepare(): Boolean {
+    fun prepare(language: String): Boolean {
         val meters = distanceInput.trim().toDoubleOrNull()
             ?.takeIf { it.isFinite() }
             ?.let { (it * 1000).roundToInt() }
@@ -44,6 +45,7 @@ class RouteViewModel(
         }
         error = null
         pendingDistanceMeters = meters
+        pendingLanguage = if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE
         return true
     }
 
@@ -53,7 +55,7 @@ class RouteViewModel(
         isGenerating = true
         viewModelScope.launch {
             try {
-                generated = repository.generate(SNU, distanceMeters)
+                generated = repository.generate(SNU, distanceMeters, pendingLanguage)
                 saveState = SaveState.Idle
                 onSuccess()
             } catch (e: CancellationException) {
@@ -85,6 +87,8 @@ class RouteViewModel(
 
     companion object {
         private const val MIN_DISTANCE_METERS = 100
+        private const val DEFAULT_LANGUAGE = "en"
+        private val SUPPORTED_LANGUAGES = setOf("en", "ko")
         private val SNU = GeoJsonPoint.of(longitude = 126.9520, latitude = 37.4600)
     }
 }

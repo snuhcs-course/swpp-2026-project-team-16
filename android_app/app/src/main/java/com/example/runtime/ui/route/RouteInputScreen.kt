@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -16,6 +17,8 @@ import com.example.runtime.ui.common.asString
 // 4. Route Input Screen (화면 4)
 @Composable
 fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
+    val language = LocalConfiguration.current.locales[0].language
+
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -50,7 +53,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = {
-                if (routeViewModel.prepare()) onGenerate()
+                if (routeViewModel.prepare(language)) onGenerate()
             },
             modifier = Modifier.fillMaxWidth()
         ) {

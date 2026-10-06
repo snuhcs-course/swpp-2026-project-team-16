@@ -10,8 +10,8 @@ import com.example.runtime.data.remote.SavedRoute
 
 class RouteRepository(private val api: ApiService = ApiClient.api) {
 
-    suspend fun generate(startingPoint: GeoJsonPoint, distanceMeters: Int): GeneratedRouteData =
-        api.generateRoute(GenerateRouteRequest(startingPoint, distanceMeters)).requireData()
+    suspend fun generate(startingPoint: GeoJsonPoint, distanceMeters: Int, language: String): GeneratedRouteData =
+        api.generateRoute(GenerateRouteRequest(startingPoint, distanceMeters, language)).requireData()
 
     suspend fun saveTemporaryRoute(temporaryRouteId: Int) {
         api.saveRoute(SaveRouteRequest(temporaryRouteId = temporaryRouteId))

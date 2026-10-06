@@ -58,6 +58,7 @@ data class ProfileData(
 data class GenerateRouteRequest(
     @SerialName("starting_point") val startingPoint: GeoJsonPoint,
     val distance: Int,
+    val language: String? = null,
 )
 
 @Serializable
