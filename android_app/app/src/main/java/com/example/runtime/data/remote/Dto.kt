@@ -60,6 +60,8 @@ data class GenerateRouteRequest(
     val distance: Int,
     val language: String? = null,
     @SerialName("end_point") val endPoint: GeoJsonPoint? = null,
+    @SerialName("starting_point_name") val startingPointName: String? = null,
+    @SerialName("end_point_name") val endPointName: String? = null,
 )
 
 @Serializable
@@ -102,6 +104,8 @@ data class SavedRoute(
     val distance: Int,
     val briefing: String,
     val route: List<GeoJsonLineString>,
+    @SerialName("start_name") val startName: String = "",
+    @SerialName("end_name") val endName: String = "",
     @SerialName("created_by") val createdBy: String? = null,
     @SerialName("saved_at") val savedAt: String,
 )

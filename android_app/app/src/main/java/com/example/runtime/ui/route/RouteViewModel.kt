@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
-import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.ui.common.UiText
@@ -51,8 +50,8 @@ class RouteViewModel(
     var saveState by mutableStateOf<SaveState>(SaveState.Idle)
         private set
 
-    private var pendingStart: GeoJsonPoint? = null
-    private var pendingEnd: GeoJsonPoint? = null
+    private var pendingStart: Place? = null
+    private var pendingEnd: Place? = null
     private var pendingDistanceMeters: Int? = null
     private var pendingLanguage: String = DEFAULT_LANGUAGE
     private var searchLanguage: String = DEFAULT_LANGUAGE
@@ -134,8 +133,8 @@ class RouteViewModel(
             return false
         }
         error = null
-        pendingStart = start.point
-        pendingEnd = end?.point
+        pendingStart = start
+        pendingEnd = end
         pendingDistanceMeters = meters
         pendingLanguage = normalizeLanguage(language)
         return true

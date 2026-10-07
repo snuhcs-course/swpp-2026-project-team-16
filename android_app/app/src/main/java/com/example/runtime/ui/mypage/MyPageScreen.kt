@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.ui.common.LanguageMenu
 import com.example.runtime.ui.common.asString
-import com.example.runtime.ui.common.formatDistance
+import com.example.runtime.ui.common.routeTitle
 
 // 7. My Page Screen (화면 7)
 @Composable
@@ -68,7 +68,7 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) 
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = formatDistance(route.distance),
+                            text = routeTitle(route.startName, route.endName, route.distance),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
