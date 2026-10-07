@@ -10,7 +10,7 @@
     <string name="switch_to_sign_up">계정 만들기</string>
     <string name="switch_to_log_in">이미 계정이 있나요? 로그인</string>
 
-    <string name="label_start_point">출발지 (예: 삼각지)</string>
+    <string name="label_start_point">출발지</string>
     <string name="label_end_point">도착지 (선택)</string>
     <string name="label_distance">"거리 : "</string>
     <string name="unit_km">" km"</string>
