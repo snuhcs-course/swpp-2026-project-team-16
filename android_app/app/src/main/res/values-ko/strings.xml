@@ -1,0 +1,55 @@
+<resources>
+    <string name="nav_route">경로</string>
+    <string name="nav_my_page">마이페이지</string>
+
+    <string name="label_name">이름:</string>
+    <string name="label_email">이메일:</string>
+    <string name="label_password">비밀번호:</string>
+    <string name="action_log_in">로그인</string>
+    <string name="action_sign_up">회원가입</string>
+    <string name="switch_to_sign_up">계정 만들기</string>
+    <string name="switch_to_log_in">이미 계정이 있나요? 로그인</string>
+
+    <string name="label_start_point">출발지</string>
+    <string name="label_end_point">도착지 (선택)</string>
+    <string name="label_distance">"거리 : "</string>
+    <string name="unit_km">" km"</string>
+    <string name="action_generate">경로 생성</string>
+    <string name="generating_route">경로 생성 중</string>
+
+    <string name="distance_value">거리 : %1$s</string>
+    <string name="shortest_path_notice">입력한 거리로는 도착지까지 갈 수 없어 최단 경로(%1$s)를 안내합니다.</string>
+    <string name="llm_briefing">LLM 브리핑:</string>
+    <string name="action_share">공유</string>
+    <string name="action_save">저장</string>
+    <string name="saving">저장 중...</string>
+    <string name="saved">저장됨</string>
+
+    <string name="no_saved_routes">아직 저장된 경로가 없습니다.</string>
+    <string name="saved_date">저장일 : %1$s</string>
+    <string name="action_back">뒤로</string>
+    <string name="action_delete">삭제</string>
+    <string name="deleting">삭제 중...</string>
+    <string name="delete_dialog_title">경로를 삭제할까요?</string>
+    <string name="delete_dialog_message">마이페이지에서 이 경로가 삭제됩니다.</string>
+    <string name="action_cancel">취소</string>
+
+    <string name="language">언어</string>
+    <string name="language_system">시스템 설정</string>
+
+    <string name="no_places_found">검색 결과가 없습니다.</string>
+    <string name="error_start_point_required">출발지를 검색해서 목록에서 선택하세요.</string>
+    <string name="error_end_point_not_selected">도착지를 목록에서 선택하거나 비워 두세요.</string>
+    <string name="error_distance_min">0.1km보다 긴 거리를 입력하세요.</string>
+    <string name="error_network">서버에 연결할 수 없습니다.</string>
+    <string name="error_unknown">문제가 발생했습니다.</string>
+    <string name="error_request_failed">요청에 실패했습니다 (%1$d)</string>
+    <string name="error_empty_response">서버 응답이 비어 있습니다.</string>
+    <string name="error_all_fields_required">모든 항목을 입력하세요.</string>
+    <string name="error_auth_required">다시 로그인해 주세요.</string>
+    <string name="error_invalid_credentials">이름 또는 비밀번호가 올바르지 않습니다.</string>
+    <string name="error_route_not_found">경로를 찾을 수 없습니다.</string>
+    <string name="error_temporary_route_not_found">임시 경로를 찾을 수 없습니다.</string>
+    <string name="error_username_exists">이미 사용 중인 이름입니다.</string>
+    <string name="error_username_password_required">이름과 비밀번호를 입력하세요.</string>
+</resources>

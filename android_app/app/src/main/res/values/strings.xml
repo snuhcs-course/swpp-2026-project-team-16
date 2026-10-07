@@ -1,3 +1,59 @@
 <resources>
-    <string name="app_name">RunTime</string>
+    <string name="app_name" translatable="false">RunTime</string>
+
+    <string name="nav_route">Route</string>
+    <string name="nav_my_page">My Page</string>
+
+    <string name="label_name">Name:</string>
+    <string name="label_email">Email:</string>
+    <string name="label_password">Password:</string>
+    <string name="action_log_in">Log-in</string>
+    <string name="action_sign_up">Sign up</string>
+    <string name="switch_to_sign_up">Create an account</string>
+    <string name="switch_to_log_in">Already have an account? Log in</string>
+
+    <string name="label_start_point">Start point</string>
+    <string name="label_end_point">End point (optional)</string>
+    <string name="label_distance">"distance : "</string>
+    <string name="unit_km">" km"</string>
+    <string name="action_generate">Generate</string>
+    <string name="generating_route">generating route</string>
+
+    <string name="distance_value">distance : %1$s</string>
+    <string name="shortest_path_notice">The end point can\'t be reached within the distance you entered, so the shortest route (%1$s) is shown.</string>
+    <string name="llm_briefing">LLM briefing:</string>
+    <string name="action_share">Share</string>
+    <string name="action_save">Save</string>
+    <string name="saving">Saving...</string>
+    <string name="saved">Saved</string>
+
+    <string name="no_saved_routes">No saved routes yet.</string>
+    <string name="saved_date">saved : %1$s</string>
+    <string name="action_back">Back</string>
+    <string name="action_delete">Delete</string>
+    <string name="deleting">Deleting...</string>
+    <string name="delete_dialog_title">Delete route?</string>
+    <string name="delete_dialog_message">This removes the route from My Page.</string>
+    <string name="action_cancel">Cancel</string>
+
+    <string name="language">Language</string>
+    <string name="language_system">System default</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_korean" translatable="false">한국어</string>
+
+    <string name="no_places_found">No places found.</string>
+    <string name="error_start_point_required">Search for a start point and select it from the list.</string>
+    <string name="error_end_point_not_selected">Select an end point from the list, or leave it empty.</string>
+    <string name="error_distance_min">Enter a distance greater than 0.1 km.</string>
+    <string name="error_network">Cannot reach the server.</string>
+    <string name="error_unknown">Something went wrong.</string>
+    <string name="error_request_failed">Request failed (%1$d)</string>
+    <string name="error_empty_response">Empty response from server.</string>
+    <string name="error_all_fields_required">All fields are required.</string>
+    <string name="error_auth_required">Please log in again.</string>
+    <string name="error_invalid_credentials">Invalid username or password.</string>
+    <string name="error_route_not_found">Route not found.</string>
+    <string name="error_temporary_route_not_found">Temporary route not found.</string>
+    <string name="error_username_exists">Username already exists.</string>
+    <string name="error_username_password_required">Username and password are required.</string>
 </resources>

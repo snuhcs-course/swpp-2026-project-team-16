@@ -1,27 +1,42 @@
 package com.example.runtime
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.runtime.ui.auth.AuthViewModel
+import com.example.runtime.ui.auth.LoginScreen
+import com.example.runtime.ui.mypage.MyPageScreen
+import com.example.runtime.ui.mypage.MyPageViewModel
+import com.example.runtime.ui.mypage.SavedRouteDetailScreen
+import com.example.runtime.ui.route.GeneratingScreen
+import com.example.runtime.ui.route.RouteInputScreen
+import com.example.runtime.ui.route.RouteResultScreen
+import com.example.runtime.ui.route.RouteViewModel
+import com.example.runtime.ui.splash.SplashScreen
+import com.example.runtime.ui.theme.RunTimeTheme
 
 class MainActivity : ComponentActivity() {
+
+    private val requestLocalNetwork =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestLocalNetworkIfNeeded()
         setContent {
-            MaterialTheme {
+            RunTimeTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -31,12 +46,24 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun requestLocalNetworkIfNeeded() {
+        if (!BuildConfig.DEBUG || Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return
+        val permission = Manifest.permission.ACCESS_LOCAL_NETWORK
+        if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            requestLocalNetwork.launch(permission)
+        }
+    }
 }
 
 // 1. Main Navigation & Screen Manager
 @Composable
 fun RunTimeApp() {
-    var currentScreen by remember { mutableStateOf("splash") }
+    var currentScreen by rememberSaveable { mutableStateOf("splash") }
+    val authViewModel: AuthViewModel = viewModel()
+    val routeViewModel: RouteViewModel = viewModel()
+    val myPageViewModel: MyPageViewModel = viewModel()
+    var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -46,14 +73,14 @@ fun RunTimeApp() {
                     NavigationBarItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
                         onClick = { currentScreen = "route_input" },
-                        icon = { Text("Route", fontWeight = FontWeight.Bold) },
-                        label = { Text("Generate") }
+                        icon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_route)) }
                     )
                     NavigationBarItem(
-                        selected = currentScreen == "MyPage",
+                        selected = currentScreen == "MyPage" || currentScreen == "saved_detail",
                         onClick = { currentScreen = "MyPage" },
-                        icon = { Text("My", fontWeight = FontWeight.Bold) },
-                        label = { Text("My Page") }
+                        icon = { Icon(painterResource(R.drawable.ic_account_circle), contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_my_page)) }
                     )
                 }
             }
@@ -61,208 +88,36 @@ fun RunTimeApp() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentScreen) {
-                "splash" -> SplashScreen(onNext = { currentScreen = "login" })
-                "login" -> LoginScreen(onLoginSuccess = { currentScreen = "route_input" })
-                "route_input" -> RouteInputScreen(onGenerate = { currentScreen = "generating" })
-                "generating" -> GeneratingScreen(onComplete = { currentScreen = "route_result" })
-                "route_result" -> RouteResultScreen()
-                "MyPage" -> MyPageScreen()
-            }
-        }
-    }
-}
-
-// 2. Splash Screen (화면 2)
-@Composable
-fun SplashScreen(onNext: () -> Unit) {
-    LaunchedEffect(Unit) {
-        delay(2000) // 2초 후 자동으로 로그인 화면 이동
-        // TODO: health check
-        onNext()
-    }
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("RunTime", fontSize = 36.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(24.dp))
-        CircularProgressIndicator()
-    }
-}
-
-// 3. Login Screen (화면 3)
-@Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
-    var id by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        OutlinedTextField(
-            value = id,
-            onValueChange = { id = it },
-            label = { Text("login:") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedTextField(
-            value = pass,
-            onValueChange = { pass = it },
-            label = { Text("Pass:") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = {
-                //TODO: Auth API 연동
-                onLoginSuccess()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Log-in")
-        }
-    }
-}
-
-// 4. Route Input Screen (화면 4)
-@Composable
-fun RouteInputScreen(onGenerate: () -> Unit) {
-    var startPoint by remember { mutableStateOf("") }
-    var distance by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        OutlinedTextField(
-            value = startPoint,
-            onValueChange = { startPoint = it },
-            label = { Text("Start point (e.g. Samgakji)") },
-            // TODO: I was considering geocoding here, but open to other methods 
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("distance : ", fontSize = 18.sp)
-            OutlinedTextField(
-                value = distance,
-                onValueChange = { distance = it },
-                modifier = Modifier.width(100.dp)
-            )
-            Text(" km", fontSize = 18.sp)
-        }
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = {
-                // TODO : user 입력 startpoint, distance -> backend 전달
-                onGenerate()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Generate")
-        }
-    }
-}
-
-// 5. Generating Screen (화면 5)
-@Composable
-fun GeneratingScreen(onComplete: () -> Unit) {
-    LaunchedEffect(Unit) {
-        // TODO : 백엔드 API 요청 후 success response 받으면 onComplete() 호출로 변경
-        delay(2000) // 일단은 2초 후 자동으로 결과 화면으로 이동
-        onComplete()
-    }
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        CircularProgressIndicator()
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("generating route", fontSize = 20.sp)
-    }
-}
-
-// 6. Route Result Screen (화면 6)
-@Composable
-fun RouteResultScreen() {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // 지도
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .background(Color.LightGray),
-            contentAlignment = Alignment.Center
-        ) {
-            // TODO : map 연동해서 생성된 route 렌더링
-            Text("[ Map Route View ]", color = Color.DarkGray)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("distance : 5km", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // LLM Briefing
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("LLM briefing:", fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Good weather to run. Blah Blah Blah")
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(onClick = { /* TODO : Share 링크 공유 기능 */ }) {
-                Text("Share")
-            }
-            Button(onClick = { /* TODO : mypage 저장 기능(서버 db에 경로 저장?) */ }) {
-                Text("Save")
-            }
-        }
-    }
-}
-
-// 7. My Page Screen (화면 7)
-@Composable
-fun MyPageScreen() {
-    //TODO : 서버에서 route list 불러오기로 대체되지 않을까
-    val savedRoutes = listOf("Route 1", "Route 2", "Route 3")
-
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("≡", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("SoonYoung", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        LazyColumn {
-            items(savedRoutes) { route ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                ) {
-                    Text(
-                        text = route,
-                        modifier = Modifier.padding(16.dp),
-                        fontSize = 18.sp
+                "splash" -> SplashScreen(
+                    authViewModel = authViewModel,
+                    onNext = { loggedIn -> currentScreen = if (loggedIn) "route_input" else "login" }
+                )
+                "login" -> LoginScreen(
+                    authViewModel = authViewModel,
+                    onLoginSuccess = { currentScreen = "route_input" }
+                )
+                "route_input" -> RouteInputScreen(
+                    routeViewModel = routeViewModel,
+                    onGenerate = { currentScreen = "generating" }
+                )
+                "generating" -> GeneratingScreen(
+                    routeViewModel = routeViewModel,
+                    onComplete = { currentScreen = "route_result" },
+                    onFailure = { currentScreen = "route_input" }
+                )
+                "route_result" -> RouteResultScreen(routeViewModel = routeViewModel)
+                "MyPage" -> MyPageScreen(
+                    myPageViewModel = myPageViewModel,
+                    onRouteClick = { routeId ->
+                        selectedRouteId = routeId
+                        currentScreen = "saved_detail"
+                    }
+                )
+                "saved_detail" -> selectedRouteId?.let { routeId ->
+                    SavedRouteDetailScreen(
+                        myPageViewModel = myPageViewModel,
+                        routeId = routeId,
+                        onBack = { currentScreen = "MyPage" }
                     )
                 }
             }
