@@ -26,6 +26,8 @@ def saved_routes_list(request):
                 "id": user_route.route.id,
                 "distance": user_route.route.distance,
                 "briefing": user_route.route.briefing,
+                "start_name": user_route.route.start_name,
+                "end_name": user_route.route.end_name,
                 "route": user_route.route.route,
                 "created_by": user_route.route.created_by.username if user_route.route.created_by else None,
                 "saved_at": user_route.saved_at
@@ -86,6 +88,8 @@ def saved_routes_detail(request, route_id):
                 "id": route.id,
                 "distance": route.distance,
                 "briefing": route.briefing,
+                "start_name": route.start_name,
+                "end_name": route.end_name,
                 "route": route.route,
                 "created_by": route.created_by.username if route.created_by else None,
                 "saved_at": user_saved_route.saved_at

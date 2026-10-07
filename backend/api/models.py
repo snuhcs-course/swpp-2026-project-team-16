@@ -8,6 +8,8 @@ class TemporaryRoute(models.Model):
     distance = models.PositiveIntegerField(null=False, blank=False)
     briefing = models.CharField(max_length=255, null=False, blank=False)
     route = models.JSONField(null=False, blank=False) 
+    start_name = models.CharField(max_length=100, blank=True, default="")
+    end_name = models.CharField(max_length=100, blank=True, default="")
 
     def _validate_route(self):
         if not isinstance(self.route, list):
@@ -31,7 +33,9 @@ class TemporaryRoute(models.Model):
             created_by=created_by,
             distance=self.distance,
             briefing=self.briefing,
-            route=self.route
+            route=self.route,
+            start_name=self.start_name,
+            end_name=self.end_name,
         )
         return route
 
@@ -42,6 +46,8 @@ class Route(models.Model):
     distance = models.PositiveIntegerField(null=False, blank=False)
     briefing = models.CharField(max_length=255, null=False, blank=False)
     route = models.JSONField(null=False, blank=False) 
+    start_name = models.CharField(max_length=100, blank=True, default="")
+    end_name = models.CharField(max_length=100, blank=True, default="")
     
     def _validate_route(self):
         if not isinstance(self.route, list):

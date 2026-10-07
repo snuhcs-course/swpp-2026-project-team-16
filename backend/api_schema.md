@@ -12,6 +12,17 @@ status — "success" or "error".
 message — describes the result or error.
 data — contains the requested or created data when applicable.
 
+Error responses use this shape:
+
+```json
+{
+    "status": "error",
+    "message": "Invalid username or password"
+}
+```
+
+Note: `GET /api/v1/routes/saved/` is the only endpoint that returns a bare JSON array without `status`/`data`.
+
 ---
 
 # GeoJSON Format
@@ -104,11 +115,16 @@ POST /api/v1/auth/register/
 
 ### Response
 
+`201 Created`
+
 ```json
 {
-    "username": "anton",
-    "email": "anton@test.com",
-    "token": "189a95d9..."
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com",
+        "token": "189a95d9..."
+    }
 }
 ```
 
@@ -146,11 +162,16 @@ POST /api/v1/auth/login/
 
 ```json
 {
-    "username": "anton",
-    "email": "anton@test.com",
-    "token": "189a95d9..."
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com",
+        "token": "189a95d9..."
+    }
 }
 ```
+
+Wrong username or password returns `401 Unauthorized`.
 
 ### Description
 
@@ -171,7 +192,7 @@ The endpoint:
 ### Endpoint
 
 ```
-GET /api/v1/users/profile/
+GET /api/v1/users/my_profile/
 ```
 
 ### Authentication
@@ -188,8 +209,11 @@ Authorization: Token <user_token>
 
 ```json
 {
-    "username": "anton",
-    "email": "anton@test.com"
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com"
+    }
 }
 ```
 
@@ -216,13 +240,17 @@ POST /api/v1/routes/generate/
 
 ### Authentication
 
-Not required.
+Optional.
 
 Header:
 
 ```http
 Authorization: Token <user_token>
 ```
+
+If the token is sent, the temporary route is linked to that user.
+Only a temporary route linked to the user can be saved later with `POST /api/v1/routes/saved/`,
+so send the token if the route may be saved.
 
 ### Request
 
@@ -235,34 +263,71 @@ Authorization: Token <user_token>
             37.4600
         ]
     },
-    "distance": 5000
+    "end_point": {
+        "type": "Point",
+        "coordinates": [
+            126.9636,
+            37.4766
+        ]
+    },
+    "starting_point_name": "코엑스",
+    "end_point_name": "강남역[수도권2호선]",
+    "distance": 5000,
+    "language": "ko"
 }
 ```
+
+`starting_point` is required.
+
+`starting_point_name` and `end_point_name` are optional display names (up to 100 characters each).
+They are stored with the route and returned by the saved route endpoints.
+
+`end_point` is optional. If it is omitted, the route ends at `starting_point` (a loop).
+It is validated the same way as `starting_point`, and must not be the same place as `starting_point`.
+
+The route is built on real walking streets from OpenStreetMap, so `distance` in the response is the
+actual route length and can differ slightly from the requested `distance`.
+
+Errors from route generation:
+
+* `400 Bad Request` with a `message` when no route can be made (for example, start and end are the same point,
+  or no route within 50% of the requested distance exists)
+* `503 Service Unavailable` when the map data cannot be downloaded
+
+`distance` is in meters and must be an integer greater than 100.
+
+`language` is optional: `"ko"` (default) or `"en"`. The `briefing` is written in this language.
+Any other value returns `400 Bad Request`.
 
 ### Response
 
 ```json
 {
     "status": "success",
-    "distance": 5000,
-    "briefing": "A running route around Seoul National University.",
-    "route": [
-        {
-            "type": "LineString",
-            "coordinates": [
-                [
-                    126.9520,
-                    37.4600
-                ],
-                [
-                    126.9535,
-                    37.4615
-                ]
-            ]
+    "data": {
+        "temporary_route_id": 1,
+        "route": {
+            "distance": 5000,
+            "briefing": "A running route around Seoul National University.",
+            "route": [
+                {
+                    "type": "LineString",
+                    "coordinates": [
+                        [126.9520, 37.4600],
+                        [126.9535, 37.4615]
+                    ]
+                }
+            ],
+            "is_shortest_path": false
         }
-    ]
+    }
 }
 ```
+
+Use `temporary_route_id` to save the route.
+
+`is_shortest_path` is `true` when `end_point` cannot be reached within the requested `distance`.
+In that case the shortest street path is returned, so `distance` is longer than requested.
 
 ### Description
 
@@ -277,6 +342,62 @@ The endpoint:
 * generates route geometry
 * creates a temporary route
 * returns route information with LLM briefing
+
+---
+
+# Places
+
+## Search Places
+
+### Endpoint
+
+```
+GET /api/v1/places/search/?q=<keyword>&language=<ko|en>
+```
+
+### Authentication
+
+Not required.
+
+### Request
+
+`q` is the place keyword (for example `삼각지`). It is required and must be 50 characters or fewer.
+
+`language` is optional: `"ko"` (default) or `"en"`.
+With `"en"`, place names and addresses are translated into English by Gemini
+(for example `Samgakji (War Memorial of Korea) Station [Line 4]`).
+If translation fails, the Korean results are returned.
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "name": "삼각지(전쟁기념관)역[수도권4호선]",
+            "address": "서울 용산구 한강대로 180",
+            "point": {
+                "type": "Point",
+                "coordinates": [126.97291133, 37.53443005]
+            }
+        }
+    ]
+}
+```
+
+`data` is an empty list when nothing matches. Up to 5 places are returned.
+Use `point` as `starting_point` or `end_point` in `POST /api/v1/routes/generate/`.
+
+Errors:
+
+* `400 Bad Request` when `q` is missing or too long, or `language` is not supported
+* `503 Service Unavailable` when the place search service cannot be reached
+
+### Description
+
+Searches places by keyword using the TMAP POI search API.
+The TMAP key stays on the server (`TMAP_APP_KEY` in `.env`).
 
 ---
 
@@ -302,6 +423,8 @@ Authorization: Token <user_token>
 
 ### Response
 
+Bare JSON array (no `status`/`data` wrapper).
+
 ```json
 [
     {
@@ -309,7 +432,10 @@ Authorization: Token <user_token>
         "distance": 5000,
         "briefing": "Running route around Seoul National University.",
         "route": [],
-        "saved_at": "2026-10-02T12:00:00"
+        "start_name": "코엑스",
+        "end_name": "강남역[수도권2호선]",
+        "created_by": "anton",
+        "saved_at": "2026-10-02T12:00:00Z"
     }
 ]
 ```
@@ -362,12 +488,29 @@ or:
 
 ### Response
 
+`201 Created`
+
+With `temporary_route_id`:
+
 ```json
 {
-    "message": "Route saved successfully.",
+    "status": "success",
+    "message": "Temporary route saved successfully.",
     "route_id": 5
 }
 ```
+
+With `route_id` (no `route_id` in the response):
+
+```json
+{
+    "status": "success",
+    "message": "Route saved successfully."
+}
+```
+
+A temporary route that doesn't exist or isn't linked to the user returns `404 Not Found`.
+After saving, the temporary route is deleted.
 
 ### Description
 
@@ -404,11 +547,17 @@ Authorization: Token <user_token>
 
 ```json
 {
-    "id": 5,
-    "distance": 5000,
-    "briefing": "Running route around Seoul National University.",
-    "route": [],
-    "saved_at": "2026-10-02T12:00:00"
+    "status": "success",
+    "data": {
+        "id": 5,
+        "distance": 5000,
+        "briefing": "Running route around Seoul National University.",
+        "route": [],
+        "start_name": "코엑스",
+        "end_name": "강남역[수도권2호선]",
+        "created_by": "anton",
+        "saved_at": "2026-10-02T12:00:00Z"
+    }
 }
 ```
 
@@ -446,6 +595,7 @@ Authorization: Token <user_token>
 
 ```json
 {
+    "status": "success",
     "message": "Route deleted successfully."
 }
 ```
