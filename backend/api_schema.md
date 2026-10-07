@@ -343,7 +343,7 @@ The endpoint:
 ### Endpoint
 
 ```
-GET /api/v1/places/search/?q=<keyword>
+GET /api/v1/places/search/?q=<keyword>&language=<ko|en>
 ```
 
 ### Authentication
@@ -353,6 +353,11 @@ Not required.
 ### Request
 
 `q` is the place keyword (for example `삼각지`). It is required and must be 50 characters or fewer.
+
+`language` is optional: `"ko"` (default) or `"en"`.
+With `"en"`, place names and addresses are translated into English by Gemini
+(for example `Samgakji (War Memorial of Korea) Station [Line 4]`).
+If translation fails, the Korean results are returned.
 
 ### Response
 
@@ -372,12 +377,12 @@ Not required.
 }
 ```
 
-`data` is an empty list when nothing matches. Up to 10 places are returned.
+`data` is an empty list when nothing matches. Up to 5 places are returned.
 Use `point` as `starting_point` or `end_point` in `POST /api/v1/routes/generate/`.
 
 Errors:
 
-* `400 Bad Request` when `q` is missing or too long
+* `400 Bad Request` when `q` is missing or too long, or `language` is not supported
 * `503 Service Unavailable` when the place search service cannot be reached
 
 ### Description

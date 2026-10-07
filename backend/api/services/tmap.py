@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 TMAP_POI_URL = "https://apis.openapi.sk.com/tmap/pois"
 TIMEOUT_SECONDS = 10
-MAX_RESULTS = 10
+MAX_RESULTS = 5
 
 
 class PlaceSearchError(Exception):
