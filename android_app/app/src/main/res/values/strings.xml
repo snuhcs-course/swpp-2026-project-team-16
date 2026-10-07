@@ -13,6 +13,7 @@
     <string name="switch_to_log_in">Already have an account? Log in</string>
 
     <string name="label_start_point">Start point (e.g. Samgakji)</string>
+    <string name="label_end_point">End point (optional)</string>
     <string name="label_distance">"distance : "</string>
     <string name="unit_km">" km"</string>
     <string name="action_generate">Generate</string>

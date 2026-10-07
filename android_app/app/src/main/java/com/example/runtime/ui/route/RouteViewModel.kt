@@ -20,6 +20,7 @@ class RouteViewModel(
 ) : ViewModel() {
 
     var startPointInput by mutableStateOf("")
+    var endPointInput by mutableStateOf("")
     var distanceInput by mutableStateOf("")
 
     var error by mutableStateOf<UiText?>(null)

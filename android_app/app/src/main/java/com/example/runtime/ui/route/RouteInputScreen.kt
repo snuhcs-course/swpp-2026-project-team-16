@@ -32,6 +32,13 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = routeViewModel.endPointInput,
+            onValueChange = { routeViewModel.endPointInput = it },
+            label = { Text(stringResource(R.string.label_end_point)) },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
