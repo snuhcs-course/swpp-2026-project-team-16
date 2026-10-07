@@ -336,6 +336,57 @@ The endpoint:
 
 ---
 
+# Places
+
+## Search Places
+
+### Endpoint
+
+```
+GET /api/v1/places/search/?q=<keyword>
+```
+
+### Authentication
+
+Not required.
+
+### Request
+
+`q` is the place keyword (for example `삼각지`). It is required and must be 50 characters or fewer.
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "name": "삼각지(전쟁기념관)역[수도권4호선]",
+            "address": "서울 용산구 한강대로 180",
+            "point": {
+                "type": "Point",
+                "coordinates": [126.97291133, 37.53443005]
+            }
+        }
+    ]
+}
+```
+
+`data` is an empty list when nothing matches. Up to 10 places are returned.
+Use `point` as `starting_point` or `end_point` in `POST /api/v1/routes/generate/`.
+
+Errors:
+
+* `400 Bad Request` when `q` is missing or too long
+* `503 Service Unavailable` when the place search service cannot be reached
+
+### Description
+
+Searches places by keyword using the TMAP POI search API.
+The TMAP key stays on the server (`TMAP_APP_KEY` in `.env`).
+
+---
+
 # Saved Routes
 
 ## Get Saved Routes
