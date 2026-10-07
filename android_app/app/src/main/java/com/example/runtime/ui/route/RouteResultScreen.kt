@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
@@ -41,6 +42,15 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
+        if (generated.route.isShortestPath) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.shortest_path_notice, formatDistance(generated.route.distance)),
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
 
         // LLM Briefing

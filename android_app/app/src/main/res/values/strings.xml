@@ -20,6 +20,7 @@
     <string name="generating_route">generating route</string>
 
     <string name="distance_value">distance : %1$s</string>
+    <string name="shortest_path_notice">The end point can\'t be reached within the distance you entered, so the shortest route (%1$s) is shown.</string>
     <string name="llm_briefing">LLM briefing:</string>
     <string name="action_share">Share</string>
     <string name="action_save">Save</string>

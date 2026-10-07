@@ -80,6 +80,7 @@ data class RouteBody(
     val distance: Int,
     val briefing: String,
     val route: List<GeoJsonLineString>,
+    @SerialName("is_shortest_path") val isShortestPath: Boolean = false,
 )
 
 @Serializable

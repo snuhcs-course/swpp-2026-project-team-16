@@ -18,6 +18,7 @@
     <string name="generating_route">경로 생성 중</string>
 
     <string name="distance_value">거리 : %1$s</string>
+    <string name="shortest_path_notice">입력한 거리로는 도착지까지 갈 수 없어 최단 경로(%1$s)를 안내합니다.</string>
     <string name="llm_briefing">LLM 브리핑:</string>
     <string name="action_share">공유</string>
     <string name="action_save">저장</string>
