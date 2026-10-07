@@ -1,6 +1,8 @@
 package com.example.runtime.ui.route
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,23 +22,22 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
     val language = LocalConfiguration.current.locales[0].language
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(32.dp))
-        OutlinedTextField(
-            value = routeViewModel.startPointInput,
-            onValueChange = { routeViewModel.startPointInput = it },
-            label = { Text(stringResource(R.string.label_start_point)) },
-            // TODO: I was considering geocoding here, but open to other methods
-            modifier = Modifier.fillMaxWidth()
+        PlaceSearchField(
+            field = routeViewModel.startField,
+            label = stringResource(R.string.label_start_point),
+            onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.startField, it) },
+            onSelect = { routeViewModel.selectPlace(routeViewModel.startField, it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = routeViewModel.endPointInput,
-            onValueChange = { routeViewModel.endPointInput = it },
-            label = { Text(stringResource(R.string.label_end_point)) },
-            modifier = Modifier.fillMaxWidth()
+        PlaceSearchField(
+            field = routeViewModel.endField,
+            label = stringResource(R.string.label_end_point),
+            onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.endField, it) },
+            onSelect = { routeViewModel.selectPlace(routeViewModel.endField, it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
         Row(

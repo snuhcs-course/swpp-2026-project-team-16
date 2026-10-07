@@ -36,6 +36,9 @@
     <string name="language">언어</string>
     <string name="language_system">시스템 설정</string>
 
+    <string name="no_places_found">검색 결과가 없습니다.</string>
+    <string name="error_start_point_required">출발지를 검색해서 목록에서 선택하세요.</string>
+    <string name="error_end_point_not_selected">도착지를 목록에서 선택하거나 비워 두세요.</string>
     <string name="error_distance_min">0.1km보다 긴 거리를 입력하세요.</string>
     <string name="error_network">서버에 연결할 수 없습니다.</string>
     <string name="error_unknown">문제가 발생했습니다.</string>

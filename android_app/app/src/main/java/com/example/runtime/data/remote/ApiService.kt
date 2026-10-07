@@ -5,6 +5,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiService {
 
@@ -31,4 +32,7 @@ interface ApiService {
 
     @DELETE("api/v1/routes/saved/{routeId}/")
     suspend fun deleteSavedRoute(@Path("routeId") routeId: Int): ApiResponse<Unit>
+
+    @GET("api/v1/places/search/")
+    suspend fun searchPlaces(@Query("q") query: String): ApiResponse<List<Place>>
 }

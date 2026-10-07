@@ -5,13 +5,21 @@ import com.example.runtime.data.remote.ApiService
 import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonPoint
+import com.example.runtime.data.remote.Place
 import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.SavedRoute
 
 class RouteRepository(private val api: ApiService = ApiClient.api) {
 
-    suspend fun generate(startingPoint: GeoJsonPoint, distanceMeters: Int, language: String): GeneratedRouteData =
-        api.generateRoute(GenerateRouteRequest(startingPoint, distanceMeters, language)).requireData()
+    suspend fun generate(
+        startingPoint: GeoJsonPoint,
+        endPoint: GeoJsonPoint?,
+        distanceMeters: Int,
+        language: String,
+    ): GeneratedRouteData =
+        api.generateRoute(GenerateRouteRequest(startingPoint, distanceMeters, language, endPoint)).requireData()
+
+    suspend fun searchPlaces(query: String): List<Place> = api.searchPlaces(query).data.orEmpty()
 
     suspend fun saveTemporaryRoute(temporaryRouteId: Int) {
         api.saveRoute(SaveRouteRequest(temporaryRouteId = temporaryRouteId))

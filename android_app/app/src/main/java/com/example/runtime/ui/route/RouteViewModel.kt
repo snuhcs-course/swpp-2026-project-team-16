@@ -8,19 +8,38 @@ import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonPoint
+import com.example.runtime.data.remote.Place
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+class PlaceField {
+    var input by mutableStateOf("")
+        internal set
+    var selected by mutableStateOf<Place?>(null)
+        internal set
+    var suggestions by mutableStateOf<List<Place>>(emptyList())
+        internal set
+    var isSearching by mutableStateOf(false)
+        internal set
+    var noResults by mutableStateOf(false)
+        internal set
+    var searchError by mutableStateOf<UiText?>(null)
+        internal set
+    internal var searchJob: Job? = null
+}
 
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
 ) : ViewModel() {
 
-    var startPointInput by mutableStateOf("")
-    var endPointInput by mutableStateOf("")
+    val startField = PlaceField()
+    val endField = PlaceField()
     var distanceInput by mutableStateOf("")
 
     var error by mutableStateOf<UiText?>(null)
@@ -32,11 +51,65 @@ class RouteViewModel(
     var saveState by mutableStateOf<SaveState>(SaveState.Idle)
         private set
 
+    private var pendingStart: GeoJsonPoint? = null
+    private var pendingEnd: GeoJsonPoint? = null
     private var pendingDistanceMeters: Int? = null
     private var pendingLanguage: String = DEFAULT_LANGUAGE
     private var isGenerating = false
 
+    fun onPlaceInputChange(field: PlaceField, text: String) {
+        error = null
+        field.input = text
+        field.selected = null
+        field.searchJob?.cancel()
+        field.searchError = null
+        field.noResults = false
+        val query = text.trim()
+        if (query.length < MIN_QUERY_LENGTH) {
+            field.suggestions = emptyList()
+            field.isSearching = false
+            return
+        }
+        field.searchJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            field.isSearching = true
+            try {
+                val places = repository.searchPlaces(query)
+                field.suggestions = places
+                field.noResults = places.isEmpty()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                field.suggestions = emptyList()
+                field.searchError = e.toUiText()
+            } finally {
+                field.isSearching = false
+            }
+        }
+    }
+
+    fun selectPlace(field: PlaceField, place: Place) {
+        error = null
+        field.searchJob?.cancel()
+        field.selected = place
+        field.input = place.name
+        field.suggestions = emptyList()
+        field.isSearching = false
+        field.noResults = false
+        field.searchError = null
+    }
+
     fun prepare(language: String): Boolean {
+        val start = startField.selected
+        if (start == null) {
+            error = UiText.Resource(R.string.error_start_point_required)
+            return false
+        }
+        val end = endField.selected
+        if (end == null && endField.input.isNotBlank()) {
+            error = UiText.Resource(R.string.error_end_point_not_selected)
+            return false
+        }
         val meters = distanceInput.trim().toDoubleOrNull()
             ?.takeIf { it.isFinite() }
             ?.let { (it * 1000).roundToInt() }
@@ -45,18 +118,21 @@ class RouteViewModel(
             return false
         }
         error = null
+        pendingStart = start.point
+        pendingEnd = end?.point
         pendingDistanceMeters = meters
         pendingLanguage = if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE
         return true
     }
 
     fun generate(onSuccess: () -> Unit, onFailure: () -> Unit) {
+        val start = pendingStart ?: return onFailure()
         val distanceMeters = pendingDistanceMeters ?: return onFailure()
         if (isGenerating) return
         isGenerating = true
         viewModelScope.launch {
             try {
-                generated = repository.generate(SNU, distanceMeters, pendingLanguage)
+                generated = repository.generate(start, pendingEnd, distanceMeters, pendingLanguage)
                 saveState = SaveState.Idle
                 onSuccess()
             } catch (e: CancellationException) {
@@ -88,9 +164,10 @@ class RouteViewModel(
 
     companion object {
         private const val MIN_DISTANCE_METERS = 100
+        private const val MIN_QUERY_LENGTH = 2
+        private const val SEARCH_DEBOUNCE_MS = 300L
         private const val DEFAULT_LANGUAGE = "en"
         private val SUPPORTED_LANGUAGES = setOf("en", "ko")
-        private val SNU = GeoJsonPoint.of(longitude = 126.9520, latitude = 37.4600)
     }
 }
 
