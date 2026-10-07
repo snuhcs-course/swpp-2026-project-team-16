@@ -32,6 +32,9 @@ from api.route_algorithm.classes import (
     RunningRoute,
 )
 
+ox.settings.requests_timeout = 20
+ox.settings.overpass_rate_limit = False
+
 M_PER_DEG = 111_000
 INITIAL_DETOUR = 1.3   # 실제 도로 거리 / 직선 거리 초기 추정값
 TOLERANCE = 0.05       # 목표 거리 ±5% 안이면 성공

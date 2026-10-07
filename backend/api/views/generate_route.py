@@ -1,4 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
+
 import requests
+from osmnx._errors import InsufficientResponseError, ResponseStatusCodeError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,6 +11,22 @@ from api.models import TemporaryRoute
 from api.route_algorithm.algorithm import create_route
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
+
+
+ROUTE_TIMEOUT_SECONDS = 35
+MAP_UNAVAILABLE_MESSAGE = "Could not load map data. Please try again later."
+
+route_executor = ThreadPoolExecutor(max_workers=4)
+
+
+def unavailable_response(message):
+    return Response(
+        {
+            "status": "error",
+            "message": message,
+        },
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 def error_response(message):
@@ -105,23 +125,22 @@ def generate_route_api(request):
 
     # Call route algorithm
 
+    future = route_executor.submit(
+        create_route,
+        starting_point=starting_point,
+        end_point=end_point,
+        distance=distance,
+        language=language,
+    )
+
     try:
-        route = create_route(
-            starting_point=starting_point,
-            end_point=end_point,
-            distance=distance,
-            language=language,
-        )
+        route = future.result(timeout=ROUTE_TIMEOUT_SECONDS)
+    except FutureTimeoutError:
+        return unavailable_response("Route generation is taking too long. Please try again in a moment.")
+    except (requests.RequestException, InsufficientResponseError, ResponseStatusCodeError):
+        return unavailable_response(MAP_UNAVAILABLE_MESSAGE)
     except ValueError as e:
         return error_response(str(e))
-    except requests.RequestException:
-        return Response(
-            {
-                "status": "error",
-                "message": "Could not load map data. Please try again later.",
-            },
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
 
     temporary_route = TemporaryRoute.objects.create(
         distance=route.distance,

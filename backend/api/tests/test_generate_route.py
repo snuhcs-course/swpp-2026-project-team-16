@@ -1,6 +1,8 @@
+import time
 from unittest import mock
 
 import requests
+from osmnx._errors import InsufficientResponseError
 from rest_framework.test import APITestCase
 
 from api.route_algorithm.algorithm import create_route
@@ -113,3 +115,23 @@ class GenerateRouteErrorTests(FakeMapTestCase):
         response = self.client.post(URL, body(), format="json")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.data["status"], "error")
+
+    def test_map_server_error_returns_503(self, llm):
+        self.download.side_effect = InsufficientResponseError("rate limited")
+        response = self.client.post(URL, body(), format="json")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data["message"], "Could not load map data. Please try again later.")
+
+    def test_slow_route_generation_returns_503(self, llm):
+        def slow_download(*args, **kwargs):
+            time.sleep(0.5)
+            return grid_graph()
+
+        self.download.side_effect = slow_download
+        with mock.patch("api.views.generate_route.ROUTE_TIMEOUT_SECONDS", 0.1):
+            response = self.client.post(URL, body(), format="json")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.data["message"],
+            "Route generation is taking too long. Please try again in a moment.",
+        )
