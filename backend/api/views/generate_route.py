@@ -8,6 +8,45 @@ from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
 
 
+def error_response(message):
+    return Response(
+        {
+            "status": "error",
+            "message": message,
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+def parse_point(value, name):
+    if not isinstance(value, dict):
+        return None, f"{name} must be a GeoJSON Point"
+
+    if value.get("type") != "Point":
+        return None, f"{name} must have type Point"
+
+    coordinates = value.get("coordinates")
+
+    if not isinstance(coordinates, list) or len(coordinates) != 2:
+        return None, f"{name} coordinates must be [longitude, latitude]"
+
+    longitude, latitude = coordinates
+
+    if isinstance(longitude, bool) or not isinstance(longitude, (int, float)):
+        return None, f"{name} longitude must be a number"
+
+    if isinstance(latitude, bool) or not isinstance(latitude, (int, float)):
+        return None, f"{name} latitude must be a number"
+
+    if not -180 <= longitude <= 180:
+        return None, f"{name} longitude must be between -180 and 180"
+
+    if not -90 <= latitude <= 90:
+        return None, f"{name} latitude must be between -90 and 90"
+
+    return GeoJSONPoint(coordinates=(longitude, latitude)), None
+
+
 @api_view(["POST"])
 def generate_route_api(request):
     if not request.user.is_authenticated:
@@ -16,78 +55,22 @@ def generate_route_api(request):
         user = request.user
 
 
-    starting_point = request.data.get("starting_point")
+    starting_point, error = parse_point(request.data.get("starting_point"), "starting_point")
+
+    if error:
+        return error_response(error)
+
+    end_point_data = request.data.get("end_point")
+
+    if end_point_data is None:
+        end_point = starting_point
+    else:
+        end_point, error = parse_point(end_point_data, "end_point")
+
+        if error:
+            return error_response(error)
+
     distance = request.data.get("distance")
-
-    if not isinstance(starting_point, dict):
-        return Response(
-            {
-                "status": "error",
-                "message": "starting_point must be a GeoJSON Point",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if starting_point.get("type") != "Point":
-        return Response(
-            {
-                "status": "error",
-                "message": "starting_point must have type Point",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    coordinates = starting_point.get("coordinates")
-
-    if not isinstance(coordinates, list) or len(coordinates) != 2:
-        return Response(
-            {
-                "status": "error",
-                "message": (
-                    "starting_point coordinates must be "
-                    "[longitude, latitude]"
-                ),
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    longitude, latitude = coordinates
-
-    if not isinstance(longitude, (int, float)):
-        return Response(
-            {
-                "status": "error",
-                "message": "longitude must be a number",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not isinstance(latitude, (int, float)):
-        return Response(
-            {
-                "status": "error",
-                "message": "latitude must be a number",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not -180 <= longitude <= 180:
-        return Response(
-            {
-                "status": "error",
-                "message": "longitude must be between -180 and 180",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not -90 <= latitude <= 90:
-        return Response(
-            {
-                "status": "error",
-                "message": "latitude must be between -90 and 90",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     if isinstance(distance, bool) or not isinstance(distance, int):
         return Response(
@@ -120,18 +103,11 @@ def generate_route_api(request):
         )
 
 
-    start_point = GeoJSONPoint(
-        coordinates=(
-            longitude,
-            latitude,
-        )
-    )
-
-
     # Call route algorithm
 
     route = create_route(
-        starting_point=start_point,
+        starting_point=starting_point,
+        end_point=end_point,
         distance=distance,
         language=language,
     )

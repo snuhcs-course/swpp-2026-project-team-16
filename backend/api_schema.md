@@ -263,10 +263,22 @@ so send the token if the route may be saved.
             37.4600
         ]
     },
+    "end_point": {
+        "type": "Point",
+        "coordinates": [
+            126.9636,
+            37.4766
+        ]
+    },
     "distance": 5000,
     "language": "ko"
 }
 ```
+
+`starting_point` is required.
+
+`end_point` is optional. If it is omitted, the route ends at `starting_point` (a loop).
+It is validated the same way as `starting_point`.
 
 `distance` is in meters and must be an integer greater than 100.
 

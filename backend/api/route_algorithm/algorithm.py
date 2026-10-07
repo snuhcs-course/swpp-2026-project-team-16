@@ -7,7 +7,12 @@ from api.route_algorithm.briefing import (
 from api.route_algorithm.classes import GeoJSONPoint, GeoJSONLineString, RunningRoute
 
 
-def create_route(starting_point: GeoJSONPoint, distance: int, language: str = DEFAULT_LANGUAGE) -> RunningRoute:
+def create_route(
+    starting_point: GeoJSONPoint,
+    distance: int,
+    language: str = DEFAULT_LANGUAGE,
+    end_point: GeoJSONPoint | None = None,
+) -> RunningRoute:
     # Mock route generation logic
     # In a real implementation, this would generate a route based on the starting point and distance
     route=[        
