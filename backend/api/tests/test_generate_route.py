@@ -84,6 +84,13 @@ class GenerateRouteEndPointTests(FakeMapTestCase):
         response, spy = self.post(end_point={"type": "Point", "coordinates": END})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(spy.call_args.kwargs["end_point"].coordinates, tuple(END))
+        self.assertFalse(response.data["data"]["route"]["is_shortest_path"])
+
+    def test_reports_shortest_path_when_distance_is_too_short(self, llm):
+        response = self.client.post(URL, body(end_point={"type": "Point", "coordinates": END}, distance=500), format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["data"]["route"]["is_shortest_path"])
+        self.assertGreater(response.data["data"]["route"]["distance"], 500)
 
     def test_rejects_invalid_end_point(self, llm):
         response, _ = self.post(end_point={"type": "LineString", "coordinates": [126.9, 37.4]})

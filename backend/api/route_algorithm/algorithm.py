@@ -318,6 +318,7 @@ def create_route(
         distance=actual_distance,
         briefing=briefing,
         route=[GeoJSONLineString(coordinates=coordinates)],
+        is_shortest_path=best.label == "shortest",
     )
 
 

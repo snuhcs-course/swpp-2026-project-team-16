@@ -312,13 +312,17 @@ Any other value returns `400 Bad Request`.
                         [126.9535, 37.4615]
                     ]
                 }
-            ]
+            ],
+            "is_shortest_path": false
         }
     }
 }
 ```
 
 Use `temporary_route_id` to save the route.
+
+`is_shortest_path` is `true` when `end_point` cannot be reached within the requested `distance`.
+In that case the shortest street path is returned, so `distance` is longer than requested.
 
 ### Description
 

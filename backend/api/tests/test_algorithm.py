@@ -32,6 +32,20 @@ class CreateRouteTests(SimpleTestCase):
         self.assertAlmostEqual(last_lat, end.coordinates[1], delta=0.001)
         self.assertLessEqual(abs(route.distance - 2000), 2000 * 0.5)
 
+    def test_short_distance_falls_back_to_shortest_path(self, download, llm):
+        download.return_value = self.graph
+        end = GeoJSONPoint(coordinates=(SNU[0] + 0.009, SNU[1]))
+        route = create_route(self.start, 500, "ko", end_point=end)
+        self.assertTrue(route.is_shortest_path)
+        self.assertGreater(route.distance, 500)
+        self.assertTrue(route.to_dict()["is_shortest_path"])
+
+    def test_regular_routes_are_not_shortest_path(self, download, llm):
+        download.return_value = self.graph
+        end = GeoJSONPoint(coordinates=(SNU[0] + 0.009, SNU[1]))
+        self.assertFalse(create_route(self.start, 2000, "ko", end_point=end).is_shortest_path)
+        self.assertFalse(create_route(self.start, 3000, "ko").is_shortest_path)
+
     def test_point_to_point_rejects_same_point(self, download, llm):
         with self.assertRaises(ValueError):
             create_route(self.start, 2000, "ko", end_point=GeoJSONPoint(coordinates=SNU))
