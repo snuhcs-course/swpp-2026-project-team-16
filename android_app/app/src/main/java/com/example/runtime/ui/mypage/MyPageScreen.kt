@@ -1,6 +1,5 @@
 package com.example.runtime.ui.mypage
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,16 +34,19 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box {
-                Text(
-                    "≡",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { showMenu = true }
-                )
-                LanguageMenu(expanded = showMenu, onDismiss = { showMenu = false })
+            Text("≡", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(myPageViewModel.username ?: "", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            painterResource(R.drawable.ic_language),
+                            contentDescription = stringResource(R.string.language)
+                        )
+                    }
+                    LanguageMenu(expanded = showMenu, onDismiss = { showMenu = false })
+                }
             }
-            Text(myPageViewModel.username ?: "", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(24.dp))
         myPageViewModel.error?.let {

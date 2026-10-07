@@ -55,7 +55,17 @@ class RouteViewModel(
     private var pendingEnd: GeoJsonPoint? = null
     private var pendingDistanceMeters: Int? = null
     private var pendingLanguage: String = DEFAULT_LANGUAGE
+    private var searchLanguage: String = DEFAULT_LANGUAGE
     private var isGenerating = false
+
+    fun onLanguageChange(language: String) {
+        val normalized = normalizeLanguage(language)
+        if (normalized == searchLanguage) return
+        searchLanguage = normalized
+        listOf(startField, endField)
+            .filter { it.selected == null && it.input.trim().length >= MIN_QUERY_LENGTH }
+            .forEach { search(it, it.input.trim()) }
+    }
 
     fun onPlaceInputChange(field: PlaceField, text: String) {
         error = null
@@ -70,11 +80,17 @@ class RouteViewModel(
             field.isSearching = false
             return
         }
+        search(field, query)
+    }
+
+    private fun search(field: PlaceField, query: String) {
+        field.searchJob?.cancel()
+        val language = searchLanguage
         field.searchJob = viewModelScope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             field.isSearching = true
             try {
-                val places = repository.searchPlaces(query)
+                val places = repository.searchPlaces(query, language)
                 field.suggestions = places
                 field.noResults = places.isEmpty()
             } catch (e: CancellationException) {
@@ -121,7 +137,7 @@ class RouteViewModel(
         pendingStart = start.point
         pendingEnd = end?.point
         pendingDistanceMeters = meters
-        pendingLanguage = if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE
+        pendingLanguage = normalizeLanguage(language)
         return true
     }
 
@@ -161,6 +177,9 @@ class RouteViewModel(
             }
         }
     }
+
+    private fun normalizeLanguage(language: String) =
+        if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE
 
     companion object {
         private const val MIN_DISTANCE_METERS = 100

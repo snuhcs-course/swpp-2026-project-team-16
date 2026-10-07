@@ -21,6 +21,10 @@ import com.example.runtime.ui.common.asString
 fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
     val language = LocalConfiguration.current.locales[0].language
 
+    LaunchedEffect(language) {
+        routeViewModel.onLanguageChange(language)
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally

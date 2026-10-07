@@ -19,7 +19,8 @@ class RouteRepository(private val api: ApiService = ApiClient.api) {
     ): GeneratedRouteData =
         api.generateRoute(GenerateRouteRequest(startingPoint, distanceMeters, language, endPoint)).requireData()
 
-    suspend fun searchPlaces(query: String): List<Place> = api.searchPlaces(query).data.orEmpty()
+    suspend fun searchPlaces(query: String, language: String): List<Place> =
+        api.searchPlaces(query, language).data.orEmpty()
 
     suspend fun saveTemporaryRoute(temporaryRouteId: Int) {
         api.saveRoute(SaveRouteRequest(temporaryRouteId = temporaryRouteId))
