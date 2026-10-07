@@ -278,7 +278,16 @@ so send the token if the route may be saved.
 `starting_point` is required.
 
 `end_point` is optional. If it is omitted, the route ends at `starting_point` (a loop).
-It is validated the same way as `starting_point`.
+It is validated the same way as `starting_point`, and must not be the same place as `starting_point`.
+
+The route is built on real walking streets from OpenStreetMap, so `distance` in the response is the
+actual route length and can differ slightly from the requested `distance`.
+
+Errors from route generation:
+
+* `400 Bad Request` with a `message` when no route can be made (for example, start and end are the same point,
+  or no route within 50% of the requested distance exists)
+* `503 Service Unavailable` when the map data cannot be downloaded
 
 `distance` is in meters and must be an integer greater than 100.
 

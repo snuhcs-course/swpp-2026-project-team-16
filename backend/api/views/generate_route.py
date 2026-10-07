@@ -1,3 +1,4 @@
+import requests
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -61,10 +62,9 @@ def generate_route_api(request):
         return error_response(error)
 
     end_point_data = request.data.get("end_point")
+    end_point = None
 
-    if end_point_data is None:
-        end_point = starting_point
-    else:
+    if end_point_data is not None:
         end_point, error = parse_point(end_point_data, "end_point")
 
         if error:
@@ -105,12 +105,23 @@ def generate_route_api(request):
 
     # Call route algorithm
 
-    route = create_route(
-        starting_point=starting_point,
-        end_point=end_point,
-        distance=distance,
-        language=language,
-    )
+    try:
+        route = create_route(
+            starting_point=starting_point,
+            end_point=end_point,
+            distance=distance,
+            language=language,
+        )
+    except ValueError as e:
+        return error_response(str(e))
+    except requests.RequestException:
+        return Response(
+            {
+                "status": "error",
+                "message": "Could not load map data. Please try again later.",
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     temporary_route = TemporaryRoute.objects.create(
         distance=route.distance,
