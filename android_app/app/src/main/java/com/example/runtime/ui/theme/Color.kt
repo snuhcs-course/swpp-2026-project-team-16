@@ -2,9 +2,9 @@ package com.example.runtime.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Green = Color(0xFF2E7D32)
-val DarkGreen = Color(0xFF1B5E20)
-val LightGreen = Color(0xFFE8F5E9)
+val Green = Color(0xFF006242)
+val DarkGreen = Color(0xFF00452E)
+val LightGreen = Color(0xFFE0F0EA)
 
 val White = Color(0xFFFFFFFF)
 val OffWhite = Color(0xFFFAFAFA)
