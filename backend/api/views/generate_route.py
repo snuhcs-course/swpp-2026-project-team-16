@@ -14,6 +14,7 @@ from api.route_algorithm.classes import GeoJSONPoint
 
 
 ROUTE_TIMEOUT_SECONDS = 35
+MAX_PLACE_NAME_LENGTH = 100
 MAP_UNAVAILABLE_MESSAGE = "Could not load map data. Please try again later."
 
 route_executor = ThreadPoolExecutor(max_workers=4)
@@ -37,6 +38,21 @@ def error_response(message):
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
+
+
+def parse_place_name(value, name):
+    if value is None:
+        return "", None
+
+    if not isinstance(value, str):
+        return None, f"{name} must be a string"
+
+    value = value.strip()
+
+    if len(value) > MAX_PLACE_NAME_LENGTH:
+        return None, f"{name} must be {MAX_PLACE_NAME_LENGTH} characters or fewer"
+
+    return value, None
 
 
 def parse_point(value, name):
@@ -111,6 +127,16 @@ def generate_route_api(request):
         )
 
 
+    start_name, error = parse_place_name(request.data.get("starting_point_name"), "starting_point_name")
+
+    if error:
+        return error_response(error)
+
+    end_name, error = parse_place_name(request.data.get("end_point_name"), "end_point_name")
+
+    if error:
+        return error_response(error)
+
     language = request.data.get("language", DEFAULT_LANGUAGE)
 
     if language not in SUPPORTED_LANGUAGES:
@@ -147,6 +173,8 @@ def generate_route_api(request):
         briefing=route.briefing,
         route=route.to_dict()['route'],
         user=user,
+        start_name=start_name,
+        end_name=end_name,
     )
 
 

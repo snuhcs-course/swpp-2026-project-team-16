@@ -270,12 +270,17 @@ so send the token if the route may be saved.
             37.4766
         ]
     },
+    "starting_point_name": "코엑스",
+    "end_point_name": "강남역[수도권2호선]",
     "distance": 5000,
     "language": "ko"
 }
 ```
 
 `starting_point` is required.
+
+`starting_point_name` and `end_point_name` are optional display names (up to 100 characters each).
+They are stored with the route and returned by the saved route endpoints.
 
 `end_point` is optional. If it is omitted, the route ends at `starting_point` (a loop).
 It is validated the same way as `starting_point`, and must not be the same place as `starting_point`.
@@ -427,6 +432,8 @@ Bare JSON array (no `status`/`data` wrapper).
         "distance": 5000,
         "briefing": "Running route around Seoul National University.",
         "route": [],
+        "start_name": "코엑스",
+        "end_name": "강남역[수도권2호선]",
         "created_by": "anton",
         "saved_at": "2026-10-02T12:00:00Z"
     }
@@ -546,6 +553,8 @@ Authorization: Token <user_token>
         "distance": 5000,
         "briefing": "Running route around Seoul National University.",
         "route": [],
+        "start_name": "코엑스",
+        "end_name": "강남역[수도권2호선]",
         "created_by": "anton",
         "saved_at": "2026-10-02T12:00:00Z"
     }
