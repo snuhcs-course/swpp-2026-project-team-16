@@ -1,0 +1,179 @@
+{
+  "searchPoiInfo": {
+    "totalCount": "210",
+    "count": "3",
+    "page": "1",
+    "pois": {
+      "poi": [
+        {
+          "id": "624362",
+          "pkey": "62436201",
+          "navSeq": "1",
+          "collectionType": "poi",
+          "name": "삼각지(전쟁기념관)역[수도권4호선]",
+          "telNo": "02-6110-4281",
+          "frontLat": "37.53443005",
+          "frontLon": "126.97291133",
+          "noorLat": "37.53443005",
+          "noorLon": "126.97291133",
+          "pnsLat": "37.53443005",
+          "pnsLon": "126.97291133",
+          "upperAddrName": "서울",
+          "middleAddrName": "용산구",
+          "lowerAddrName": "한강로1가",
+          "detailAddrName": "",
+          "mlClass": "1",
+          "firstNo": "293",
+          "secondNo": "0",
+          "roadName": "한강대로",
+          "firstBuildNo": "180",
+          "secondBuildNo": "0",
+          "radius": "0.0",
+          "bizName": "",
+          "upperBizName": "교통편의",
+          "middleBizName": "교통시설",
+          "lowerBizName": "지하철역",
+          "detailBizName": "4호선",
+          "rpFlag": "4",
+          "parkFlag": "0",
+          "detailInfoFlag": "1",
+          "desc": "용산, 이태원, 국방부 등과 인접하여 내,외국인을 쉽게 접할 수 있는 곳이다. 주변으로는 80여개의 화랑과 200여개의 화실로 들어선 삼각지 화랑가가 형성되어 있으며 또한 전쟁기념관은 반공이념 교육장으로써의 역할을 하고 있다. 또한 이태원 상가를 찾는 외국인 방문객들로 이국적인 인상을 주는 곳이 삼각지역이기도 하다.",
+          "dataKind": "1",
+          "zipCode": "04375",
+          "adminDongCode": "1117062500",
+          "legalDongCode": "1117012400",
+          "newAddressList": {
+            "newAddress": [
+              {
+                "centerLat": "37.53443005",
+                "centerLon": "126.97291133",
+                "frontLat": "37.53443005",
+                "frontLon": "126.97291133",
+                "roadName": "한강대로",
+                "bldNo1": "180",
+                "bldNo2": "0",
+                "roadId": "00403",
+                "fullAddressRoad": "서울 용산구 한강대로 지하 180"
+              }
+            ]
+          },
+          "evChargers": {
+            "evCharger": []
+          }
+        },
+        {
+          "id": "280429",
+          "pkey": "28042901",
+          "navSeq": "1",
+          "collectionType": "poi",
+          "name": "삼각지(전쟁기념관)역[수도권6호선]",
+          "telNo": "02-6311-6281",
+          "frontLat": "37.53548551",
+          "frontLon": "126.97471669",
+          "noorLat": "37.53551328",
+          "noorLon": "126.97418896",
+          "pnsLat": "37.53551328",
+          "pnsLon": "126.97418896",
+          "upperAddrName": "서울",
+          "middleAddrName": "용산구",
+          "lowerAddrName": "한강로1가",
+          "detailAddrName": "",
+          "mlClass": "1",
+          "firstNo": "228",
+          "secondNo": "1",
+          "roadName": "한강대로",
+          "firstBuildNo": "185",
+          "secondBuildNo": "0",
+          "radius": "0.0",
+          "bizName": "",
+          "upperBizName": "교통편의",
+          "middleBizName": "교통시설",
+          "lowerBizName": "지하철역",
+          "detailBizName": "6호선",
+          "rpFlag": "5",
+          "parkFlag": "0",
+          "detailInfoFlag": "0",
+          "desc": "",
+          "dataKind": "1",
+          "zipCode": "04375",
+          "adminDongCode": "1117062500",
+          "legalDongCode": "1117012400",
+          "newAddressList": {
+            "newAddress": [
+              {
+                "centerLat": "37.53551328",
+                "centerLon": "126.97418896",
+                "frontLat": "37.53548551",
+                "frontLon": "126.97471669",
+                "roadName": "한강대로",
+                "bldNo1": "185",
+                "bldNo2": "0",
+                "roadId": "00403",
+                "fullAddressRoad": "서울 용산구 한강대로 지하 185"
+              }
+            ]
+          },
+          "evChargers": {
+            "evCharger": []
+          }
+        },
+        {
+          "id": "1134469",
+          "pkey": "113446901",
+          "navSeq": "1",
+          "collectionType": "poi",
+          "name": "삼각지(전쟁기념관)역 1번출구",
+          "telNo": "",
+          "frontLat": "37.53456893",
+          "frontLon": "126.97343905",
+          "noorLat": "37.53456893",
+          "noorLon": "126.97343905",
+          "pnsLat": "37.53456893",
+          "pnsLon": "126.97343905",
+          "upperAddrName": "서울",
+          "middleAddrName": "용산구",
+          "lowerAddrName": "한강로1가",
+          "detailAddrName": "",
+          "mlClass": "1",
+          "firstNo": "228",
+          "secondNo": "1",
+          "roadName": "한강대로",
+          "firstBuildNo": "180",
+          "secondBuildNo": "0",
+          "radius": "0.0",
+          "bizName": "",
+          "upperBizName": "교통편의",
+          "middleBizName": "교통시설",
+          "lowerBizName": "지하철출구번호",
+          "detailBizName": "4호선",
+          "rpFlag": "8",
+          "parkFlag": "0",
+          "detailInfoFlag": "0",
+          "desc": "",
+          "dataKind": "2",
+          "zipCode": "04375",
+          "adminDongCode": "1117062500",
+          "legalDongCode": "1117012400",
+          "newAddressList": {
+            "newAddress": [
+              {
+                "centerLat": "37.53456893",
+                "centerLon": "126.97343905",
+                "frontLat": "37.53456893",
+                "frontLon": "126.97343905",
+                "roadName": "한강대로",
+                "bldNo1": "180",
+                "bldNo2": "0",
+                "roadId": "00403",
+                "fullAddressRoad": "서울 용산구 한강대로 지하 180"
+              }
+            ]
+          },
+          "evChargers": {
+            "evCharger": []
+          }
+        }
+      ]
+    }
+  }
+}
