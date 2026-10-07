@@ -6,7 +6,7 @@ import urllib.request
 
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
-DEFAULT_MODEL = "gemini-3.8-flash"
+DEFAULT_MODEL = "gemini-3.1-flash-lite"
 TIMEOUT_SECONDS = 15
 RETRIES = 1
 RETRY_DELAY_SECONDS = 1
