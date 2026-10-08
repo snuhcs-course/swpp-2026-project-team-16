@@ -20,6 +20,7 @@ import com.example.runtime.ui.common.formatDistance
 fun RouteResultScreen(routeViewModel: RouteViewModel) {
     val generated = routeViewModel.generated ?: return
     val saveState = routeViewModel.saveState
+    var showFullMap by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -33,7 +34,11 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            RouteMap(lines = generated.route.route, modifier = Modifier.fillMaxSize())
+            RouteMap(
+                lines = generated.route.route,
+                modifier = Modifier.fillMaxSize(),
+                onClick = { showFullMap = true }
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
@@ -87,5 +92,9 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(saveState.message.asString(), color = MaterialTheme.colorScheme.error)
         }
+    }
+
+    if (showFullMap) {
+        FullScreenRouteMap(lines = generated.route.route, onDismiss = { showFullMap = false })
     }
 }

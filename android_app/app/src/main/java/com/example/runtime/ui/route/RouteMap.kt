@@ -1,15 +1,27 @@
 package com.example.runtime.ui.route
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeoJsonLineString
 import com.naver.maps.geometry.LatLng
@@ -58,7 +70,7 @@ private fun StartEndMarkers(start: LatLng?, end: LatLng?) {
 
 @OptIn(ExperimentalNaverMapApi::class)
 @Composable
-fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier) {
+fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val points = remember(lines) {
         lines.flatMap { it.coordinates }
             .filter { it.size >= 2 }
@@ -77,6 +89,7 @@ fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier) {
         modifier = modifier,
         cameraPositionState = cameraPositionState,
         locale = mapLocale(),
+        onMapClick = { _, _ -> onClick?.invoke() },
         onMapLoaded = { cameraPositionState.fit(points, padding) }
     ) {
         if (points.size >= 2) {
@@ -89,5 +102,24 @@ fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier) {
             )
         }
         StartEndMarkers(start, end)
+    }
+}
+
+@Composable
+fun FullScreenRouteMap(lines: List<GeoJsonLineString>, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            RouteMap(lines = lines, modifier = Modifier.fillMaxSize())
+            IconButton(
+                onClick = onDismiss,
+                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .clip(CircleShape)
+            ) {
+                Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.action_close))
+            }
+        }
     }
 }
