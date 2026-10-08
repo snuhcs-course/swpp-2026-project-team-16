@@ -21,6 +21,7 @@ android {
 
         val baseUrl = providers.gradleProperty("RUNTIME_BASE_URL").getOrElse("http://10.0.2.2:8000/")
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+        manifestPlaceholders["naverMapClientId"] = providers.gradleProperty("NAVER_MAP_CLIENT_ID").getOrElse("")
     }
 
     buildTypes {
@@ -56,6 +57,8 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.naver.map.sdk)
+    implementation(libs.naver.map.compose)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

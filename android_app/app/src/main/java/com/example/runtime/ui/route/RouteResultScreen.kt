@@ -33,8 +33,7 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            // TODO : map 연동해서 생성된 route 렌더링
-            RouteCanvas(lines = generated.route.route, modifier = Modifier.fillMaxSize())
+            RouteMap(lines = generated.route.route, modifier = Modifier.fillMaxSize())
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(

@@ -29,6 +29,7 @@ and gives a short pre-run briefing written by an LLM.
 - API keys
   - `TMAP_APP_KEY`: SK open API (TMAP) key for place search
   - `GOOGLE_API_KEY`: Google AI Studio key for Gemini briefings
+  - `NAVER_MAP_CLIENT_ID`: NAVER Cloud Platform Maps client ID (Dynamic Map, package `com.example.runtime`)
 
 ### Backend
 
@@ -49,8 +50,9 @@ Run the tests with `python manage.py test api`.
 ### Android App
 
 1. Start the backend first.
-2. Open `android_app/` in Android Studio and run the `app` configuration.
-3. The app connects to `http://10.0.2.2:8000/`, which is the host machine from the Android emulator.
+2. Add `NAVER_MAP_CLIENT_ID=<your client id>` to `~/.gradle/gradle.properties` (not to the project).
+3. Open `android_app/` in Android Studio and run the `app` configuration.
+4. The app connects to `http://10.0.2.2:8000/`, which is the host machine from the Android emulator.
    On a real device, build with `-PRUNTIME_BASE_URL=http://<your-computer-ip>:8000/`.
-4. On Android 17 or later, allow the "Nearby devices" permission when asked.
+5. On Android 17 or later, allow the "Nearby devices" permission when asked.
    Debug builds need it to reach the local server.

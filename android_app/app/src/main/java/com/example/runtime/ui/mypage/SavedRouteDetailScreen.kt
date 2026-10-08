@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
-import com.example.runtime.ui.route.RouteCanvas
+import com.example.runtime.ui.route.RouteMap
 
 @Composable
 fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBack: () -> Unit) {
@@ -43,7 +43,7 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
                 .height(220.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            RouteCanvas(lines = route.route, modifier = Modifier.fillMaxSize())
+            RouteMap(lines = route.route, modifier = Modifier.fillMaxSize())
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
