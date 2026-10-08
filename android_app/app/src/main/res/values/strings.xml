@@ -43,6 +43,10 @@
 
     <string name="current_location">Current location</string>
     <string name="use_current_location">Use current location</string>
+    <string name="map_point">Point on map</string>
+    <string name="map_pick_label">Tap the map to set</string>
+    <string name="map_pick_start">Start</string>
+    <string name="map_pick_end">End</string>
     <string name="marker_start">Start</string>
     <string name="marker_end">End</string>
     <string name="action_close">Close</string>

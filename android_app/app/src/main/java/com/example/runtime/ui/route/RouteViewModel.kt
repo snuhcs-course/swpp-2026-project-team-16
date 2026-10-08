@@ -35,6 +35,8 @@ class PlaceField {
     internal var searchJob: Job? = null
 }
 
+enum class PickTarget { START, END }
+
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
 ) : ViewModel() {
@@ -42,6 +44,7 @@ class RouteViewModel(
     val startField = PlaceField()
     val endField = PlaceField()
     var distanceInput by mutableStateOf("")
+    var pickTarget by mutableStateOf(PickTarget.START)
 
     var error by mutableStateOf<UiText?>(null)
         private set

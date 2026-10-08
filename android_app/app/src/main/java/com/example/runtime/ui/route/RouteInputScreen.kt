@@ -33,6 +33,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
     val scope = rememberCoroutineScope()
     var isLocating by remember { mutableStateOf(false) }
     val currentLocationName = stringResource(R.string.current_location)
+    val mapPointName = stringResource(R.string.map_point)
 
     LaunchedEffect(language) {
         routeViewModel.onLanguageChange(language)
@@ -91,6 +92,33 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
             label = stringResource(R.string.label_end_point),
             onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.endField, it) },
             onSelect = { routeViewModel.selectPlace(routeViewModel.endField, it) }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.map_pick_label), modifier = Modifier.weight(1f))
+            FilterChip(
+                selected = routeViewModel.pickTarget == PickTarget.START,
+                onClick = { routeViewModel.pickTarget = PickTarget.START },
+                label = { Text(stringResource(R.string.map_pick_start)) }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            FilterChip(
+                selected = routeViewModel.pickTarget == PickTarget.END,
+                onClick = { routeViewModel.pickTarget = PickTarget.END },
+                label = { Text(stringResource(R.string.map_pick_end)) }
+            )
+        }
+        PlacePickerMap(
+            start = routeViewModel.startField.selected,
+            end = routeViewModel.endField.selected,
+            onPick = { point ->
+                val field = if (routeViewModel.pickTarget == PickTarget.START) routeViewModel.startField else routeViewModel.endField
+                routeViewModel.selectPoint(field, mapPointName, point.longitude, point.latitude)
+            },
+            modifier = Modifier.fillMaxWidth().height(240.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Row(

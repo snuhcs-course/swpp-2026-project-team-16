@@ -24,8 +24,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeoJsonLineString
+import com.example.runtime.data.remote.GeoJsonPoint
+import com.example.runtime.data.remote.Place
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.LatLngBounds
+import com.naver.maps.map.CameraPosition
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.compose.CameraPositionState
 import com.naver.maps.map.compose.ExperimentalNaverMapApi
@@ -38,6 +41,8 @@ import com.naver.maps.map.util.MarkerIcons
 import java.util.Locale
 
 private val MAP_LANGUAGES = setOf("ko", "en")
+private val SEOUL = LatLng(37.5666, 126.9784)
+private const val DEFAULT_ZOOM = 13.0
 private const val SAME_POINT_METERS = 30.0
 
 @Composable
@@ -123,3 +128,29 @@ fun FullScreenRouteMap(lines: List<GeoJsonLineString>, onDismiss: () -> Unit) {
         }
     }
 }
+
+@OptIn(ExperimentalNaverMapApi::class)
+@Composable
+fun PlacePickerMap(start: Place?, end: Place?, onPick: (LatLng) -> Unit, modifier: Modifier = Modifier) {
+    val startPoint = start?.point?.toLatLng()
+    val endPoint = end?.point?.toLatLng()
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition(startPoint ?: endPoint ?: SEOUL, DEFAULT_ZOOM)
+    }
+    val padding = boundsPadding()
+
+    LaunchedEffect(startPoint, endPoint) {
+        cameraPositionState.fit(listOfNotNull(startPoint, endPoint), padding)
+    }
+
+    NaverMap(
+        modifier = modifier,
+        cameraPositionState = cameraPositionState,
+        locale = mapLocale(),
+        onMapClick = { _, latLng -> onPick(latLng) }
+    ) {
+        StartEndMarkers(startPoint, endPoint)
+    }
+}
+
+private fun GeoJsonPoint.toLatLng() = LatLng(coordinates[1], coordinates[0])

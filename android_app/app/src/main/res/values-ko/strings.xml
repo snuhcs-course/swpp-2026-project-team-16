@@ -39,6 +39,10 @@
 
     <string name="current_location">현재 위치</string>
     <string name="use_current_location">현재 위치 사용</string>
+    <string name="map_point">지도에서 선택한 위치</string>
+    <string name="map_pick_label">지도를 눌러 지정</string>
+    <string name="map_pick_start">출발지</string>
+    <string name="map_pick_end">도착지</string>
     <string name="marker_start">출발</string>
     <string name="marker_end">도착</string>
     <string name="action_close">닫기</string>
