@@ -41,6 +41,8 @@
     <string name="language_english" translatable="false">English</string>
     <string name="language_korean" translatable="false">한국어</string>
 
+    <string name="marker_start">Start</string>
+    <string name="marker_end">End</string>
     <string name="no_places_found">No places found.</string>
     <string name="error_start_point_required">Search for a start point and select it from the list.</string>
     <string name="error_end_point_not_selected">Select an end point from the list, or leave it empty.</string>
