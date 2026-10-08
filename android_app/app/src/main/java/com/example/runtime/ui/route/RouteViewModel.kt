@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
+import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.ui.common.UiText
@@ -15,6 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.roundToInt
 
 class PlaceField {
@@ -112,6 +114,21 @@ class RouteViewModel(
         field.isSearching = false
         field.noResults = false
         field.searchError = null
+    }
+
+    fun selectPoint(field: PlaceField, name: String, longitude: Double, latitude: Double) {
+        selectPlace(
+            field,
+            Place(
+                name = name,
+                address = "%.5f, %.5f".format(Locale.US, latitude, longitude),
+                point = GeoJsonPoint.of(longitude, latitude),
+            )
+        )
+    }
+
+    fun showError(message: UiText) {
+        error = message
     }
 
     fun prepare(language: String): Boolean {
