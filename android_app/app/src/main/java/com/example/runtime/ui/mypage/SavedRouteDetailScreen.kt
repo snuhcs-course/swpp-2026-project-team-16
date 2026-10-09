@@ -15,11 +15,13 @@ import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
-import com.example.runtime.ui.route.RouteCanvas
+import com.example.runtime.ui.route.FullScreenRouteMap
+import com.example.runtime.ui.route.RouteMap
 
 @Composable
 fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBack: () -> Unit) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showFullMap by remember { mutableStateOf(false) }
 
     LaunchedEffect(routeId) {
         myPageViewModel.loadDetail(routeId)
@@ -43,7 +45,11 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
                 .height(220.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            RouteCanvas(lines = route.route, modifier = Modifier.fillMaxSize())
+            RouteMap(
+                lines = route.route,
+                modifier = Modifier.fillMaxSize(),
+                onClick = { showFullMap = true }
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
@@ -81,6 +87,11 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
             Spacer(modifier = Modifier.height(12.dp))
             Text(it.asString(), color = MaterialTheme.colorScheme.error)
         }
+    }
+
+    val detailRoute = myPageViewModel.detail
+    if (showFullMap && detailRoute != null) {
+        FullScreenRouteMap(lines = detailRoute.route, onDismiss = { showFullMap = false })
     }
 
     if (showDeleteDialog) {
