@@ -54,3 +54,14 @@ Run the tests with `python manage.py test api`.
    On a real device, build with `-PRUNTIME_BASE_URL=http://<your-computer-ip>:8000/`.
 4. On Android 17 or later, allow the "Nearby devices" permission when asked.
    Debug builds need it to reach the local server.
+
+
+## Demo Video
+
+[Click here to watch the Iteration 1 Demo Video](./iteration1_demo.mp4)
+
+The demo video showcases:
+1. Setting up route parameters (Start point, End point, and Target distance)
+2. Generating a route and processing state
+3. Viewing saved routes list in My Page
+4. Opening route details to render generated routes and LLM pre-run briefings
