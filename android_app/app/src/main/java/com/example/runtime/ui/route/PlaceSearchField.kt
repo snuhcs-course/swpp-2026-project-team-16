@@ -24,6 +24,7 @@ fun PlaceSearchField(
     onInputChange: (String) -> Unit,
     onSelect: (Place) -> Unit,
     modifier: Modifier = Modifier,
+    trailingAction: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -32,10 +33,11 @@ fun PlaceSearchField(
             label = { Text(label) },
             singleLine = true,
             supportingText = field.selected?.let { place -> { Text(place.address) } },
-            trailingIcon = if (field.isSearching) {
-                { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
-            } else {
-                null
+            trailingIcon = when {
+                field.isSearching -> {
+                    { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                }
+                else -> trailingAction
             },
             modifier = Modifier.fillMaxWidth()
         )
