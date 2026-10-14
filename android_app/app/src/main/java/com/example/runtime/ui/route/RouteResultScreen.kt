@@ -20,6 +20,12 @@ import com.example.runtime.ui.common.formatDistance
 fun RouteResultScreen(routeViewModel: RouteViewModel) {
     val generated = routeViewModel.generated ?: return
     val saveState = routeViewModel.saveState
+    val elevationSummary = routeViewModel.steepSectionSummary
+    val elevationText = if (elevationSummary.isBlank()) {
+        stringResource(R.string.elevation_unavailable)
+    } else {
+        elevationSummary
+    }
     var showFullMap by remember { mutableStateOf(false) }
 
     Column(
@@ -54,6 +60,19 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // elevation information
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    stringResource(R.string.elevation_information),
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(elevationText)
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
 
