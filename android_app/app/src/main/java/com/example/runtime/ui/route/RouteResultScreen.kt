@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
+import androidx.compose.material3.CircularProgressIndicator
 
 // 6. Route Result Screen (화면 6)
 @Composable
@@ -21,11 +22,8 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
     val generated = routeViewModel.generated ?: return
     val saveState = routeViewModel.saveState
     val elevationSummary = routeViewModel.steepSectionSummary
-    val elevationText = if (elevationSummary.isBlank()) {
-        stringResource(R.string.elevation_unavailable)
-    } else {
-        elevationSummary
-    }
+    val elevationLoadState = routeViewModel.elevationLoadState
+
     var showFullMap by remember { mutableStateOf(false) }
 
     Column(
@@ -71,7 +69,21 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(elevationText)
+                when (elevationLoadState) {
+                    ElevationLoadState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
+
+                    ElevationLoadState.Success -> {
+                        Text(elevationSummary)
+                    }
+
+                    ElevationLoadState.Error -> {
+                        Text(stringResource(R.string.elevation_unavailable))
+                    }
+                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))

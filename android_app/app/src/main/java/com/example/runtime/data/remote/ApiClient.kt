@@ -68,7 +68,7 @@ object OpenElevationClient {
             .baseUrl("https://api.open-elevation.com/")
             .client(
                 OkHttpClient.Builder()
-                    .readTimeout(45L, TimeUnit.SECONDS)
+                    .readTimeout(15L, TimeUnit.SECONDS)
                     .apply {
                         if (BuildConfig.DEBUG) {
                             addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))

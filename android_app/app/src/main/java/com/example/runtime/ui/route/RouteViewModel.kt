@@ -41,6 +41,11 @@ class PlaceField {
 }
 
 enum class PickTarget { START, END }
+enum class ElevationLoadState {
+    Loading,
+    Success,
+    Error,
+}
 
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
@@ -66,6 +71,8 @@ class RouteViewModel(
     var slopes by mutableStateOf<List<Double>>(emptyList())
         private set
     var steepSectionSummary by mutableStateOf("")
+        private set
+    var elevationLoadState by mutableStateOf(ElevationLoadState.Error)
         private set
 
     private var pendingStart: Place? = null
@@ -197,11 +204,6 @@ class RouteViewModel(
 
         viewModelScope.launch {
             try {
-                // 새 경로 시작할 때 이전 경로 고도 정보 비우기
-                elevations = emptyList()
-                slopes = emptyList()
-                steepSectionSummary = noElevationMessage(pendingLanguage)
-
                 val generatedData = repository.generate(
                     startingPoint = start,
                     endPoint = pendingEnd,
@@ -209,79 +211,106 @@ class RouteViewModel(
                     language = pendingLanguage,
                 )
                 generated = generatedData
-
-                // GeoJSON 좌표는 [longitude, latitude] 순서
-                // 여기서는 (latitude, longitude) 순서로 보관 (API호출관련)
-                val coordinates = mutableListOf<Pair<Double, Double>>()
-
-                generatedData.route.route.forEach { lineString ->
-                    lineString.coordinates.forEach { coordinate ->
-                        if (coordinate.size >= 2) {
-                            val longitude = coordinate[0]
-                            val latitude = coordinate[1]
-
-                            if (
-                                latitude.isFinite() &&
-                                longitude.isFinite() &&
-                                latitude in -90.0..90.0 &&
-                                longitude in -180.0..180.0
-                            ) {
-                                coordinates.add(latitude to longitude)
-                            }
-                        }
-                    }
-                }
-
-                if (coordinates.size >= 2) {
-                    val sampledCoordinates =
-                        sampleCoordinatesAtIntervals(coordinates, SAMPLE_INTERVAL_METERS)
-
-                    val fetchedElevations =
-                        repository.getElevations(sampledCoordinates)
-                    elevations = fetchedElevations
-
-                    // 고도값과 좌표 수가 다르면 짝이 맞아야만
-                    val usablePointCount =
-                        minOf(fetchedElevations.size, sampledCoordinates.size)
-
-                    if (usablePointCount >= 2) {
-                        val usableElevations =
-                            fetchedElevations.take(usablePointCount)
-                        val usableCoordinates =
-                            sampledCoordinates.take(usablePointCount)
-
-                        // 각 고도 샘플 사이 실제 거리로 경사도 계산
-                        val segmentDistances = usableCoordinates
-                            .zipWithNext { first, second ->
-                                distanceBetweenMeters(first, second)
-                            }
-
-                        val calculatedSlopes = repository.calculateSlopes(
-                            elevations = usableElevations,
-                            distancesMeters = segmentDistances,
-                        )
-
-                        slopes = calculatedSlopes
-                        steepSectionSummary = summarizeSteepSections(
-                            slopes = calculatedSlopes,
-                            segmentDistances = segmentDistances,
-                            language = pendingLanguage,
-                        )
-                    }
-                }
-
                 saveState = SaveState.Idle
+
+                elevations = emptyList()
+                slopes = emptyList()
+                steepSectionSummary = ""
+                elevationLoadState = ElevationLoadState.Loading
+
                 onSuccess()
+
+                loadElevationData(generatedData, pendingLanguage)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e("RouteViewModel", "경로 처리 중 예외 발생", e)
+                Log.e("RouteViewModel", "Route generation failed", e)
                 error = e.toUiText()
                 onFailure()
             } finally {
                 isGenerating = false
             }
         }
+    }
+
+    private suspend fun loadElevationData(
+        generatedData: GeneratedRouteData,
+        language: String,
+    ) {
+        try {
+            val coordinates = mutableListOf<Pair<Double, Double>>()
+
+            generatedData.route.route.forEach { lineString ->
+                lineString.coordinates.forEach { coordinate ->
+                    if (coordinate.size >= 2) {
+                        val longitude = coordinate[0]
+                        val latitude = coordinate[1]
+
+                        if (
+                            latitude.isFinite() &&
+                            longitude.isFinite() &&
+                            latitude in -90.0..90.0 &&
+                            longitude in -180.0..180.0
+                        ) {
+                            coordinates.add(latitude to longitude)
+                        }
+                    }
+                }
+            }
+
+            if (coordinates.size < 2) {
+                markElevationUnavailable(language)
+                return
+            }
+
+            val sampledCoordinates =
+                sampleCoordinatesAtIntervals(coordinates, SAMPLE_INTERVAL_METERS)
+
+            val elevationResult = repository.getElevations(sampledCoordinates)
+
+            if (elevationResult.isFailure) {
+                markElevationUnavailable(language)
+                return
+            }
+
+            val fetchedElevations = elevationResult.getOrThrow()
+
+            if (fetchedElevations.size < 2) {
+                markElevationUnavailable(language)
+                return
+            }
+
+            elevations = fetchedElevations
+
+            val segmentDistances = sampledCoordinates.zipWithNext { first, second ->
+                distanceBetweenMeters(first, second)
+            }
+
+            val calculatedSlopes = repository.calculateSlopes(
+                elevations = fetchedElevations,
+                distancesMeters = segmentDistances,
+            )
+
+            slopes = calculatedSlopes
+            steepSectionSummary = summarizeSteepSections(
+                slopes = calculatedSlopes,
+                segmentDistances = segmentDistances,
+                language = language,
+            )
+            elevationLoadState = ElevationLoadState.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("RouteViewModel", "Elevation processing failed", e)
+            markElevationUnavailable(language)
+        }
+    }
+
+    private fun markElevationUnavailable(language: String) {
+        elevations = emptyList()
+        slopes = emptyList()
+        steepSectionSummary = noElevationMessage(language)
+        elevationLoadState = ElevationLoadState.Error
     }
 
     /**
@@ -395,7 +424,7 @@ class RouteViewModel(
         }
 
     /**
-     실제 경로 좌표를 따라 출발점, 100m 간격 지점, 도착점 반환
+     실제 경로 좌표를 따라 출발점, 250m 간격 지점, 도착점 반환
      마지막 구간은 실제 길이로 경사도 계산
      */
     private fun sampleCoordinatesAtIntervals(
