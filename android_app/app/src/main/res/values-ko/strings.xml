@@ -63,4 +63,7 @@
     <string name="error_temporary_route_not_found">임시 경로를 찾을 수 없습니다.</string>
     <string name="error_username_exists">이미 사용 중인 이름입니다.</string>
     <string name="error_username_password_required">이름과 비밀번호를 입력하세요.</string>
+
+    <string name="elevation_information">고도 정보</string>
+    <string name="elevation_unavailable">고도 정보를 불러오지 못했습니다.</string>
 </resources>
