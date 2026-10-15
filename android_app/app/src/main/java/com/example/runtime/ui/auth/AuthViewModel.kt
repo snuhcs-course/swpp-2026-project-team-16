@@ -51,6 +51,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         authenticate(onSuccess) { repository.register(username.trim(), email.trim(), password) }
     }
 
+    fun logout(onDone: () -> Unit) {
+        viewModelScope.launch {
+            repository.logout()
+            uiState = AuthUiState()
+            onDone()
+        }
+    }
+
     fun clearError() {
         uiState = uiState.copy(error = null)
     }

@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,8 +23,11 @@ import com.example.runtime.ui.common.routeTitle
 
 // 7. My Page Screen (화면 7)
 @Composable
-fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) {
+fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit, onLogout: () -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
+    var showAccountMenu by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    val menuLabel = stringResource(R.string.menu)
 
     LaunchedEffect(Unit) {
         myPageViewModel.refresh()
@@ -34,7 +39,32 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("≡", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Box {
+                IconButton(onClick = { showAccountMenu = true }) {
+                    Text(
+                        "≡",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.semantics { contentDescription = menuLabel }
+                    )
+                }
+                DropdownMenu(expanded = showAccountMenu, onDismissRequest = { showAccountMenu = false }) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(myPageViewModel.username ?: "", fontWeight = FontWeight.Bold)
+                        myPageViewModel.email?.let {
+                            Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        }
+                    }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_log_out), color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showAccountMenu = false
+                            showLogoutDialog = true
+                        }
+                    )
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(myPageViewModel.username ?: "", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box {
@@ -84,5 +114,26 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit) 
                 }
             }
         }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text(stringResource(R.string.log_out_dialog_title)) },
+            text = { Text(stringResource(R.string.log_out_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    onLogout()
+                }) {
+                    Text(stringResource(R.string.action_log_out))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 }

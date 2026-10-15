@@ -23,6 +23,9 @@ class MyPageViewModel(
     var username by mutableStateOf<String?>(null)
         private set
 
+    var email by mutableStateOf<String?>(null)
+        private set
+
     var routes by mutableStateOf<List<SavedRoute>>(emptyList())
         private set
 
@@ -53,6 +56,7 @@ class MyPageViewModel(
                     profile.await() to saved.await()
                 }
                 username = profile.username
+                email = profile.email
                 routes = saved
             } catch (e: CancellationException) {
                 throw e

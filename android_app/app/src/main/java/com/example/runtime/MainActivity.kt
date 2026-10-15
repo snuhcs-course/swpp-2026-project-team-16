@@ -61,9 +61,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RunTimeApp() {
     var currentScreen by rememberSaveable { mutableStateOf("splash") }
+    var session by rememberSaveable { mutableIntStateOf(0) }
     val authViewModel: AuthViewModel = viewModel()
-    val routeViewModel: RouteViewModel = viewModel()
-    val myPageViewModel: MyPageViewModel = viewModel()
+    val routeViewModel: RouteViewModel = viewModel(key = "route-$session")
+    val myPageViewModel: MyPageViewModel = viewModel(key = "my-page-$session")
     var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     Scaffold(
@@ -118,6 +119,13 @@ fun RunTimeApp() {
                     onRouteClick = { routeId ->
                         selectedRouteId = routeId
                         currentScreen = "saved_detail"
+                    },
+                    onLogout = {
+                        authViewModel.logout {
+                            session += 1
+                            selectedRouteId = null
+                            currentScreen = "login"
+                        }
                     }
                 )
                 "saved_detail" -> selectedRouteId?.let { routeId ->

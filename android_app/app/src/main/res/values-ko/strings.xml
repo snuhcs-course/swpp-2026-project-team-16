@@ -17,6 +17,10 @@
     <string name="google_sign_in_coming_soon">구글 로그인은 준비 중입니다.</string>
     <string name="title_log_in">계정에 로그인하세요</string>
     <string name="title_sign_up">새 계정을 만드세요</string>
+    <string name="menu">메뉴</string>
+    <string name="action_log_out">로그아웃</string>
+    <string name="log_out_dialog_title">로그아웃할까요?</string>
+    <string name="log_out_dialog_message">RunTime을 쓰려면 다시 로그인해야 합니다.</string>
     <string name="error_email_invalid">올바른 이메일 주소를 입력하세요.</string>
     <string name="error_password_short">비밀번호는 8자 이상이어야 합니다.</string>
     <string name="error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
