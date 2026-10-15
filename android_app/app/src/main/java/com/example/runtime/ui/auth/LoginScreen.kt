@@ -13,7 +13,7 @@ import com.example.runtime.R
 @Composable
 fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onSignUpClick: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     val uiState = authViewModel.uiState
 
     AuthLayout(title = stringResource(R.string.title_log_in), error = uiState.error) {

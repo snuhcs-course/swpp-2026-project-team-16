@@ -11,6 +11,10 @@ import com.example.runtime.data.repository.UserRepository
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -44,11 +48,29 @@ class MyPageViewModel(
     var isDeleting by mutableStateOf(false)
         private set
 
+    private var sessionScope = newSessionScope()
+
+    private fun newSessionScope() =
+        CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
+
+    fun reset() {
+        sessionScope.cancel()
+        sessionScope = newSessionScope()
+        username = null
+        email = null
+        routes = emptyList()
+        isLoading = false
+        error = null
+        detail = null
+        detailError = null
+        isDeleting = false
+    }
+
     fun refresh() {
         if (isLoading) return
         isLoading = true
         error = null
-        viewModelScope.launch {
+        sessionScope.launch {
             try {
                 val (profile, saved) = coroutineScope {
                     val profile = async { userRepository.profile() }
@@ -71,7 +93,7 @@ class MyPageViewModel(
     fun loadDetail(routeId: Int) {
         detail = routes.firstOrNull { it.id == routeId }
         detailError = null
-        viewModelScope.launch {
+        sessionScope.launch {
             try {
                 detail = routeRepository.savedRoute(routeId)
             } catch (e: CancellationException) {
@@ -86,7 +108,7 @@ class MyPageViewModel(
         if (isDeleting) return
         isDeleting = true
         detailError = null
-        viewModelScope.launch {
+        sessionScope.launch {
             try {
                 routeRepository.deleteSavedRoute(routeId)
                 routes = routes.filterNot { it.id == routeId }

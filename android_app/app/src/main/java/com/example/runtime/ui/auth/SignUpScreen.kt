@@ -15,8 +15,8 @@ import com.example.runtime.R
 fun SignUpScreen(authViewModel: AuthViewModel, onSignUpSuccess: () -> Unit, onLogInClick: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var passwordConfirm by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordConfirm by remember { mutableStateOf("") }
     val uiState = authViewModel.uiState
 
     fun goToLogIn() {
