@@ -24,6 +24,7 @@ def saved_routes_list(request):
         routes_data = [
             {
                 "id": user_route.route.id,
+                "name": user_route.name,
                 "distance": user_route.route.distance,
                 "briefing": user_route.route.briefing,
                 "start_name": user_route.route.start_name,
@@ -40,7 +41,32 @@ def saved_routes_list(request):
 
         route_id = request.data.get('route_id')
         temporary_route_id = request.data.get('temporary_route_id')
+        name = request.data.get("name")
 
+        if not isinstance(name, str) or not name.strip():
+            return Response(
+                {"status": "error", "message": "A route name is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name = name.strip()
+
+        if len(name) > 255:
+            return Response(
+                {"status": "error", "message": "The name must be 255 characters or fewer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        
+        if bool(route_id) == bool(temporary_route_id):
+            return Response(
+                {
+                    "status": "error",
+                    "message": "Provide either route_id or temporary_route_id.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
         if not route_id and not temporary_route_id:
             return Response({'status': 'error', 'message': 'route_id or temporary_route_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -53,9 +79,10 @@ def saved_routes_list(request):
             with transaction.atomic():
                 route = temporary_route.create_route(created_by=request.user)
                 temporary_route.delete()
-                UserSavedRoute.objects.get_or_create(
+                UserSavedRoute.objects.create(
                     user=request.user,
-                    route=route
+                    route=route,
+                    name=name,
                 )
 
             return Response({'status': 'success', 'message': 'Temporary route saved successfully.', 'route_id': route.id}, status=status.HTTP_201_CREATED)
@@ -66,12 +93,12 @@ def saved_routes_list(request):
             except Route.DoesNotExist:
                 return Response({'status': 'error', 'message': 'Route not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-            UserSavedRoute.objects.get_or_create(user=request.user, route=route)
+            UserSavedRoute.objects.get_or_create(user=request.user, route=route, defaults={"name": name})
             return Response({'status': 'success', 'message': 'Route saved successfully.'}, status=status.HTTP_201_CREATED)
 
 
 
-@api_view(['GET', 'DELETE'])
+@api_view(["GET", "PATCH", "DELETE"])
 def saved_routes_detail(request, route_id):
     if not request.user.is_authenticated:
         return Response({'status': 'error', 'message': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -86,6 +113,7 @@ def saved_routes_detail(request, route_id):
         route = user_saved_route.route
         route_data = {
                 "id": route.id,
+                'name': user_saved_route.name,
                 "distance": route.distance,
                 "briefing": route.briefing,
                 "start_name": route.start_name,
@@ -96,6 +124,39 @@ def saved_routes_detail(request, route_id):
                 }
         return Response({'status': 'success', 'data': route_data}, status=status.HTTP_200_OK)
 
+
+    elif request.method == "PATCH":
+        name = request.data.get("name")
+
+        if not isinstance(name, str) or not name.strip():
+            return Response(
+                {"status": "error", "message": "A route name is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name = name.strip()
+
+        if len(name) > 255:
+            return Response(
+                {"status": "error", "message": "The name must be 255 characters or fewer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_saved_route.name = name
+        user_saved_route.save(update_fields=["name"])
+
+        return Response(
+            {
+                "status": "success",
+                "message": "Saved route name updated.",
+                'data': {
+                    "route_id": user_saved_route.route_id,
+                    "name": user_saved_route.name
+                    }
+
+            },
+            status=status.HTTP_200_OK,
+        )
 
     elif request.method == 'DELETE':
         user_saved_route.delete()
