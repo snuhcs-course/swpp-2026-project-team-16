@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.ui.auth.AuthViewModel
 import com.example.runtime.ui.auth.LoginScreen
+import com.example.runtime.ui.auth.SignUpScreen
 import com.example.runtime.ui.mypage.MyPageScreen
 import com.example.runtime.ui.mypage.MyPageViewModel
 import com.example.runtime.ui.mypage.SavedRouteDetailScreen
@@ -68,7 +69,7 @@ fun RunTimeApp() {
     Scaffold(
         bottomBar = {
             // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
-            if (currentScreen != "splash" && currentScreen != "generating" && currentScreen != "login") {
+            if (currentScreen !in setOf("splash", "generating", "login", "signup")) {
                 NavigationBar {
                     NavigationBarItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
@@ -94,7 +95,13 @@ fun RunTimeApp() {
                 )
                 "login" -> LoginScreen(
                     authViewModel = authViewModel,
-                    onLoginSuccess = { currentScreen = "route_input" }
+                    onLoginSuccess = { currentScreen = "route_input" },
+                    onSignUpClick = { currentScreen = "signup" }
+                )
+                "signup" -> SignUpScreen(
+                    authViewModel = authViewModel,
+                    onSignUpSuccess = { currentScreen = "route_input" },
+                    onLogInClick = { currentScreen = "login" }
                 )
                 "route_input" -> RouteInputScreen(
                     routeViewModel = routeViewModel,
