@@ -9,6 +9,21 @@
     <string name="action_sign_up">회원가입</string>
     <string name="switch_to_sign_up">계정 만들기</string>
     <string name="switch_to_log_in">이미 계정이 있나요? 로그인</string>
+    <string name="label_password_confirm">비밀번호 확인:</string>
+    <string name="show_password">비밀번호 보기</string>
+    <string name="hide_password">비밀번호 숨기기</string>
+    <string name="or">또는</string>
+    <string name="continue_with_google">Google로 계속하기</string>
+    <string name="google_sign_in_coming_soon">구글 로그인은 준비 중입니다.</string>
+    <string name="title_log_in">계정에 로그인하세요</string>
+    <string name="title_sign_up">새 계정을 만드세요</string>
+    <string name="menu">메뉴</string>
+    <string name="action_log_out">로그아웃</string>
+    <string name="log_out_dialog_title">로그아웃할까요?</string>
+    <string name="log_out_dialog_message">RunTime을 쓰려면 다시 로그인해야 합니다.</string>
+    <string name="error_email_invalid">올바른 이메일 주소를 입력하세요.</string>
+    <string name="error_password_short">비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
 
     <string name="label_start_point">출발지</string>
     <string name="label_end_point">도착지 (선택)</string>

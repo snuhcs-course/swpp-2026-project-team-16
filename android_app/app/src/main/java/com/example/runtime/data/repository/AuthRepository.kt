@@ -42,6 +42,10 @@ class AuthRepository(
         tokenStorage.save(token)
     }
 
+    suspend fun logout() {
+        clearToken()
+    }
+
     private suspend fun clearToken() {
         TokenStore.token = null
         tokenStorage.clear()
