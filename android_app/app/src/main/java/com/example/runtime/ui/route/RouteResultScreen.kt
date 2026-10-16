@@ -62,7 +62,7 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                 generated.route.trafficLightCount
             ),
             fontSize = 16.sp
-        )
+        ) // AI-assited with ChatGPT, 2026-10-16 ; reviewd by Soonyoung
 
         Spacer(modifier = Modifier.height(8.dp))
 

@@ -231,7 +231,7 @@ def create_route(
     graph = ox.simplification.simplify_graph(
         raw_graph,
         node_attrs_include=["traffic_signal"],
-    )
+    ) # AI-assisted with ChatGPT, 2026-10-16; reviewed by Soonyoung
 
     route_graph = graph.to_undirected()   # 한 번만 변환
     log(f"  took {time.perf_counter() - timer:.2f}s ({len(graph.nodes)} nodes)")
@@ -356,7 +356,7 @@ def mock_route_features(
         [UphillSegment(start_km=2.0, length_m=300, elevation_gain_m=20)]
         if distance > 2000
         else []
-    )
+    ) # AI-assisted with ChatGPT, 2026-10-16; reviewed by Soonyoung
     return RouteFeatures(
         distance_m=distance,
         total_elevation_gain_m=45,
