@@ -55,6 +55,15 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                 textAlign = TextAlign.Center
             )
         }
+
+        Text(
+            stringResource(
+                R.string.traffic_light_count,
+                generated.route.trafficLightCount
+            ),
+            fontSize = 16.sp
+        ) // AI-assited with ChatGPT, 2026-10-16 ; reviewd by Soonyoung
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // LLM Briefing
