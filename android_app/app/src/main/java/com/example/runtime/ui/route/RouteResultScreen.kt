@@ -55,6 +55,15 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
                 textAlign = TextAlign.Center
             )
         }
+
+        Text(
+            stringResource(
+                R.string.traffic_light_count,
+                generated.route.trafficLightCount
+            ),
+            fontSize = 16.sp
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // LLM Briefing

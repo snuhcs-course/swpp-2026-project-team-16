@@ -216,7 +216,23 @@ def create_route(
 
     log(f"[{mode}] Downloading street graph...")
     timer = time.perf_counter()
-    graph = ox.graph.graph_from_point(center, dist=radius, network_type="walk", simplify=True)
+
+    raw_graph = ox.graph.graph_from_point(
+        center,
+        dist=radius,
+        network_type="walk",
+        simplify=False,
+    )
+
+    for _, node_data in raw_graph.nodes(data=True):
+        if node_data.get("highway") == "traffic_signals":
+            node_data["traffic_signal"] = True
+
+    graph = ox.simplification.simplify_graph(
+        raw_graph,
+        node_attrs_include=["traffic_signal"],
+    )
+
     route_graph = graph.to_undirected()   # 한 번만 변환
     log(f"  took {time.perf_counter() - timer:.2f}s ({len(graph.nodes)} nodes)")
 
@@ -308,25 +324,42 @@ def create_route(
             f"Closest route was {round(best.length)} m."
         )
 
+    traffic_light_count = sum(
+        1
+        for node_id in best.path
+        if graph.nodes[node_id].get("traffic_signal") is True
+    )
+
     coordinates = [(graph.nodes[n]["x"], graph.nodes[n]["y"]) for n in best.path]
     log(f"Total {time.perf_counter() - total_timer:.2f}s, best = {best.label}, {best.length:.0f}m")
 
     actual_distance = round(best.length)
-    briefing = generate_briefing(mock_route_features(actual_distance), language)
+    briefing = generate_briefing(
+         mock_route_features(actual_distance, traffic_light_count),
+         language,
+    )
 
     return RunningRoute(
         distance=actual_distance,
         briefing=briefing,
         route=[GeoJSONLineString(coordinates=coordinates)],
         is_shortest_path=best.label == "shortest",
+        traffic_light_count = traffic_light_count,
     )
 
 
-def mock_route_features(distance: int) -> RouteFeatures:
-    uphills = [UphillSegment(start_km=2.0, length_m=300, elevation_gain_m=20)] if distance > 2000 else []
+def mock_route_features(
+    distance: int,
+    traffic_light_count: int,
+) -> RouteFeatures:
+    uphills = (
+        [UphillSegment(start_km=2.0, length_m=300, elevation_gain_m=20)]
+        if distance > 2000
+        else []
+    )
     return RouteFeatures(
         distance_m=distance,
         total_elevation_gain_m=45,
-        traffic_light_count=3,
+        traffic_light_count=traffic_light_count,
         uphill_segments=uphills,
     )
