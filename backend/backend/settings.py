@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 
 load_dotenv()
@@ -9,7 +10,9 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+if not GOOGLE_CLIENT_ID:
+    raise ImproperlyConfigured("GOOGLE_CLIENT_ID must be set.")
 
 
 SECRET_KEY = os.getenv("SECRET_KEY",)

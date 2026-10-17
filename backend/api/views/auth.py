@@ -7,7 +7,7 @@ from rest_framework import status
 
 from rest_framework.authtoken.models import Token
 
-from google.auth.exceptions import GoogleAuthError
+from google.auth.exceptions import GoogleAuthError, TransportError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
@@ -120,9 +120,17 @@ def google_login(request):
             settings.GOOGLE_CLIENT_ID,
         )
 
+    except TransportError:
+        return Response(
+            {
+                "status": "error",
+                "message": "Google authentication is temporarily unavailable.",
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
     except (ValueError, GoogleAuthError):
         return Response(
-            {"status": "error", "message": "Invalid Google credential"},
+            {"status": "error", "message": "Invalid Google credential."},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
@@ -147,7 +155,7 @@ def google_login(request):
     if user is None:
         return Response(
             {"status": "error", "message": "No account found. Register first."},
-            status=status.HTTP_401_UNAUTHORIZED,
+            status=status.HTTP_404_NOT_FOUND,
         )
 
     token, _ = Token.objects.get_or_create(user=user)
