@@ -75,6 +75,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onSessionExpired(onDone: () -> Unit) {
+        viewModelScope.launch {
+            repository.clearSession()
+            uiState = AuthUiState(error = UiText.Resource(R.string.error_auth_required))
+            onDone()
+        }
+    }
+
     fun clearError() {
         uiState = uiState.copy(error = null)
     }

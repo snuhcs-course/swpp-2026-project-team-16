@@ -32,6 +32,7 @@
     <string name="log_out_dialog_message">You will need to log in again to use RunTime.</string>
     <string name="error_email_invalid">Enter a valid email address.</string>
     <string name="error_password_short">Password must be at least 8 characters.</string>
+    <string name="error_email_exists">Email already exists.</string>
     <string name="error_password_mismatch">Passwords do not match.</string>
 
     <string name="label_start_point">Start point</string>

@@ -30,6 +30,7 @@
     <string name="log_out_dialog_message">RunTime을 쓰려면 다시 로그인해야 합니다.</string>
     <string name="error_email_invalid">올바른 이메일 주소를 입력하세요.</string>
     <string name="error_password_short">비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="error_email_exists">이미 사용 중인 이메일입니다.</string>
     <string name="error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
 
     <string name="label_start_point">출발지</string>

@@ -21,14 +21,17 @@ fun UiText.asString(): String = when (this) {
 }
 
 private val serverMessages = mapOf(
+    "A verified Google email is required" to R.string.error_google_email_unverified,
     "All fields are required" to R.string.error_all_fields_required,
     "Authentication credentials were not provided." to R.string.error_auth_required,
     "Authentication required." to R.string.error_auth_required,
-    "A verified Google email is required" to R.string.error_google_email_unverified,
+    "Email already exists" to R.string.error_email_exists,
+    "Enter a valid email address" to R.string.error_email_invalid,
     "Google authentication is temporarily unavailable." to R.string.error_google_unavailable,
     "Invalid Google credential." to R.string.error_google_invalid,
     "Invalid username or password" to R.string.error_invalid_credentials,
     "Multiple accounts use this email" to R.string.error_google_multiple_accounts,
+    "Password must be at least 8 characters" to R.string.error_password_short,
     "Route not found." to R.string.error_route_not_found,
     "Temporary route not found." to R.string.error_temporary_route_not_found,
     "Username already exists" to R.string.error_username_exists,
