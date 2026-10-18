@@ -1,17 +1,23 @@
 package com.example.runtime.ui.route
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
+import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,9 +33,20 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
     var showFullMap by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (routeViewModel.options.size > 1) {
+            RouteOptionCards(
+                options = routeViewModel.options,
+                selected = routeViewModel.selectedOption,
+                onSelect = routeViewModel::selectOption
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         // 지도
         Box(
             modifier = Modifier
@@ -136,5 +153,48 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
 
     if (showFullMap) {
         FullScreenRouteMap(lines = generated.route.route, onDismiss = { showFullMap = false })
+    }
+}
+
+@Composable
+private fun RouteOptionCards(options: List<GeneratedRouteData>, selected: Int, onSelect: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        options.forEachIndexed { index, option ->
+            val isSelected = index == selected
+            val route = option.route
+            OutlinedCard(
+                onClick = { onSelect(index) },
+                modifier = Modifier.weight(1f).semantics { this.selected = isSelected },
+                border = BorderStroke(
+                    if (isSelected) 2.dp else 1.dp,
+                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                ),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        if (index == 0) stringResource(R.string.route_option_recommended) else "",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(formatDistance(route.distance), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        route.elevationGainM?.let { stringResource(R.string.route_option_climb, it) }
+                            ?: stringResource(R.string.route_option_climb_unknown),
+                        fontSize = 13.sp
+                    )
+                    Text(stringResource(R.string.route_option_traffic_lights, route.trafficLightCount), fontSize = 13.sp)
+                }
+            }
+        }
     }
 }
