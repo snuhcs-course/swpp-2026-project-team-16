@@ -413,11 +413,31 @@ Any other value returns `400 Bad Request`.
                     ]
                 }
             ],
-            "is_shortest_path": false
-        }
+            "is_shortest_path": false,
+            "traffic_light_count": 2,
+            "elevation_gain_m": 25,
+            "score": 47.5
+        },
+        "options": [
+            {"temporary_route_id": 1, "route": {"...": "same as route above"}},
+            {"temporary_route_id": 2, "route": {"...": "second option"}},
+            {"temporary_route_id": 3, "route": {"...": "third option"}}
+        ]
     }
 }
 ```
+
+`options` has up to 3 routes, best first. `temporary_route_id` and `route` at the top level are the same as `options[0]`. Each option has its own `temporary_route_id` and can be saved separately.
+
+Options are ranked by a score (lower is better):
+
+```
+score = 1.0 x elevation_gain_m + 10 x traffic_light_count + 5 x distance error (%)
+```
+
+Only candidates within 15% of the requested distance are ranked; if none are, the closest one is returned alone.
+
+`elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing leaves out elevation. The briefing uses the measured distance, elevation gain, traffic lights, and uphill sections.
 
 Use `temporary_route_id` to save the route.
 

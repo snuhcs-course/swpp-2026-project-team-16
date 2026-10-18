@@ -74,6 +74,15 @@ class BuildBriefingPromptTests(SimpleTestCase):
         self.assertIn("Uphills: none", build_briefing_prompt(features, "en")["user"])
         self.assertIn("3.25km", build_briefing_prompt(features, "en")["user"])
 
+    def test_elevation_lines_only_when_known(self):
+        features = RouteFeatures(distance_m=3000, total_elevation_gain_m=None, traffic_light_count=2)
+        for language, words in (("ko", ("상승", "오르막")), ("en", ("elevation", "Uphills"))):
+            user = build_briefing_prompt(features, language)["user"]
+            for word in words:
+                self.assertNotIn(word, user)
+        self.assertEqual(fallback_briefing(features, "ko"), "총 3km, 신호등 2개가 있는 코스입니다.")
+        self.assertEqual(fallback_briefing(features, "en"), "This 3km route has 2 traffic lights.")
+
     def test_crosswalks_line_only_when_known(self):
         self.assertNotIn("횡단보도", build_briefing_prompt(SAMPLE_FEATURES, "ko")["user"])
         features = RouteFeatures(distance_m=5000, total_elevation_gain_m=45, traffic_light_count=3, crosswalk_count=2)
