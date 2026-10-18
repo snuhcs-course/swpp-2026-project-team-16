@@ -67,4 +67,7 @@
     <string name="error_temporary_route_not_found">Temporary route not found.</string>
     <string name="error_username_exists">Username already exists.</string>
     <string name="error_username_password_required">Username and password are required.</string>
+
+    <string name="elevation_information">Elevation information</string>
+    <string name="elevation_unavailable">Elevation information is unavailable.</string>
 </resources>
