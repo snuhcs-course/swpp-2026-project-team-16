@@ -14,7 +14,10 @@ import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -81,6 +84,37 @@ class RouteViewModel(
     private var pendingLanguage: String = DEFAULT_LANGUAGE
     private var searchLanguage: String = DEFAULT_LANGUAGE
     private var isGenerating = false
+    private var sessionScope = newSessionScope()
+
+    private fun newSessionScope() =
+        CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
+
+    fun reset() {
+        sessionScope.cancel()
+        sessionScope = newSessionScope()
+        listOf(startField, endField).forEach { field ->
+            field.searchJob = null
+            field.input = ""
+            field.selected = null
+            field.suggestions = emptyList()
+            field.isSearching = false
+            field.noResults = false
+            field.searchError = null
+        }
+        distanceInput = ""
+        pickTarget = PickTarget.START
+        error = null
+        generated = null
+        saveState = SaveState.Idle
+        elevations = emptyList()
+        slopes = emptyList()
+        steepSectionSummary = ""
+        elevationLoadState = ElevationLoadState.Error
+        pendingStart = null
+        pendingEnd = null
+        pendingDistanceMeters = null
+        isGenerating = false
+    }
 
     fun onLanguageChange(language: String) {
         val normalized = normalizeLanguage(language)
@@ -114,7 +148,7 @@ class RouteViewModel(
         field.searchJob?.cancel()
         val language = searchLanguage
 
-        field.searchJob = viewModelScope.launch {
+        field.searchJob = sessionScope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             field.isSearching = true
 
@@ -202,7 +236,7 @@ class RouteViewModel(
         if (isGenerating) return
         isGenerating = true
 
-        viewModelScope.launch {
+        sessionScope.launch {
             try {
                 val generatedData = repository.generate(
                     startingPoint = start,
@@ -529,7 +563,7 @@ class RouteViewModel(
         if (saveState == SaveState.Saving || saveState == SaveState.Saved) return
 
         saveState = SaveState.Saving
-        viewModelScope.launch {
+        sessionScope.launch {
             saveState = try {
                 repository.saveTemporaryRoute(route.temporaryRouteId)
                 SaveState.Saved

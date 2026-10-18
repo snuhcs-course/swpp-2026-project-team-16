@@ -1,11 +1,13 @@
 package com.example.runtime.ui.auth
 
 import android.app.Application
+import android.util.Patterns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.runtime.R
 import com.example.runtime.data.auth.TokenStorage
 import com.example.runtime.data.repository.AuthRepository
 import com.example.runtime.ui.common.UiText
@@ -26,11 +28,35 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     fun login(username: String, password: String, onSuccess: () -> Unit) {
-        authenticate(onSuccess) { repository.login(username, password) }
+        if (username.isBlank() || password.isEmpty()) {
+            uiState = AuthUiState(error = UiText.Resource(R.string.error_username_password_required))
+            return
+        }
+        authenticate(onSuccess) { repository.login(username.trim(), password) }
     }
 
-    fun register(username: String, email: String, password: String, onSuccess: () -> Unit) {
-        authenticate(onSuccess) { repository.register(username, email, password) }
+    fun register(username: String, email: String, password: String, passwordConfirm: String, onSuccess: () -> Unit) {
+        val error = when {
+            username.isBlank() || email.isBlank() || password.isEmpty() || passwordConfirm.isEmpty() ->
+                R.string.error_all_fields_required
+            !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> R.string.error_email_invalid
+            password.length < MIN_PASSWORD_LENGTH -> R.string.error_password_short
+            password != passwordConfirm -> R.string.error_password_mismatch
+            else -> null
+        }
+        if (error != null) {
+            uiState = AuthUiState(error = UiText.Resource(error))
+            return
+        }
+        authenticate(onSuccess) { repository.register(username.trim(), email.trim(), password) }
+    }
+
+    fun logout(onDone: () -> Unit) {
+        viewModelScope.launch {
+            repository.logout()
+            uiState = AuthUiState()
+            onDone()
+        }
     }
 
     fun clearError() {
@@ -57,5 +83,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 uiState = AuthUiState(error = e.toUiText())
             }
         }
+    }
+
+    companion object {
+        private const val MIN_PASSWORD_LENGTH = 8
     }
 }
