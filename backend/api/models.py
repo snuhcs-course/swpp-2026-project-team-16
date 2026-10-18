@@ -66,6 +66,7 @@ class Route(models.Model):
 class UserSavedRoute(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, blank=True, default="")
     saved_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
