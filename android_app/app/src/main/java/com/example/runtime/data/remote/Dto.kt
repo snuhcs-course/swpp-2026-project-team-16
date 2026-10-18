@@ -87,6 +87,17 @@ data class RouteBody(
 )
 
 @Serializable
+data class RenameRouteRequest(
+    val name: String,
+)
+
+@Serializable
+data class RenamedRoute(
+    val id: Int,
+    val name: String,
+)
+
+@Serializable
 data class SaveRouteRequest(
     @SerialName("temporary_route_id") val temporaryRouteId: Int? = null,
     @SerialName("route_id") val routeId: Int? = null,
@@ -102,6 +113,7 @@ data class SaveRouteResponse(
 @Serializable
 data class SavedRoute(
     val id: Int,
+    val name: String = "",
     val distance: Int,
     val briefing: String,
     val route: List<GeoJsonLineString>,

@@ -48,6 +48,9 @@ class MyPageViewModel(
     var isDeleting by mutableStateOf(false)
         private set
 
+    var isRenaming by mutableStateOf(false)
+        private set
+
     private var sessionScope = newSessionScope()
 
     private fun newSessionScope() =
@@ -64,6 +67,7 @@ class MyPageViewModel(
         detail = null
         detailError = null
         isDeleting = false
+        isRenaming = false
     }
 
     fun refresh() {
@@ -100,6 +104,27 @@ class MyPageViewModel(
                 throw e
             } catch (e: Exception) {
                 detailError = e.toUiText()
+            }
+        }
+    }
+
+    fun rename(routeId: Int, name: String, onRenamed: () -> Unit) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || isRenaming) return
+        isRenaming = true
+        detailError = null
+        sessionScope.launch {
+            try {
+                val saved = routeRepository.renameSavedRoute(routeId, trimmed)
+                routes = routes.map { if (it.id == routeId) it.copy(name = saved) else it }
+                detail = detail?.let { if (it.id == routeId) it.copy(name = saved) else it }
+                onRenamed()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                detailError = e.toUiText()
+            } finally {
+                isRenaming = false
             }
         }
     }

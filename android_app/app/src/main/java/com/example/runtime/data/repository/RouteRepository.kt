@@ -10,6 +10,7 @@ import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.remote.SaveRouteRequest
+import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.SavedRoute
 import kotlinx.coroutines.CancellationException
 import com.example.runtime.data.remote.OpenElevationApiService
@@ -45,6 +46,9 @@ class RouteRepository(
     suspend fun savedRoutes(): List<SavedRoute> = api.savedRoutes()
 
     suspend fun savedRoute(routeId: Int): SavedRoute = api.savedRoute(routeId).requireData()
+
+    suspend fun renameSavedRoute(routeId: Int, name: String): String =
+        api.renameSavedRoute(routeId, RenameRouteRequest(name)).requireData().name
 
     suspend fun deleteSavedRoute(routeId: Int) {
         api.deleteSavedRoute(routeId)

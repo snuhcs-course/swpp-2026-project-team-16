@@ -97,11 +97,15 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit, 
                         .padding(vertical = 6.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        val defaultTitle = routeTitle(route.startName, route.endName, route.distance)
                         Text(
-                            text = routeTitle(route.startName, route.endName, route.distance),
+                            text = route.name.ifBlank { defaultTitle },
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
+                        if (route.name.isNotBlank()) {
+                            Text(text = defaultTitle, color = Color.Gray, fontSize = 13.sp)
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = route.briefing,
