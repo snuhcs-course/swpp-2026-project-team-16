@@ -5,10 +5,42 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 
+REGISTER_URL = "/api/v1/auth/register/"
 LOGOUT_URL = "/api/v1/auth/logout/"
 GOOGLE_URL = "/api/v1/auth/google/"
 PROFILE_URL = "/api/v1/users/my_profile/"
 VERIFY = "api.views.auth.id_token.verify_oauth2_token"
+
+
+class RegisterTests(APITestCase):
+    def register(self, **overrides):
+        body = {"username": "runner", "email": "r@test.com", "password": "password123", **overrides}
+        return self.client.post(REGISTER_URL, body, format="json")
+
+    def test_register_trims_fields(self):
+        response = self.register(username=" runner ", email=" r@test.com ")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual((response.data["data"]["username"], response.data["data"]["email"]), ("runner", "r@test.com"))
+
+    def test_invalid_input_is_rejected(self):
+        cases = [
+            ({"username": "  "}, "All fields are required"),
+            ({"password": 12345678}, "All fields are required"),
+            ({"email": "not-an-email"}, "Enter a valid email address"),
+            ({"password": "short"}, "Password must be at least 8 characters"),
+        ]
+        for overrides, message in cases:
+            with self.subTest(overrides=overrides):
+                response = self.register(**overrides)
+                self.assertEqual((response.status_code, response.data["message"]), (400, message))
+
+    def test_duplicate_email_is_rejected(self):
+        self.register()
+
+        response = self.register(username="other", email="R@Test.com")
+
+        self.assertEqual((response.status_code, response.data["message"]), (400, "Email already exists"))
 
 
 class LogoutTests(APITestCase):

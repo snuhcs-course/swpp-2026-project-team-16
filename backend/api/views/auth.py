@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -14,6 +16,8 @@ from google.oauth2 import id_token
 
 User = get_user_model()
 
+MIN_PASSWORD_LENGTH = 8
+
 
 @api_view(["POST"])
 def register_user(request):
@@ -23,16 +27,39 @@ def register_user(request):
     password = request.data.get("password")
 
 
-    if not username or not email or not password:
+    if not all(isinstance(value, str) and value.strip() for value in (username, email, password)):
         return Response(
-            {'status': 'error', "message": "All fields are required"},    
+            {'status': 'error', "message": "All fields are required"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
 
+    username = username.strip()
+    email = email.strip()
+
+    try:
+        validate_email(email)
+    except ValidationError:
+        return Response(
+            {'status': 'error', "message": "Enter a valid email address"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return Response(
+            {'status': 'error', "message": f"Password must be at least {MIN_PASSWORD_LENGTH} characters"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     if User.objects.filter(username=username).exists():
         return Response(
             {'status': 'error', "message": "Username already exists"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if User.objects.filter(email__iexact=email).exists():
+        return Response(
+            {'status': 'error', "message": "Email already exists"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
