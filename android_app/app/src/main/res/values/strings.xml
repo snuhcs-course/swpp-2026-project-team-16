@@ -16,7 +16,14 @@
     <string name="hide_password">Hide password</string>
     <string name="or">or</string>
     <string name="continue_with_google">Continue with Google</string>
-    <string name="google_sign_in_coming_soon">Google sign-in is coming soon.</string>
+    <string name="google_account_not_registered">No account uses this Google email yet. Sign up to continue.</string>
+    <string name="error_google_not_configured">Google sign-in is not set up for this build.</string>
+    <string name="error_google_no_account">No Google account found on this device.</string>
+    <string name="error_google_sign_in_failed">Google sign-in failed. Please try again.</string>
+    <string name="error_google_invalid">Google sign-in could not be verified.</string>
+    <string name="error_google_unavailable">Google sign-in is temporarily unavailable.</string>
+    <string name="error_google_email_unverified">Your Google email must be verified.</string>
+    <string name="error_google_multiple_accounts">More than one account uses this email.</string>
     <string name="title_log_in">Log-in to your account</string>
     <string name="title_sign_up">Create your account</string>
     <string name="menu">Menu</string>
@@ -25,6 +32,7 @@
     <string name="log_out_dialog_message">You will need to log in again to use RunTime.</string>
     <string name="error_email_invalid">Enter a valid email address.</string>
     <string name="error_password_short">Password must be at least 8 characters.</string>
+    <string name="error_email_exists">Email already exists.</string>
     <string name="error_password_mismatch">Passwords do not match.</string>
 
     <string name="label_start_point">Start point</string>

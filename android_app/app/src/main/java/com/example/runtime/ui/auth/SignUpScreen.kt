@@ -12,9 +12,14 @@ import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 
 @Composable
-fun SignUpScreen(authViewModel: AuthViewModel, onSignUpSuccess: () -> Unit, onLogInClick: () -> Unit) {
+fun SignUpScreen(
+    authViewModel: AuthViewModel,
+    initialEmail: String,
+    onSignUpSuccess: () -> Unit,
+    onLogInClick: () -> Unit,
+) {
     var name by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable(initialEmail) { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
     val uiState = authViewModel.uiState
@@ -50,7 +55,12 @@ fun SignUpScreen(authViewModel: AuthViewModel, onSignUpSuccess: () -> Unit, onLo
             onClick = { authViewModel.register(name, email, password, passwordConfirm, onSignUpSuccess) }
         )
         OrDivider()
-        GoogleSignInButton(enabled = !uiState.isLoading)
+        GoogleSignInButton(
+            authViewModel = authViewModel,
+            enabled = !uiState.isLoading,
+            onSuccess = onSignUpSuccess,
+            onSignUpRequired = { email = it }
+        )
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(onClick = ::goToLogIn, enabled = !uiState.isLoading) {
             Text(stringResource(R.string.switch_to_log_in))

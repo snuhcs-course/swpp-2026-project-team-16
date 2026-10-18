@@ -128,13 +128,23 @@ POST /api/v1/auth/register/
 }
 ```
 
+### Errors
+
+All errors return `400 Bad Request` with one of these messages:
+
+* `All fields are required`
+* `Enter a valid email address`
+* `Password must be at least 8 characters`
+* `Username already exists`
+* `Email already exists` (case-insensitive)
+
 ### Description
 
 Creates a new user account.
 
 The endpoint:
 
-* validates user input
+* validates user input (trims username and email)
 * creates a Django user
 * generates an authentication token
 * returns the token for future requests
@@ -182,6 +192,90 @@ The endpoint:
 * checks username and password
 * returns an existing token or creates a new one
 * allows access to protected endpoints
+
+---
+
+## Google Login
+
+### Endpoint
+
+```
+POST /api/v1/auth/google/
+```
+
+### Request
+
+```json
+{
+    "credential": "<Google ID token>"
+}
+```
+
+The ID token comes from Google sign-in on the app. Its audience must be the backend's `GOOGLE_CLIENT_ID` (the web client ID).
+
+### Response
+
+`200 OK`
+
+```json
+{
+    "status": "success",
+    "data": {
+        "username": "anton",
+        "email": "anton@test.com",
+        "token": "189a95d9..."
+    }
+}
+```
+
+### Errors
+
+* `400 Bad Request`: `Google credential is required`
+* `401 Unauthorized`: `Invalid Google credential.` or `A verified Google email is required`
+* `404 Not Found`: `No account found. Register first.`
+* `409 Conflict`: `Multiple accounts use this email`
+* `503 Service Unavailable`: `Google authentication is temporarily unavailable.`
+
+### Description
+
+Logs in an existing user with Google.
+
+The endpoint:
+
+* verifies the Google ID token
+* finds the user whose email matches the Google email (case-insensitive)
+* returns an existing token or creates a new one
+
+It does not create accounts. The app sends the user to sign-up when it gets `404`.
+
+---
+
+## Logout
+
+### Endpoint
+
+```
+POST /api/v1/auth/logout/
+```
+
+### Authentication
+
+Required.
+
+### Response
+
+```json
+{
+    "status": "success",
+    "message": "Logged out successfully."
+}
+```
+
+Missing or invalid token returns `401 Unauthorized`.
+
+### Description
+
+Deletes the user's token. Each user has one token, so this logs the user out on every device.
 
 ---
 

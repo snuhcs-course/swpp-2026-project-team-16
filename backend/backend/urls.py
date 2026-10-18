@@ -6,6 +6,7 @@ urlpatterns = [
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
     path("api/v1/auth/login/", auth.login_user, name="login_user"),
     path("api/v1/auth/google/", auth.google_login, name="google_login"),
+    path("api/v1/auth/logout/", auth.logout_user, name="logout_user"),
 
     # User
     path("api/v1/users/my_profile/", auth.my_profile, name="my_profile"),

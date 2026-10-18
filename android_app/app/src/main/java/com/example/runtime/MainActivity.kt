@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.runtime.data.remote.SessionEvents
 import com.example.runtime.ui.auth.AuthViewModel
 import com.example.runtime.ui.auth.LoginScreen
 import com.example.runtime.ui.auth.SignUpScreen
@@ -65,6 +66,19 @@ fun RunTimeApp() {
     val routeViewModel: RouteViewModel = viewModel()
     val myPageViewModel: MyPageViewModel = viewModel()
     var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var signUpEmail by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        SessionEvents.expired.collect {
+            if (currentScreen in setOf("splash", "login", "signup")) return@collect
+            authViewModel.onSessionExpired {
+                routeViewModel.reset()
+                myPageViewModel.reset()
+                selectedRouteId = null
+                currentScreen = "login"
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -96,10 +110,18 @@ fun RunTimeApp() {
                 "login" -> LoginScreen(
                     authViewModel = authViewModel,
                     onLoginSuccess = { currentScreen = "route_input" },
-                    onSignUpClick = { currentScreen = "signup" }
+                    onSignUpClick = {
+                        signUpEmail = ""
+                        currentScreen = "signup"
+                    },
+                    onGoogleSignUpRequired = { email ->
+                        signUpEmail = email
+                        currentScreen = "signup"
+                    }
                 )
                 "signup" -> SignUpScreen(
                     authViewModel = authViewModel,
+                    initialEmail = signUpEmail,
                     onSignUpSuccess = { currentScreen = "route_input" },
                     onLogInClick = { currentScreen = "login" }
                 )
