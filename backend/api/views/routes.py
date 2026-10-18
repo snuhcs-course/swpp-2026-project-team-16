@@ -31,6 +31,12 @@ def _validate_route_name(name):
     return name, None
 
 
+def _validate_optional_route_name(name):
+    if name is None or (isinstance(name, str) and not name.strip()):
+        return None, None
+    return _validate_route_name(name)
+
+
 @api_view(['GET', 'POST'])
 def saved_routes_list(request):
     if not request.user.is_authenticated:
@@ -61,7 +67,7 @@ def saved_routes_list(request):
 
         route_id = request.data.get('route_id')
         temporary_route_id = request.data.get('temporary_route_id')
-        name, error_response = _validate_route_name(request.data.get("name"))
+        name, error_response = _validate_optional_route_name(request.data.get("name"))
 
 
         if error_response:
@@ -90,7 +96,7 @@ def saved_routes_list(request):
                 UserSavedRoute.objects.create(
                     user=request.user,
                     route=route,
-                    name=name,
+                    name=name or "",
                 )
 
             return Response({'status': 'success', 'message': 'Temporary route saved successfully.', 'route_id': route.id}, status=status.HTTP_201_CREATED)
@@ -104,10 +110,10 @@ def saved_routes_list(request):
             saved_route, created = UserSavedRoute.objects.get_or_create(
                 user=request.user,
                 route=route,
-                defaults={"name": name},
+                defaults={"name": name or ""},
             )
 
-            if not created:
+            if not created and name is not None:
                 saved_route.name = name
                 saved_route.save(update_fields=["name"])
 
@@ -118,6 +124,8 @@ def saved_routes_list(request):
                         "Route saved successfully."
                         if created
                         else "Saved route name updated successfully."
+                        if name is not None
+                        else "Route already saved."
                     ),
                 },
                 status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,

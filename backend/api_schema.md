@@ -430,6 +430,7 @@ Bare JSON array (no `status`/`data` wrapper).
 [
     {
         "id": 1,
+        "name": "",
         "distance": 5000,
         "briefing": "Running route around Seoul National University.",
         "route": [],
@@ -487,6 +488,8 @@ or:
 }
 ```
 
+`name` is optional in both requests (up to 255 characters). If it is missing or blank, the route is saved with an empty name, and the app shows "start -> end [distance]" instead. Saving a route that is already saved with `route_id` keeps its name unless a new `name` is sent.
+
 ### Response
 
 `201 Created`
@@ -509,6 +512,8 @@ With `route_id` (no `route_id` in the response):
     "message": "Route saved successfully."
 }
 ```
+
+Saving a route that is already saved returns `200 OK` with `Saved route name updated successfully.` (when `name` is sent) or `Route already saved.`
 
 A temporary route that doesn't exist or isn't linked to the user returns `404 Not Found`.
 After saving, the temporary route is deleted.
@@ -551,6 +556,7 @@ Authorization: Token <user_token>
     "status": "success",
     "data": {
         "id": 5,
+        "name": "Morning Han River run",
         "distance": 5000,
         "briefing": "Running route around Seoul National University.",
         "route": [],
@@ -571,6 +577,43 @@ The endpoint:
 * checks route ownership
 * returns route information
 * returns saved timestamp
+
+---
+
+## Rename Saved Route
+
+### Endpoint
+
+```
+PATCH /api/v1/routes/saved/<route_id>/
+```
+
+### Authentication
+
+Required.
+
+### Request
+
+```json
+{
+    "name": "Morning Han River run"
+}
+```
+
+### Response
+
+```json
+{
+    "status": "success",
+    "message": "Saved route name updated.",
+    "data": {
+        "id": 5,
+        "name": "Morning Han River run"
+    }
+}
+```
+
+A blank name returns `400 Bad Request` with `A route name is required.`, and a name longer than 255 characters returns `400` with `The name must be 255 characters or fewer.`
 
 ---
 
