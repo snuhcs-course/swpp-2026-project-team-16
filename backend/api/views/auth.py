@@ -163,6 +163,7 @@ def google_login(request):
     return Response({
         "status": "success",
         "data": {
+            "username": user.username,
             "email": user.email,
             "token": token.key,
         },
