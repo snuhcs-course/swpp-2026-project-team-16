@@ -14,6 +14,7 @@ import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -51,11 +52,26 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         authenticate(onSuccess) { repository.register(username.trim(), email.trim(), password) }
     }
 
+    fun googleLogin(idToken: String, email: String, onSuccess: () -> Unit, onSignUpRequired: (String) -> Unit) {
+        authenticate(
+            onSuccess = onSuccess,
+            onNotFound = {
+                uiState = AuthUiState(error = UiText.Resource(R.string.google_account_not_registered))
+                onSignUpRequired(email)
+            },
+        ) { repository.googleLogin(idToken) }
+    }
+
+    fun showError(message: UiText) {
+        uiState = AuthUiState(error = message)
+    }
+
     fun logout(onDone: () -> Unit) {
         viewModelScope.launch {
-            repository.logout()
+            val token = repository.clearSession()
             uiState = AuthUiState()
             onDone()
+            token?.let { repository.revokeToken(it) }
         }
     }
 
@@ -69,7 +85,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun authenticate(onSuccess: () -> Unit, request: suspend () -> Unit) {
+    private fun authenticate(
+        onSuccess: () -> Unit,
+        onNotFound: (() -> Unit)? = null,
+        request: suspend () -> Unit,
+    ) {
         if (uiState.isLoading) return
         uiState = AuthUiState(isLoading = true)
         viewModelScope.launch {
@@ -80,12 +100,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                uiState = AuthUiState(error = e.toUiText())
+                if (onNotFound != null && e is HttpException && e.code() == HTTP_NOT_FOUND) {
+                    onNotFound()
+                } else {
+                    uiState = AuthUiState(error = e.toUiText())
+                }
             }
         }
     }
 
     companion object {
         private const val MIN_PASSWORD_LENGTH = 8
+        private const val HTTP_NOT_FOUND = 404
     }
 }

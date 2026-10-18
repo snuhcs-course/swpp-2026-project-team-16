@@ -11,7 +11,12 @@ import com.example.runtime.R
 
 // 3. Login Screen (화면 3)
 @Composable
-fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onSignUpClick: () -> Unit) {
+fun LoginScreen(
+    authViewModel: AuthViewModel,
+    onLoginSuccess: () -> Unit,
+    onSignUpClick: () -> Unit,
+    onGoogleSignUpRequired: (String) -> Unit,
+) {
     var name by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val uiState = authViewModel.uiState
@@ -27,7 +32,12 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onSign
             onClick = { authViewModel.login(name, password, onLoginSuccess) }
         )
         OrDivider()
-        GoogleSignInButton(enabled = !uiState.isLoading)
+        GoogleSignInButton(
+            authViewModel = authViewModel,
+            enabled = !uiState.isLoading,
+            onSuccess = onLoginSuccess,
+            onSignUpRequired = onGoogleSignUpRequired
+        )
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(
             onClick = {

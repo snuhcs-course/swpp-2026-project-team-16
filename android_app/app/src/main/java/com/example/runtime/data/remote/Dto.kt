@@ -42,6 +42,11 @@ data class LoginRequest(
 )
 
 @Serializable
+data class GoogleLoginRequest(
+    val credential: String,
+)
+
+@Serializable
 data class AuthData(
     val username: String,
     val email: String,

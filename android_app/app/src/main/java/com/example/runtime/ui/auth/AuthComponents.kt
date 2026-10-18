@@ -1,6 +1,5 @@
 package com.example.runtime.ui.auth
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +22,7 @@ import com.example.runtime.R
 import com.example.runtime.ui.common.LanguageMenu
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.asString
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthLayout(
@@ -128,13 +128,31 @@ fun OrDivider() {
 }
 
 @Composable
-fun GoogleSignInButton(enabled: Boolean) {
+fun GoogleSignInButton(
+    authViewModel: AuthViewModel,
+    enabled: Boolean,
+    onSuccess: () -> Unit,
+    onSignUpRequired: (String) -> Unit,
+) {
     val context = LocalContext.current
-    val message = stringResource(R.string.google_sign_in_coming_soon)
+    val scope = rememberCoroutineScope()
+    var isRequesting by remember { mutableStateOf(false) }
 
     OutlinedButton(
-        onClick = { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() },
-        enabled = enabled,
+        onClick = {
+            isRequesting = true
+            authViewModel.clearError()
+            scope.launch {
+                when (val result = requestGoogleCredential(context)) {
+                    is GoogleCredentialResult.Success ->
+                        authViewModel.googleLogin(result.idToken, result.email, onSuccess, onSignUpRequired)
+                    is GoogleCredentialResult.Failure -> authViewModel.showError(result.message)
+                    GoogleCredentialResult.Cancelled -> Unit
+                }
+                isRequesting = false
+            }
+        },
+        enabled = enabled && !isRequesting,
         modifier = Modifier.fillMaxWidth()
     ) {
         Image(painterResource(R.drawable.ic_google), contentDescription = null, modifier = Modifier.size(20.dp))
