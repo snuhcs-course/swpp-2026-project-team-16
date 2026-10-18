@@ -33,6 +33,7 @@ from api.route_algorithm.classes import (
 )
 from api.route_algorithm.elevation import climb_profiles
 from api.route_algorithm.scoring import score_route
+from api.route_algorithm.street_graph import street_graph
 
 ox.settings.requests_timeout = 20
 ox.settings.overpass_rate_limit = False
@@ -229,24 +230,10 @@ def create_routes(
         center = (s_lat, s_lon)
         radius = max(distance * 0.7, 300)
 
-    log(f"[{mode}] Downloading street graph...")
+    log(f"[{mode}] Loading street graph...")
     timer = time.perf_counter()
 
-    raw_graph = ox.graph.graph_from_point(
-        center,
-        dist=radius,
-        network_type="walk",
-        simplify=False,
-    )
-
-    for _, node_data in raw_graph.nodes(data=True):
-        if node_data.get("highway") == "traffic_signals":
-            node_data["traffic_signal"] = True
-
-    graph = ox.simplification.simplify_graph(
-        raw_graph,
-        node_attrs_include=["traffic_signal"],
-    ) # AI-assisted with ChatGPT, 2026-10-16; reviewed by Soonyoung
+    graph = street_graph(center, radius)
 
     route_graph = graph.to_undirected()   # 한 번만 변환
     log(f"  took {time.perf_counter() - timer:.2f}s ({len(graph.nodes)} nodes)")
