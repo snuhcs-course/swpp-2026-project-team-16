@@ -1,5 +1,6 @@
 package com.example.runtime.ui.route
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,7 +21,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.asin
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class PlaceField {
     var input by mutableStateOf("")
@@ -39,6 +44,11 @@ class PlaceField {
 }
 
 enum class PickTarget { START, END }
+enum class ElevationLoadState {
+    Loading,
+    Success,
+    Error,
+}
 
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
@@ -56,6 +66,16 @@ class RouteViewModel(
         private set
 
     var saveState by mutableStateOf<SaveState>(SaveState.Idle)
+        private set
+
+    // 고도 경사도 정보
+    var elevations by mutableStateOf<List<Double>>(emptyList())
+        private set
+    var slopes by mutableStateOf<List<Double>>(emptyList())
+        private set
+    var steepSectionSummary by mutableStateOf("")
+        private set
+    var elevationLoadState by mutableStateOf(ElevationLoadState.Error)
         private set
 
     private var pendingStart: Place? = null
@@ -86,6 +106,10 @@ class RouteViewModel(
         error = null
         generated = null
         saveState = SaveState.Idle
+        elevations = emptyList()
+        slopes = emptyList()
+        steepSectionSummary = ""
+        elevationLoadState = ElevationLoadState.Error
         pendingStart = null
         pendingEnd = null
         pendingDistanceMeters = null
@@ -95,6 +119,7 @@ class RouteViewModel(
     fun onLanguageChange(language: String) {
         val normalized = normalizeLanguage(language)
         if (normalized == searchLanguage) return
+
         searchLanguage = normalized
         listOf(startField, endField)
             .filter { it.selected == null && it.input.trim().length >= MIN_QUERY_LENGTH }
@@ -108,21 +133,25 @@ class RouteViewModel(
         field.searchJob?.cancel()
         field.searchError = null
         field.noResults = false
+
         val query = text.trim()
         if (query.length < MIN_QUERY_LENGTH) {
             field.suggestions = emptyList()
             field.isSearching = false
             return
         }
+
         search(field, query)
     }
 
     private fun search(field: PlaceField, query: String) {
         field.searchJob?.cancel()
         val language = searchLanguage
+
         field.searchJob = sessionScope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             field.isSearching = true
+
             try {
                 val places = repository.searchPlaces(query, language)
                 field.suggestions = places
@@ -149,14 +178,19 @@ class RouteViewModel(
         field.searchError = null
     }
 
-    fun selectPoint(field: PlaceField, name: String, longitude: Double, latitude: Double) {
+    fun selectPoint(
+        field: PlaceField,
+        name: String,
+        longitude: Double,
+        latitude: Double,
+    ) {
         selectPlace(
             field,
             Place(
                 name = name,
                 address = "%.5f, %.5f".format(Locale.US, latitude, longitude),
                 point = GeoJsonPoint.of(longitude, latitude),
-            )
+            ),
         )
     }
 
@@ -170,18 +204,23 @@ class RouteViewModel(
             error = UiText.Resource(R.string.error_start_point_required)
             return false
         }
+
         val end = endField.selected
         if (end == null && endField.input.isNotBlank()) {
             error = UiText.Resource(R.string.error_end_point_not_selected)
             return false
         }
-        val meters = distanceInput.trim().toDoubleOrNull()
+
+        val meters = distanceInput.trim()
+            .toDoubleOrNull()
             ?.takeIf { it.isFinite() }
             ?.let { (it * 1000).roundToInt() }
+
         if (meters == null || meters <= MIN_DISTANCE_METERS) {
             error = UiText.Resource(R.string.error_distance_min)
             return false
         }
+
         error = null
         pendingStart = start
         pendingEnd = end
@@ -193,16 +232,33 @@ class RouteViewModel(
     fun generate(onSuccess: () -> Unit, onFailure: () -> Unit) {
         val start = pendingStart ?: return onFailure()
         val distanceMeters = pendingDistanceMeters ?: return onFailure()
+
         if (isGenerating) return
         isGenerating = true
+
         sessionScope.launch {
             try {
-                generated = repository.generate(start, pendingEnd, distanceMeters, pendingLanguage)
+                val generatedData = repository.generate(
+                    startingPoint = start,
+                    endPoint = pendingEnd,
+                    distanceMeters = distanceMeters,
+                    language = pendingLanguage,
+                )
+                generated = generatedData
                 saveState = SaveState.Idle
+
+                elevations = emptyList()
+                slopes = emptyList()
+                steepSectionSummary = ""
+                elevationLoadState = ElevationLoadState.Loading
+
                 onSuccess()
+
+                loadElevationData(generatedData, pendingLanguage)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Log.e("RouteViewModel", "Route generation failed", e)
                 error = e.toUiText()
                 onFailure()
             } finally {
@@ -211,9 +267,301 @@ class RouteViewModel(
         }
     }
 
+    private suspend fun loadElevationData(
+        generatedData: GeneratedRouteData,
+        language: String,
+    ) {
+        try {
+            val coordinates = mutableListOf<Pair<Double, Double>>()
+
+            generatedData.route.route.forEach { lineString ->
+                lineString.coordinates.forEach { coordinate ->
+                    if (coordinate.size >= 2) {
+                        val longitude = coordinate[0]
+                        val latitude = coordinate[1]
+
+                        if (
+                            latitude.isFinite() &&
+                            longitude.isFinite() &&
+                            latitude in -90.0..90.0 &&
+                            longitude in -180.0..180.0
+                        ) {
+                            coordinates.add(latitude to longitude)
+                        }
+                    }
+                }
+            }
+
+            if (coordinates.size < 2) {
+                markElevationUnavailable(language)
+                return
+            }
+
+            val sampledCoordinates =
+                sampleCoordinatesAtIntervals(coordinates, SAMPLE_INTERVAL_METERS)
+
+            val elevationResult = repository.getElevations(sampledCoordinates)
+
+            if (elevationResult.isFailure) {
+                markElevationUnavailable(language)
+                return
+            }
+
+            val fetchedElevations = elevationResult.getOrThrow()
+
+            if (fetchedElevations.size < 2) {
+                markElevationUnavailable(language)
+                return
+            }
+
+            elevations = fetchedElevations
+
+            val segmentDistances = sampledCoordinates.zipWithNext { first, second ->
+                distanceBetweenMeters(first, second)
+            }
+
+            val calculatedSlopes = repository.calculateSlopes(
+                elevations = fetchedElevations,
+                distancesMeters = segmentDistances,
+            )
+
+            slopes = calculatedSlopes
+            steepSectionSummary = summarizeSteepSections(
+                slopes = calculatedSlopes,
+                segmentDistances = segmentDistances,
+                language = language,
+            )
+            elevationLoadState = ElevationLoadState.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("RouteViewModel", "Elevation processing failed", e)
+            markElevationUnavailable(language)
+        }
+    }
+
+    private fun markElevationUnavailable(language: String) {
+        elevations = emptyList()
+        slopes = emptyList()
+        steepSectionSummary = noElevationMessage(language)
+        elevationLoadState = ElevationLoadState.Error
+    }
+
+    /**
+     5% 이상 오르막 경사구간 찾기
+     250m 단위로, 경사 구간이 2개 이상 연속되면 상세 위치 요약
+     */
+    private fun summarizeSteepSections(
+        slopes: List<Double>,
+        segmentDistances: List<Double>,
+        language: String,
+    ): String {
+        if (slopes.isEmpty()) {
+            return noElevationMessage(language)
+        }
+
+        val groups = mutableListOf<SteepGroup>()
+        var totalDistance = 0.0
+        var index = 0
+
+        while (index < slopes.size) {
+            if (slopes[index] >= STEEP_SLOPE_THRESHOLD) {
+                val groupStartDistance = totalDistance
+                var groupDuration = 0.0
+                var groupSegmentCount = 0
+
+                while (
+                    index < slopes.size &&
+                    slopes[index] >= STEEP_SLOPE_THRESHOLD
+                ) {
+                    val segmentDistance =
+                        segmentDistances.getOrElse(index) { 0.0 }.coerceAtLeast(0.0)
+
+                    groupDuration += segmentDistance
+                    totalDistance += segmentDistance
+                    groupSegmentCount++
+                    index++
+                }
+
+                groups.add(
+                    SteepGroup(
+                        startMeters = groupStartDistance,
+                        durationMeters = groupDuration,
+                        segmentCount = groupSegmentCount,
+                    ),
+                )
+            } else {
+                totalDistance +=
+                    segmentDistances.getOrElse(index) { 0.0 }.coerceAtLeast(0.0)
+                index++
+            }
+        }
+
+        if (groups.isEmpty()) {
+            return if (language == KOREAN) {
+                "평지 위주의 경로입니다."
+            } else {
+                "This route is mostly flat."
+            }
+        }
+
+        val maximumSlope = slopes.maxOrNull() ?: 0.0
+        val maximumSlopeText = "%.1f".format(Locale.US, maximumSlope)
+
+        // 연속된 샘플 구간이 2개 이상인 구간만 상세 설명에 포함
+        val detailedGroups = groups.filter {
+            it.segmentCount >= MIN_CONSECUTIVE_STEEP_SEGMENTS
+        }
+
+        val details = detailedGroups.joinToString(separator = ", ") { group ->
+            val startMeters = group.startMeters.roundToInt()
+            val durationMeters = group.durationMeters.roundToInt()
+
+            if (language == KOREAN) {
+                "${startMeters}m 지점부터 ${durationMeters}m"
+            } else {
+                "from ${startMeters} m for ${durationMeters} m"
+            }
+        }
+
+        val sectionCount = groups.size
+
+        return if (language == KOREAN) {
+            val base =
+                "5% 이상의 급경사 구간이 ${sectionCount}개 있습니다. " +
+                        "(최대 경사도: ${maximumSlopeText}%)"
+
+            if (details.isNotBlank()) {
+                "$base\n특히 $details 구간에서 급경사가 이어집니다."
+            } else {
+                base
+            }
+        } else {
+            val sectionWord = if (sectionCount == 1) "section" else "sections"
+            val base =
+                "$sectionCount uphill $sectionWord reach 5% or more. " +
+                        "(Maximum slope: ${maximumSlopeText}%)"
+
+            if (details.isNotBlank()) {
+                "$base\nIn particular, steep uphill sections continue $details."
+            } else {
+                base
+            }
+        }
+    }
+
+    private fun noElevationMessage(language: String): String =
+        if (language == KOREAN) {
+            "고도 정보를 불러오지 못했습니다."
+        } else {
+            "Elevation information is unavailable."
+        }
+
+    /**
+     실제 경로 좌표를 따라 출발점, 250m 간격 지점, 도착점 반환
+     마지막 구간은 실제 길이로 경사도 계산
+     */
+    private fun sampleCoordinatesAtIntervals(
+        coordinates: List<Pair<Double, Double>>,
+        intervalMeters: Double,
+    ): List<Pair<Double, Double>> {
+        if (coordinates.isEmpty()) return emptyList()
+
+        // 연속으로 중복된 좌표 제거
+        val cleanCoordinates = mutableListOf<Pair<Double, Double>>()
+        coordinates.forEach { point ->
+            if (
+                cleanCoordinates.isEmpty() ||
+                distanceBetweenMeters(cleanCoordinates.last(), point) > MIN_COORDINATE_DISTANCE_METERS
+            ) {
+                cleanCoordinates.add(point)
+            }
+        }
+
+        if (cleanCoordinates.size <= 1) return cleanCoordinates
+
+        val sampled = mutableListOf(cleanCoordinates.first())
+        var distanceSinceLastSample = 0.0
+
+        for (segmentIndex in 0 until cleanCoordinates.lastIndex) {
+            val start = cleanCoordinates[segmentIndex]
+            val end = cleanCoordinates[segmentIndex + 1]
+            val segmentLength = distanceBetweenMeters(start, end)
+
+            if (segmentLength <= 0.0) continue
+
+            var distanceAlongSegment = 0.0
+
+            while (
+                distanceSinceLastSample +
+                (segmentLength - distanceAlongSegment) >= intervalMeters
+            ) {
+                val distanceToNextSample =
+                    intervalMeters - distanceSinceLastSample
+
+                distanceAlongSegment += distanceToNextSample
+
+                val fraction =
+                    (distanceAlongSegment / segmentLength).coerceIn(0.0, 1.0)
+
+                val sample = interpolateCoordinate(start, end, fraction)
+                sampled.add(sample)
+                distanceSinceLastSample = 0.0
+            }
+
+            distanceSinceLastSample += segmentLength - distanceAlongSegment
+        }
+
+        val routeEnd = cleanCoordinates.last()
+        if (distanceBetweenMeters(sampled.last(), routeEnd) > MIN_COORDINATE_DISTANCE_METERS) {
+            sampled.add(routeEnd)
+        } else {
+            // 마지막 샘플이 도착점과 거의 같으면 실제 도착 좌표로..
+            sampled[sampled.lastIndex] = routeEnd
+        }
+
+        return sampled
+    }
+
+    private fun interpolateCoordinate(
+        start: Pair<Double, Double>,
+        end: Pair<Double, Double>,
+        fraction: Double,
+    ): Pair<Double, Double> {
+        val latitude = start.first + (end.first - start.first) * fraction
+        val longitude = start.second + (end.second - start.second) * fraction
+        return latitude to longitude
+    }
+
+    /**
+     두 좌표 사이의 지표면 거리를 Haversine 공식으로 계산
+     좌표 형식은 (latitude, longitude)
+     */
+    private fun distanceBetweenMeters(
+        first: Pair<Double, Double>,
+        second: Pair<Double, Double>,
+    ): Double {
+        val earthRadiusMeters = 6_371_000.0
+
+        val firstLatitude = Math.toRadians(first.first)
+        val secondLatitude = Math.toRadians(second.first)
+        val latitudeDifference = Math.toRadians(second.first - first.first)
+        val longitudeDifference = Math.toRadians(second.second - first.second)
+
+        val haversine =
+            sin(latitudeDifference / 2) * sin(latitudeDifference / 2) +
+                    cos(firstLatitude) *
+                    cos(secondLatitude) *
+                    sin(longitudeDifference / 2) *
+                    sin(longitudeDifference / 2)
+
+        return 2 * earthRadiusMeters * asin(sqrt(haversine.coerceIn(0.0, 1.0)))
+    }
+
     fun save() {
         val route = generated ?: return
         if (saveState == SaveState.Saving || saveState == SaveState.Saved) return
+
         saveState = SaveState.Saving
         sessionScope.launch {
             saveState = try {
@@ -227,14 +575,27 @@ class RouteViewModel(
         }
     }
 
-    private fun normalizeLanguage(language: String) =
+    private fun normalizeLanguage(language: String): String =
         if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE
+
+    private data class SteepGroup(
+        val startMeters: Double,
+        val durationMeters: Double,
+        val segmentCount: Int,
+    )
 
     companion object {
         private const val MIN_DISTANCE_METERS = 100
         private const val MIN_QUERY_LENGTH = 2
         private const val SEARCH_DEBOUNCE_MS = 300L
+
+        private const val SAMPLE_INTERVAL_METERS = 250.0
+        private const val STEEP_SLOPE_THRESHOLD = 5.0
+        private const val MIN_CONSECUTIVE_STEEP_SEGMENTS = 2
+        private const val MIN_COORDINATE_DISTANCE_METERS = 0.1
+
         private const val DEFAULT_LANGUAGE = "en"
+        private const val KOREAN = "ko"
         private val SUPPORTED_LANGUAGES = setOf("en", "ko")
     }
 }

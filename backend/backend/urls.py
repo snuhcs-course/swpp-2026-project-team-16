@@ -5,6 +5,7 @@ from api.views import auth, generate_route, places, routes
 urlpatterns = [
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
     path("api/v1/auth/login/", auth.login_user, name="login_user"),
+    path("api/v1/auth/google/", auth.google_login, name="google_login"),
 
     # User
     path("api/v1/users/my_profile/", auth.my_profile, name="my_profile"),
