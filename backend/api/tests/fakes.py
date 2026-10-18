@@ -30,3 +30,7 @@ def grid_graph(center=SNU, size=31, spacing_m=100):
                     graph.add_edge(b, a, length=spacing_m)
 
     return graph
+
+
+def fake_elevations(points, grade=0.05):
+    return [(lat - SNU[1]) * 111_000 * grade for _, lat in points]

@@ -2,10 +2,11 @@ from unittest import mock
 
 from django.test import SimpleTestCase
 
-from api.route_algorithm.algorithm import create_route
+from api.route_algorithm.algorithm import create_route, create_routes
 from api.route_algorithm.classes import GeoJSONPoint
+from api.route_algorithm.elevation import ElevationError
 from api.route_algorithm.llm import LLMError
-from api.tests.fakes import SNU, grid_graph
+from api.tests.fakes import SNU, fake_elevations, grid_graph
 
 
 @mock.patch("api.route_algorithm.briefing.generate_text", side_effect=LLMError("offline"))
@@ -14,6 +15,9 @@ class CreateRouteTests(SimpleTestCase):
     def setUp(self):
         self.graph = grid_graph()
         self.start = GeoJSONPoint(coordinates=SNU)
+        patcher = mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=fake_elevations)
+        self.elevation = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_loop_returns_to_start_near_target_distance(self, download, llm):
         download.return_value = self.graph
@@ -54,3 +58,54 @@ class CreateRouteTests(SimpleTestCase):
     def test_unknown_mode_raises(self, download, llm):
         with self.assertRaises(ValueError):
             create_route(self.start, 2000, "ko", mode="zigzag")
+
+
+@mock.patch("api.route_algorithm.briefing.generate_text", side_effect=LLMError("offline"))
+@mock.patch("api.route_algorithm.algorithm.ox.graph.graph_from_point")
+class CreateRoutesTests(SimpleTestCase):
+    def setUp(self):
+        self.graph = grid_graph()
+        self.start = GeoJSONPoint(coordinates=SNU)
+
+    def create(self, elevations=fake_elevations):
+        with mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=elevations):
+            return create_routes(self.start, 3000, "ko")
+
+    def test_returns_up_to_three_distinct_routes_ranked_by_score(self, download, llm):
+        download.return_value = self.graph
+        routes = self.create()
+
+        self.assertEqual(len(routes), 3)
+        self.assertEqual(len({tuple(r.route[0].coordinates) for r in routes}), len(routes))
+        self.assertEqual([r.score for r in routes], sorted(r.score for r in routes))
+
+    def test_briefing_uses_measured_climb_and_signals(self, download, llm):
+        for node in self.graph.nodes:
+            self.graph.nodes[node]["highway"] = "traffic_signals"
+        download.return_value = self.graph
+        route = self.create()[0]
+
+        self.assertIsNotNone(route.elevation_gain_m)
+        self.assertGreater(route.elevation_gain_m, 0)
+        self.assertGreater(route.traffic_light_count, 0)
+        self.assertIn(f"누적 상승 {route.elevation_gain_m}m", route.briefing)
+        self.assertIn(f"신호등 {route.traffic_light_count}개", route.briefing)
+
+    def test_ranks_by_score_not_only_distance(self, download, llm):
+        download.return_value = self.graph
+        with mock.patch(
+            "api.route_algorithm.algorithm.score_route",
+            side_effect=lambda gain, signals, length, target: -length,
+        ):
+            routes = self.create()
+
+        self.assertEqual([r.distance for r in routes], sorted((r.distance for r in routes), reverse=True))
+        self.assertNotEqual(routes[0].distance, 3000)
+
+    def test_works_without_elevation(self, download, llm):
+        download.return_value = self.graph
+        routes = self.create(elevations=ElevationError("down"))
+
+        self.assertTrue(routes)
+        self.assertIsNone(routes[0].elevation_gain_m)
+        self.assertNotIn("누적 상승", routes[0].briefing)

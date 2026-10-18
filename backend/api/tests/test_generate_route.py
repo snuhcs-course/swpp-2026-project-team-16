@@ -5,9 +5,9 @@ import requests
 from osmnx._errors import InsufficientResponseError
 from rest_framework.test import APITestCase
 
-from api.route_algorithm.algorithm import create_route
+from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.llm import LLMError
-from api.tests.fakes import SNU, grid_graph
+from api.tests.fakes import SNU, fake_elevations, grid_graph
 
 
 URL = "/api/v1/routes/generate/"
@@ -29,6 +29,9 @@ class FakeMapTestCase(APITestCase):
             return_value=grid_graph(),
         )
         self.download = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=fake_elevations)
+        self.elevation = patcher.start()
         self.addCleanup(patcher.stop)
 
 
@@ -67,9 +70,25 @@ class GenerateRouteLLMTests(FakeMapTestCase):
 
 
 @mock.patch("api.route_algorithm.briefing.generate_text", side_effect=LLMError("offline"))
+class GenerateRouteOptionsTests(FakeMapTestCase):
+    def test_returns_ranked_options_with_their_own_temporary_routes(self, llm):
+        response = self.client.post(URL, body(distance=3000), format="json")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.data["data"]
+        options = data["options"]
+        self.assertEqual(len(options), 3)
+        self.assertEqual(len({o["temporary_route_id"] for o in options}), 3)
+        self.assertEqual((data["temporary_route_id"], data["route"]), (options[0]["temporary_route_id"], options[0]["route"]))
+        self.assertEqual([o["route"]["score"] for o in options], sorted(o["route"]["score"] for o in options))
+        self.assertTrue(all(o["route"]["elevation_gain_m"] is not None for o in options))
+        self.assertEqual(llm.call_count, 3)
+
+
+@mock.patch("api.route_algorithm.briefing.generate_text", side_effect=LLMError("offline"))
 class GenerateRouteEndPointTests(FakeMapTestCase):
     def post(self, **extra):
-        with mock.patch("api.views.generate_route.create_route", wraps=create_route) as spy:
+        with mock.patch("api.views.generate_route.create_routes", wraps=create_routes) as spy:
             response = self.client.post(URL, body(**extra), format="json")
         return response, spy
 

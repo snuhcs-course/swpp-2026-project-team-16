@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from api.models import TemporaryRoute
-from api.route_algorithm.algorithm import create_route
+from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
 
@@ -152,7 +152,7 @@ def generate_route_api(request):
     # Call route algorithm
 
     future = route_executor.submit(
-        create_route,
+        create_routes,
         starting_point=starting_point,
         end_point=end_point,
         distance=distance,
@@ -160,7 +160,7 @@ def generate_route_api(request):
     )
 
     try:
-        route = future.result(timeout=ROUTE_TIMEOUT_SECONDS)
+        routes = future.result(timeout=ROUTE_TIMEOUT_SECONDS)
     except FutureTimeoutError:
         return unavailable_response("Route generation is taking too long. Please try again in a moment.")
     except (requests.RequestException, InsufficientResponseError, ResponseStatusCodeError):
@@ -168,22 +168,29 @@ def generate_route_api(request):
     except ValueError as e:
         return error_response(str(e))
 
-    temporary_route = TemporaryRoute.objects.create(
-        distance=route.distance,
-        briefing=route.briefing,
-        route=route.to_dict()['route'],
-        user=user,
-        start_name=start_name,
-        end_name=end_name,
-    )
+    options = []
+
+    for route in routes:
+        temporary_route = TemporaryRoute.objects.create(
+            distance=route.distance,
+            briefing=route.briefing,
+            route=route.to_dict()['route'],
+            user=user,
+            start_name=start_name,
+            end_name=end_name,
+        )
+        options.append({
+            "temporary_route_id": temporary_route.id,
+            "route": route.to_dict(),
+        })
 
 
     return Response(
         {
             "status": "success",
             'data': {
-                "temporary_route_id": temporary_route.id,
-                'route': {**route.to_dict()},
+                **options[0],
+                "options": options,
             }
         }
     )

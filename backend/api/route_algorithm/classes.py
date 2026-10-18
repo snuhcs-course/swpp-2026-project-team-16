@@ -121,6 +121,8 @@ class RunningRoute:
     route: list[GeoJSONLineString]
     is_shortest_path: bool = False
     traffic_light_count: int = 0
+    elevation_gain_m: int | None = None
+    score: float | None = None
 
     def __post_init__(self):
         self._validate_distance()
@@ -182,4 +184,6 @@ class RunningRoute:
             ],
             "is_shortest_path": self.is_shortest_path,
             "traffic_light_count": self.traffic_light_count,
+            "elevation_gain_m": self.elevation_gain_m,
+            "score": self.score,
         }

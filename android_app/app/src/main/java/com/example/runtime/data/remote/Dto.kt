@@ -80,6 +80,13 @@ data class Place(
 data class GeneratedRouteData(
     @SerialName("temporary_route_id") val temporaryRouteId: Int,
     val route: RouteBody,
+    val options: List<RouteOption> = emptyList(),
+)
+
+@Serializable
+data class RouteOption(
+    @SerialName("temporary_route_id") val temporaryRouteId: Int,
+    val route: RouteBody,
 )
 
 @Serializable
@@ -89,6 +96,7 @@ data class RouteBody(
     val route: List<GeoJsonLineString>,
     @SerialName("is_shortest_path") val isShortestPath: Boolean = false,
     @SerialName("traffic_light_count") val trafficLightCount: Int = 0,
+    @SerialName("elevation_gain_m") val elevationGainM: Int? = null,
 )
 
 @Serializable

@@ -15,6 +15,7 @@
 
 import math
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import networkx as nx
@@ -23,7 +24,6 @@ import osmnx as ox
 from api.route_algorithm.briefing import (
     DEFAULT_LANGUAGE,
     RouteFeatures,
-    UphillSegment,
     generate_briefing,
 )
 from api.route_algorithm.classes import (
@@ -31,6 +31,8 @@ from api.route_algorithm.classes import (
     GeoJSONLineString,
     RunningRoute,
 )
+from api.route_algorithm.elevation import climb_profiles
+from api.route_algorithm.scoring import score_route
 
 ox.settings.requests_timeout = 20
 ox.settings.overpass_rate_limit = False
@@ -39,6 +41,9 @@ M_PER_DEG = 111_000
 INITIAL_DETOUR = 1.3   # 실제 도로 거리 / 직선 거리 초기 추정값
 TOLERANCE = 0.05       # 목표 거리 ±5% 안이면 성공
 MAX_ITER = 4           # 후보 하나당 보정 반복 횟수
+SCORING_TOLERANCE = 0.15
+MAX_SCORED_CANDIDATES = 6
+MAX_ROUTE_OPTIONS = 3
 
 LOOP_ROTATIONS = (0, math.pi / 8, math.pi / 4, 3 * math.pi / 8)
 OUT_BACK_DIRECTIONS = tuple(i * math.pi / 4 for i in range(8))
@@ -188,6 +193,16 @@ def create_route(
     end_point: GeoJSONPoint | None = None,
     mode: str | None = None,
 ) -> RunningRoute:
+    return create_routes(starting_point, distance, language, end_point, mode)[0]
+
+
+def create_routes(
+    starting_point: GeoJSONPoint,
+    distance: int,
+    language: str = DEFAULT_LANGUAGE,
+    end_point: GeoJSONPoint | None = None,
+    mode: str | None = None,
+) -> list[RunningRoute]:
     total_timer = time.perf_counter()
 
     if mode is None:
@@ -316,50 +331,54 @@ def create_route(
     if not candidates:
         raise ValueError("Could not find a connected route near the starting point.")
 
-    best = min(candidates, key=lambda c: abs(c.length - distance))
+    ranked = sorted({tuple(c.path): c for c in candidates}.values(), key=lambda c: abs(c.length - distance))
+    closest = ranked[0]
 
-    if best.label != "shortest" and abs(best.length - distance) > distance * 0.5:
+    if closest.label != "shortest" and abs(closest.length - distance) > distance * 0.5:
         raise ValueError(
             f"Could not find a route within 50% of {distance} m. "
-            f"Closest route was {round(best.length)} m."
+            f"Closest route was {round(closest.length)} m."
         )
 
-    traffic_light_count = sum(
-        1
-        for node_id in best.path
-        if graph.nodes[node_id].get("traffic_signal") is True
+    pool = [c for c in ranked if abs(c.length - distance) <= distance * SCORING_TOLERANCE] or [closest]
+    pool = pool[:MAX_SCORED_CANDIDATES]
+
+    coordinates = [[(graph.nodes[n]["x"], graph.nodes[n]["y"]) for n in c.path] for c in pool]
+    signals = [sum(1 for n in c.path if graph.nodes[n].get("traffic_signal") is True) for c in pool]
+    profiles = climb_profiles(coordinates) or [None] * len(pool)
+
+    features = [
+        RouteFeatures(
+            distance_m=round(c.length),
+            total_elevation_gain_m=profile.total_gain_m if profile else None,
+            traffic_light_count=signal_count,
+            uphill_segments=profile.uphill_segments if profile else [],
+        )
+        for c, signal_count, profile in zip(pool, signals, profiles)
+    ]
+    scores = [
+        score_route(f.total_elevation_gain_m, f.traffic_light_count, c.length, distance)
+        for c, f in zip(pool, features)
+    ]
+    chosen = sorted(range(len(pool)), key=lambda i: scores[i])[:MAX_ROUTE_OPTIONS]
+
+    with ThreadPoolExecutor(max_workers=len(chosen)) as executor:
+        briefings = list(executor.map(lambda i: generate_briefing(features[i], language), chosen))
+
+    log(
+        f"Total {time.perf_counter() - total_timer:.2f}s, "
+        + ", ".join(f"{pool[i].label} {pool[i].length:.0f}m score {scores[i]:.1f}" for i in chosen)
     )
 
-    coordinates = [(graph.nodes[n]["x"], graph.nodes[n]["y"]) for n in best.path]
-    log(f"Total {time.perf_counter() - total_timer:.2f}s, best = {best.label}, {best.length:.0f}m")
-
-    actual_distance = round(best.length)
-    briefing = generate_briefing(
-         mock_route_features(actual_distance, traffic_light_count),
-         language,
-    )
-
-    return RunningRoute(
-        distance=actual_distance,
-        briefing=briefing,
-        route=[GeoJSONLineString(coordinates=coordinates)],
-        is_shortest_path=best.label == "shortest",
-        traffic_light_count = traffic_light_count,
-    )
-
-
-def mock_route_features(
-    distance: int,
-    traffic_light_count: int,
-) -> RouteFeatures:
-    uphills = (
-        [UphillSegment(start_km=2.0, length_m=300, elevation_gain_m=20)]
-        if distance > 2000
-        else []
-    ) # AI-assisted with ChatGPT, 2026-10-16; reviewed by Soonyoung
-    return RouteFeatures(
-        distance_m=distance,
-        total_elevation_gain_m=45,
-        traffic_light_count=traffic_light_count,
-        uphill_segments=uphills,
-    )
+    return [
+        RunningRoute(
+            distance=features[i].distance_m,
+            briefing=briefing,
+            route=[GeoJSONLineString(coordinates=coordinates[i])],
+            is_shortest_path=pool[i].label == "shortest",
+            traffic_light_count=features[i].traffic_light_count,
+            elevation_gain_m=features[i].total_elevation_gain_m,
+            score=round(scores[i], 1),
+        )
+        for i, briefing in zip(chosen, briefings)
+    ]
