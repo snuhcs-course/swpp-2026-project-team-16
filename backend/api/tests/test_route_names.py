@@ -51,3 +51,20 @@ class RouteNameTests(FakeMapTestCase):
         response = self.client.post(URL, body(end_point_name="a" * 101), format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["message"], "end_point_name must be 100 characters or fewer")
+
+    def test_saved_route_name_is_optional_and_editable(self, llm):
+        route_id = self.generate_and_save()
+        self.assertEqual(self.client.get(SAVED_URL).data[0]["name"], "")
+
+        renamed = self.client.patch(f"{SAVED_URL}{route_id}/", {"name": " 아침 한강 코스 "}, format="json")
+        self.assertEqual(renamed.status_code, 200)
+        self.assertEqual(self.client.get(f"{SAVED_URL}{route_id}/").data["data"]["name"], "아침 한강 코스")
+
+        resaved = self.client.post(SAVED_URL, {"route_id": route_id}, format="json")
+        self.assertEqual(resaved.status_code, 200)
+        self.assertEqual(self.client.get(SAVED_URL).data[0]["name"], "아침 한강 코스")
+
+    def test_blank_rename_is_rejected(self, llm):
+        route_id = self.generate_and_save()
+        response = self.client.patch(f"{SAVED_URL}{route_id}/", {"name": "  "}, format="json")
+        self.assertEqual((response.status_code, response.data["message"]), (400, "A route name is required."))

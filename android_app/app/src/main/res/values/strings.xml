@@ -57,6 +57,8 @@
     <string name="deleting">Deleting...</string>
     <string name="delete_dialog_title">Delete route?</string>
     <string name="delete_dialog_message">This removes the route from My Page.</string>
+    <string name="rename_route">Rename route</string>
+    <string name="label_route_name">Route name</string>
     <string name="action_cancel">Cancel</string>
 
     <string name="language">Language</string>
