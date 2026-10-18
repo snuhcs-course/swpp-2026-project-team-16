@@ -15,6 +15,9 @@ class CreateRouteTests(SimpleTestCase):
     def setUp(self):
         self.graph = grid_graph()
         self.start = GeoJSONPoint(coordinates=SNU)
+        patcher = mock.patch("api.route_algorithm.street_graph.local_graph", return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=fake_elevations)
         self.elevation = patcher.start()
         self.addCleanup(patcher.stop)
@@ -66,6 +69,9 @@ class CreateRoutesTests(SimpleTestCase):
     def setUp(self):
         self.graph = grid_graph()
         self.start = GeoJSONPoint(coordinates=SNU)
+        patcher = mock.patch("api.route_algorithm.street_graph.local_graph", return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def create(self, elevations=fake_elevations):
         with mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=elevations):
