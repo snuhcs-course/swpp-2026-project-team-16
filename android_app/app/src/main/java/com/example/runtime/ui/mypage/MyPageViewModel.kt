@@ -129,6 +129,24 @@ class MyPageViewModel(
         }
     }
 
+    fun deleteFromList(routeId: Int) {
+        val index = routes.indexOfFirst { it.id == routeId }
+        if (index < 0) return
+        val removed = routes[index]
+        routes = routes.filterNot { it.id == routeId }
+        error = null
+        sessionScope.launch {
+            try {
+                routeRepository.deleteSavedRoute(routeId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                routes = routes.toMutableList().apply { add(index.coerceAtMost(size), removed) }
+                error = e.toUiText()
+            }
+        }
+    }
+
     fun delete(routeId: Int, onDeleted: () -> Unit) {
         if (isDeleting) return
         isDeleting = true
