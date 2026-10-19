@@ -27,6 +27,7 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit, 
     var showMenu by remember { mutableStateOf(false) }
     var showAccountMenu by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var revealedRouteId by remember { mutableStateOf<Int?>(null) }
     val menuLabel = stringResource(R.string.menu)
 
     LaunchedEffect(Unit) {
@@ -90,30 +91,45 @@ fun MyPageScreen(myPageViewModel: MyPageViewModel, onRouteClick: (Int) -> Unit, 
         }
         LazyColumn {
             items(myPageViewModel.routes, key = { it.id }) { route ->
-                Card(
-                    onClick = { onRouteClick(route.id) },
+                SwipeToDeleteItem(
+                    revealed = revealedRouteId == route.id,
+                    onRevealChange = { revealed ->
+                        revealedRouteId = if (revealed) route.id else revealedRouteId.takeUnless { it == route.id }
+                    },
+                    onDelete = {
+                        revealedRouteId = null
+                        myPageViewModel.deleteFromList(route.id)
+                    },
                     modifier = Modifier
+                        .animateItem()
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        val defaultTitle = routeTitle(route.startName, route.endName, route.distance)
-                        Text(
-                            text = route.name.ifBlank { defaultTitle },
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (route.name.isNotBlank()) {
-                            Text(text = defaultTitle, color = Color.Gray, fontSize = 13.sp)
+                    Card(
+                        onClick = {
+                            if (revealedRouteId != null) revealedRouteId = null else onRouteClick(route.id)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            val defaultTitle = routeTitle(route.startName, route.endName, route.distance)
+                            Text(
+                                text = route.name.ifBlank { defaultTitle },
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (route.name.isNotBlank()) {
+                                Text(text = defaultTitle, color = Color.Gray, fontSize = 13.sp)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = route.briefing,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = route.savedAt.take(10), color = Color.Gray, fontSize = 13.sp)
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = route.briefing,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = route.savedAt.take(10), color = Color.Gray, fontSize = 13.sp)
                     }
                 }
             }
