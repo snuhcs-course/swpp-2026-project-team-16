@@ -115,3 +115,25 @@ class CreateRoutesTests(SimpleTestCase):
         self.assertTrue(routes)
         self.assertIsNone(routes[0].elevation_gain_m)
         self.assertNotIn("누적 상승", routes[0].briefing)
+
+    def test_counts_only_signal_nodes_on_generated_route(self, download, llm):
+        signal_coordinates = set()
+
+        # 그래프 노드 일부를 신호등으로 표시
+        for node, data in self.graph.nodes(data=True):
+            if node % 3 == 0:
+                data["highway"] = "traffic_signals"
+                signal_coordinates.add((data["x"], data["y"]))
+
+        download.return_value = self.graph
+        route = self.create()[0]
+        route_coordinates = route.route[0].coordinates
+
+        # 반환된 좌표 중 신호등 개수 직접 counting
+        expected_count = sum(
+            tuple(coordinate) in signal_coordinates
+            for coordinate in route_coordinates
+        )
+
+        self.assertGreater(expected_count, 0)
+        self.assertEqual(route.traffic_light_count, expected_count)
