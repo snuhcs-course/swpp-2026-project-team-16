@@ -40,10 +40,24 @@ import com.naver.maps.map.compose.rememberCameraPositionState
 import com.naver.maps.map.util.MarkerIcons
 import java.util.Locale
 
+data class RouteCoordinate(
+    val latitude: Double,
+    val longitude: Double,
+)
+
 data class RouteSlopeSegment(
-    val coordinates : List<Pair<Double,Double>>,
+    val coordinates: List<RouteCoordinate>,
     val slopePercent: Double,
 )
+
+private data class ColoredRoutePath(
+    val coordinates: List<LatLng>,
+    val color: Color,
+)
+
+private const val STEEP_UPHILL_THRESHOLD = 5.0
+private const val MODERATE_UPHILL_THRESHOLD = 2.5
+private const val DOWNHILL_THRESHOLD = -2.5
 
 private val MAP_LANGUAGES = setOf("ko", "en")
 private val SEOUL = LatLng(37.5666, 126.9784)
@@ -92,17 +106,39 @@ fun RouteMap(
             .map { LatLng(it[1], it[0]) }
     }
     val coloredPaths = remember(slopeSegments) {
-        slopeSegments.mapNotNull { segment ->
-            val segmentPoints = segment.coordinates.map { (latitude, longitude) ->
-                LatLng(latitude, longitude)
+        val paths = mutableListOf<ColoredRoutePath>()
+
+        slopeSegments.forEach { segment ->
+            val segmentPoints = segment.coordinates.map { coordinate ->
+                LatLng(coordinate.latitude, coordinate.longitude)
             }
+
             if (segmentPoints.size >= 2) {
-                segmentPoints to segment.slopePercent
-            } else {
-                null
+                val color = slopeColor(segment.slopePercent)
+                val previousPath = paths.lastOrNull()
+
+                if (
+                    previousPath != null &&
+                    previousPath.color == color &&
+                    previousPath.coordinates.last() == segmentPoints.first()
+                ) {
+                    paths[paths.lastIndex] = previousPath.copy(
+                        coordinates = previousPath.coordinates + segmentPoints.drop(1),
+                    )
+                } else {
+                    paths.add(
+                        ColoredRoutePath(
+                            coordinates = segmentPoints,
+                            color = color,
+                        ),
+                    )
+                }
             }
         }
+
+        paths
     }
+
     val start = points.firstOrNull()
     val end = points.lastOrNull()?.takeIf { start != null && it.distanceTo(start) > SAME_POINT_METERS }
     val cameraPositionState = rememberCameraPositionState()
@@ -120,13 +156,13 @@ fun RouteMap(
         onMapLoaded = { cameraPositionState.fit(points, padding) }
     ) {
         if (coloredPaths.isNotEmpty()) {
-            coloredPaths.forEach { (segmentPoints, slopePercent) ->
+            coloredPaths.forEach { path ->
                 PathOverlay(
-                    coords = segmentPoints,
+                    coords = path.coordinates,
                     width = 5.dp,
                     outlineWidth = 1.dp,
-                    color = slopeColor(slopePercent),
-                    outlineColor = Color.White
+                    color = path.color,
+                    outlineColor = Color.White,
                 )
             }
         } else if (points.size >= 2) {
@@ -196,9 +232,13 @@ fun PlacePickerMap(start: Place?, end: Place?, onPick: (LatLng) -> Unit, modifie
 
 private fun GeoJsonPoint.toLatLng() = LatLng(coordinates[1], coordinates[0])
 
+internal val steepUphillColor = Color(0xFFE53935)
+internal val moderateUphillColor = Color(0xFFFFC107)
+internal val levelRouteColor = Color(0xFF43A047)
+internal val downhillColor = Color(0xFF1E88E5)
 private fun slopeColor(slopePercent: Double): Color = when {
-    slopePercent >= 5.0 -> Color(0xFFE53935)   // 빨강
-    slopePercent >= 2.5 -> Color(0xFFFFC107)   // 노랑
-    slopePercent >= -2.5 -> Color(0xFF43A047)  // 초록
-    else -> Color(0xFF1E88E5)                  // 파랑
+    slopePercent >= STEEP_UPHILL_THRESHOLD -> steepUphillColor
+    slopePercent >= MODERATE_UPHILL_THRESHOLD -> moderateUphillColor
+    slopePercent >= DOWNHILL_THRESHOLD -> levelRouteColor
+    else -> downhillColor
 }

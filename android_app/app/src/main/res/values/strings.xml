@@ -100,4 +100,9 @@
     <string name="traffic_light_count">Traffic lights: %1$d</string>
     <string name="elevation_information">Elevation information</string>
     <string name="elevation_unavailable">Elevation information is unavailable.</string>
+
+    <string name="slope_legend_steep_uphill">Steep uphill</string>
+    <string name="slope_legend_moderate_uphill">Uphill</string>
+    <string name="slope_legend_level">Level</string>
+    <string name="slope_legend_downhill">Downhill</string>
 </resources>
