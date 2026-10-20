@@ -96,4 +96,9 @@
     <string name="traffic_light_count">신호등: %1$d개</string>
     <string name="elevation_information">고도 정보</string>
     <string name="elevation_unavailable">고도 정보를 불러오지 못했습니다.</string>
+
+    <string name="slope_legend_steep_uphill">급경사</string>
+    <string name="slope_legend_moderate_uphill">오르막</string>
+    <string name="slope_legend_level">평지</string>
+    <string name="slope_legend_downhill">내리막</string>
 </resources>

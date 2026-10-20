@@ -21,6 +21,9 @@ import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 
 // 6. Route Result Screen (화면 6)
 @Composable
@@ -29,6 +32,7 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
     val saveState = routeViewModel.saveState
     val elevationSummary = routeViewModel.steepSectionSummary
     val elevationLoadState = routeViewModel.elevationLoadState
+    val routeSlopeSegments = routeViewModel.routeSlopeSegments
 
     var showFullMap by remember { mutableStateOf(false) }
 
@@ -58,9 +62,17 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
             RouteMap(
                 lines = generated.route.route,
                 modifier = Modifier.fillMaxSize(),
-                onClick = { showFullMap = true }
+                onClick = { showFullMap = true },
+                slopeSegments = routeSlopeSegments,
             )
         }
+        if (elevationLoadState == ElevationLoadState.Success &&
+            routeSlopeSegments.isNotEmpty()
+        ) {
+            SlopeLegend()
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             stringResource(R.string.distance_value, formatDistance(generated.route.distance)),
@@ -152,7 +164,74 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
     }
 
     if (showFullMap) {
-        FullScreenRouteMap(lines = generated.route.route, onDismiss = { showFullMap = false })
+        FullScreenRouteMap(
+            lines = generated.route.route,
+            onDismiss = { showFullMap = false },
+            slopeSegments = routeSlopeSegments,
+            )
+    }
+}
+
+@Composable
+private fun SlopeLegend() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SlopeLegendItem(
+                modifier = Modifier.weight(1f),
+                color = steepUphillColor,
+                label = stringResource(R.string.slope_legend_steep_uphill),
+            )
+            SlopeLegendItem(
+                modifier = Modifier.weight(1f),
+                color = moderateUphillColor,
+                label = stringResource(R.string.slope_legend_moderate_uphill),
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SlopeLegendItem(
+                modifier = Modifier.weight(1f),
+                color = levelRouteColor,
+                label = stringResource(R.string.slope_legend_level),
+            )
+            SlopeLegendItem(
+                modifier = Modifier.weight(1f),
+                color = downhillColor,
+                label = stringResource(R.string.slope_legend_downhill),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SlopeLegendItem(
+    modifier: Modifier = Modifier,
+    color: Color,
+    label: String,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
+        Text(label, fontSize = 11.sp)
     }
 }
 

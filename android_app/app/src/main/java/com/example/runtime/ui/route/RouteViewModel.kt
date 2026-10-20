@@ -21,11 +21,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.math.asin
-import kotlin.math.cos
 import kotlin.math.roundToInt
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 class PlaceField {
     var input by mutableStateOf("")
@@ -81,6 +77,9 @@ class RouteViewModel(
         private set
     var slopes by mutableStateOf<List<Double>>(emptyList())
         private set
+
+    var routeSlopeSegments by mutableStateOf<List<RouteSlopeSegment>>(emptyList())
+        private set
     var steepSectionSummary by mutableStateOf("")
         private set
     var elevationLoadState by mutableStateOf(ElevationLoadState.Error)
@@ -120,6 +119,7 @@ class RouteViewModel(
         elevationJob = null
         elevations = emptyList()
         slopes = emptyList()
+        routeSlopeSegments = emptyList()
         steepSectionSummary = ""
         elevationLoadState = ElevationLoadState.Error
         pendingStart = null
@@ -290,6 +290,7 @@ class RouteViewModel(
         elevationJob?.cancel()
         elevations = emptyList()
         slopes = emptyList()
+        routeSlopeSegments = emptyList()
         steepSectionSummary = ""
         elevationLoadState = ElevationLoadState.Loading
         val language = pendingLanguage
@@ -355,6 +356,27 @@ class RouteViewModel(
             )
 
             slopes = calculatedSlopes
+
+            val routeGeometrySegments =
+                splitRouteGeometryAtIntervals(coordinates, SAMPLE_INTERVAL_METERS)
+
+            routeSlopeSegments =
+                if (routeGeometrySegments.size == calculatedSlopes.size) {
+                    routeGeometrySegments.zip(calculatedSlopes) { segmentCoordinates, slope ->
+                        RouteSlopeSegment(
+                            coordinates = segmentCoordinates.map { (latitude, longitude) ->
+                                RouteCoordinate(
+                                    latitude = latitude,
+                                    longitude = longitude,
+                                )
+                            },
+                            slopePercent = slope,
+                        )
+                    }
+                } else {
+                    // 구간 수 안 맞으면 기본 경로 색으로
+                    emptyList()
+                }
             steepSectionSummary = summarizeSteepSections(
                 slopes = calculatedSlopes,
                 segmentDistances = segmentDistances,
@@ -372,6 +394,7 @@ class RouteViewModel(
     private fun markElevationUnavailable(language: String) {
         elevations = emptyList()
         slopes = emptyList()
+        routeSlopeSegments = emptyList()
         steepSectionSummary = noElevationMessage(language)
         elevationLoadState = ElevationLoadState.Error
     }
@@ -552,40 +575,9 @@ class RouteViewModel(
         return sampled
     }
 
-    private fun interpolateCoordinate(
-        start: Pair<Double, Double>,
-        end: Pair<Double, Double>,
-        fraction: Double,
-    ): Pair<Double, Double> {
-        val latitude = start.first + (end.first - start.first) * fraction
-        val longitude = start.second + (end.second - start.second) * fraction
-        return latitude to longitude
-    }
 
-    /**
-     두 좌표 사이의 지표면 거리를 Haversine 공식으로 계산
-     좌표 형식은 (latitude, longitude)
-     */
-    private fun distanceBetweenMeters(
-        first: Pair<Double, Double>,
-        second: Pair<Double, Double>,
-    ): Double {
-        val earthRadiusMeters = 6_371_000.0
 
-        val firstLatitude = Math.toRadians(first.first)
-        val secondLatitude = Math.toRadians(second.first)
-        val latitudeDifference = Math.toRadians(second.first - first.first)
-        val longitudeDifference = Math.toRadians(second.second - first.second)
 
-        val haversine =
-            sin(latitudeDifference / 2) * sin(latitudeDifference / 2) +
-                    cos(firstLatitude) *
-                    cos(secondLatitude) *
-                    sin(longitudeDifference / 2) *
-                    sin(longitudeDifference / 2)
-
-        return 2 * earthRadiusMeters * asin(sqrt(haversine.coerceIn(0.0, 1.0)))
-    }
 
     fun save() {
         val route = generated ?: return
@@ -623,7 +615,6 @@ class RouteViewModel(
         private const val SAMPLE_INTERVAL_METERS = 250.0
         private const val STEEP_SLOPE_THRESHOLD = 5.0
         private const val MIN_CONSECUTIVE_STEEP_SEGMENTS = 2
-        private const val MIN_COORDINATE_DISTANCE_METERS = 0.1
 
         private const val DEFAULT_LANGUAGE = "en"
         private const val KOREAN = "ko"
