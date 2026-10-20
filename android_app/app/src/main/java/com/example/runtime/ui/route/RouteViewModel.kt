@@ -81,6 +81,9 @@ class RouteViewModel(
         private set
     var slopes by mutableStateOf<List<Double>>(emptyList())
         private set
+
+    var routeSlopeSegments by mutableStateOf<List<RouteSlopeSegment>>(emptyList())
+        private set
     var steepSectionSummary by mutableStateOf("")
         private set
     var elevationLoadState by mutableStateOf(ElevationLoadState.Error)
@@ -120,6 +123,7 @@ class RouteViewModel(
         elevationJob = null
         elevations = emptyList()
         slopes = emptyList()
+        routeSlopeSegments = emptyList()
         steepSectionSummary = ""
         elevationLoadState = ElevationLoadState.Error
         pendingStart = null
@@ -290,6 +294,7 @@ class RouteViewModel(
         elevationJob?.cancel()
         elevations = emptyList()
         slopes = emptyList()
+        routeSlopeSegments = emptyList()
         steepSectionSummary = ""
         elevationLoadState = ElevationLoadState.Loading
         val language = pendingLanguage
@@ -355,6 +360,22 @@ class RouteViewModel(
             )
 
             slopes = calculatedSlopes
+
+            val routeGeometrySegments =
+                splitRouteGeometryAtIntervals(coordinates, SAMPLE_INTERVAL_METERS)
+
+            routeSlopeSegments =
+                if (routeGeometrySegments.size == calculatedSlopes.size) {
+                    routeGeometrySegments.zip(calculatedSlopes) { segmentCoordinates, slope ->
+                        RouteSlopeSegment(
+                            coordinates = segmentCoordinates,
+                            slopePercent = slope,
+                        )
+                    }
+                } else {
+                    // 구간 수 안 맞으면 기본 경로 색으로
+                    emptyList()
+                }
             steepSectionSummary = summarizeSteepSections(
                 slopes = calculatedSlopes,
                 segmentDistances = segmentDistances,
@@ -372,6 +393,7 @@ class RouteViewModel(
     private fun markElevationUnavailable(language: String) {
         elevations = emptyList()
         slopes = emptyList()
+        routeSlopeSegments = emptyList()
         steepSectionSummary = noElevationMessage(language)
         elevationLoadState = ElevationLoadState.Error
     }
@@ -550,6 +572,66 @@ class RouteViewModel(
         }
 
         return sampled
+    }
+
+    private fun splitRouteGeometryAtIntervals(
+        coordinates: List<Pair<Double, Double>>,
+        intervalMeters: Double,
+    ): List<List<Pair<Double, Double>>> {
+        if (coordinates.size < 2 || intervalMeters <= 0.0) return emptyList()
+
+        val cleanCoordinates = mutableListOf<Pair<Double, Double>>()
+        coordinates.forEach { point ->
+            if (
+                cleanCoordinates.isEmpty() ||
+                distanceBetweenMeters(cleanCoordinates.last(), point) >
+                MIN_COORDINATE_DISTANCE_METERS
+            ) {
+                cleanCoordinates.add(point)
+            }
+        }
+
+        if (cleanCoordinates.size < 2) return emptyList()
+
+        val result = mutableListOf<List<Pair<Double, Double>>>()
+        var currentCoordinates = mutableListOf(cleanCoordinates.first())
+        var distanceInCurrentSegment = 0.0
+
+        for (index in 0 until cleanCoordinates.lastIndex) {
+            var edgeStart = cleanCoordinates[index]
+            val edgeEnd = cleanCoordinates[index + 1]
+            var remainingEdgeDistance = distanceBetweenMeters(edgeStart, edgeEnd)
+
+            while (remainingEdgeDistance > 0.001) {
+                val distanceToBoundary = intervalMeters - distanceInCurrentSegment
+
+                if (remainingEdgeDistance + 1e-6 >= distanceToBoundary) {
+                    val fraction =
+                        (distanceToBoundary / remainingEdgeDistance).coerceIn(0.0, 1.0)
+                    val boundary = interpolateCoordinate(edgeStart, edgeEnd, fraction)
+                    currentCoordinates.add(boundary)
+
+                    if (currentCoordinates.size >= 2) {
+                        result.add(currentCoordinates.toList())
+                    }
+
+                    currentCoordinates = mutableListOf(boundary)
+                    distanceInCurrentSegment = 0.0
+                    edgeStart = boundary
+                    remainingEdgeDistance = distanceBetweenMeters(edgeStart, edgeEnd)
+                } else {
+                    currentCoordinates.add(edgeEnd)
+                    distanceInCurrentSegment += remainingEdgeDistance
+                    remainingEdgeDistance = 0.0
+                }
+            }
+        }
+
+        if (currentCoordinates.size >= 2) {
+            result.add(currentCoordinates.toList())
+        }
+
+        return result
     }
 
     private fun interpolateCoordinate(

@@ -40,6 +40,11 @@ import com.naver.maps.map.compose.rememberCameraPositionState
 import com.naver.maps.map.util.MarkerIcons
 import java.util.Locale
 
+data class RouteSlopeSegment(
+    val coordinates : List<Pair<Double,Double>>,
+    val slopePercent: Double,
+)
+
 private val MAP_LANGUAGES = setOf("ko", "en")
 private val SEOUL = LatLng(37.5666, 126.9784)
 private const val DEFAULT_ZOOM = 13.0
@@ -75,11 +80,28 @@ private fun StartEndMarkers(start: LatLng?, end: LatLng?) {
 
 @OptIn(ExperimentalNaverMapApi::class)
 @Composable
-fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun RouteMap(
+    lines: List<GeoJsonLineString>,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    slopeSegments: List<RouteSlopeSegment> = emptyList(),
+    ) {
     val points = remember(lines) {
         lines.flatMap { it.coordinates }
             .filter { it.size >= 2 }
             .map { LatLng(it[1], it[0]) }
+    }
+    val coloredPaths = remember(slopeSegments) {
+        slopeSegments.mapNotNull { segment ->
+            val segmentPoints = segment.coordinates.map { (latitude, longitude) ->
+                LatLng(latitude, longitude)
+            }
+            if (segmentPoints.size >= 2) {
+                segmentPoints to segment.slopePercent
+            } else {
+                null
+            }
+        }
     }
     val start = points.firstOrNull()
     val end = points.lastOrNull()?.takeIf { start != null && it.distanceTo(start) > SAME_POINT_METERS }
@@ -97,7 +119,18 @@ fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier, onCl
         onMapClick = { _, _ -> onClick?.invoke() },
         onMapLoaded = { cameraPositionState.fit(points, padding) }
     ) {
-        if (points.size >= 2) {
+        if (coloredPaths.isNotEmpty()) {
+            coloredPaths.forEach { (segmentPoints, slopePercent) ->
+                PathOverlay(
+                    coords = segmentPoints,
+                    width = 5.dp,
+                    outlineWidth = 1.dp,
+                    color = slopeColor(slopePercent),
+                    outlineColor = Color.White
+                )
+            }
+        } else if (points.size >= 2) {
+            // 고도 정보가 없거나 불러오지 못한 경우 원래대로
             PathOverlay(
                 coords = points,
                 width = 5.dp,
@@ -111,10 +144,18 @@ fun RouteMap(lines: List<GeoJsonLineString>, modifier: Modifier = Modifier, onCl
 }
 
 @Composable
-fun FullScreenRouteMap(lines: List<GeoJsonLineString>, onDismiss: () -> Unit) {
+fun FullScreenRouteMap(
+    lines: List<GeoJsonLineString>,
+    onDismiss: () -> Unit,
+    slopeSegments: List<RouteSlopeSegment> = emptyList(),
+    ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(modifier = Modifier.fillMaxSize()) {
-            RouteMap(lines = lines, modifier = Modifier.fillMaxSize())
+            RouteMap(
+                lines = lines,
+                modifier = Modifier.fillMaxSize(),
+                slopeSegments = slopeSegments,
+            )
             IconButton(
                 onClick = onDismiss,
                 colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -154,3 +195,10 @@ fun PlacePickerMap(start: Place?, end: Place?, onPick: (LatLng) -> Unit, modifie
 }
 
 private fun GeoJsonPoint.toLatLng() = LatLng(coordinates[1], coordinates[0])
+
+private fun slopeColor(slopePercent: Double): Color = when {
+    slopePercent >= 5.0 -> Color(0xFFE53935)   // 빨강
+    slopePercent >= 2.5 -> Color(0xFFFFC107)   // 노랑
+    slopePercent >= -2.5 -> Color(0xFF43A047)  // 초록
+    else -> Color(0xFF1E88E5)                  // 파랑
+}

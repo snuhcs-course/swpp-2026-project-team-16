@@ -29,6 +29,7 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
     val saveState = routeViewModel.saveState
     val elevationSummary = routeViewModel.steepSectionSummary
     val elevationLoadState = routeViewModel.elevationLoadState
+    val routeSlopeSegments = routeViewModel.routeSlopeSegments
 
     var showFullMap by remember { mutableStateOf(false) }
 
@@ -58,7 +59,8 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
             RouteMap(
                 lines = generated.route.route,
                 modifier = Modifier.fillMaxSize(),
-                onClick = { showFullMap = true }
+                onClick = { showFullMap = true },
+                slopeSegments = routeSlopeSegments,
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -152,7 +154,11 @@ fun RouteResultScreen(routeViewModel: RouteViewModel) {
     }
 
     if (showFullMap) {
-        FullScreenRouteMap(lines = generated.route.route, onDismiss = { showFullMap = false })
+        FullScreenRouteMap(
+            lines = generated.route.route,
+            onDismiss = { showFullMap = false },
+            slopeSegments = routeSlopeSegments,
+            )
     }
 }
 
