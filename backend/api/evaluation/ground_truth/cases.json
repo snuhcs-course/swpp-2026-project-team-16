@@ -1,0 +1,165 @@
+{
+  "description": "Ground truth for traffic lights and elevation gain on fixed routes. Routes are in routes/<id>.geojson. Fill in `truth` by hand; do not change `thresholds` after truth values are added.",
+  "thresholds": {
+    "declared": "2026-10-21",
+    "traffic_lights": {
+      "within": 2,
+      "min_pass_rate": 0.75
+    },
+    "elevation_gain_m": {
+      "within_m": 10,
+      "within_ratio": 0.3,
+      "min_pass_rate": 0.75
+    }
+  },
+  "cases": [
+    {
+      "id": "snu_gate_loop",
+      "name": "서울대학교 정문 3km loop",
+      "why": "Campus hills",
+      "start": [
+        126.94808,
+        37.46649
+      ],
+      "distance_m": 3000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "city_hall_loop",
+      "name": "서울특별시청 3km loop",
+      "why": "Downtown, many crossings",
+      "start": [
+        126.97872,
+        37.5669
+      ],
+      "distance_m": 3000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "gangnam_station_loop",
+      "name": "강남역 3km loop",
+      "why": "Wide roads, many crossings",
+      "start": [
+        127.02796,
+        37.49805
+      ],
+      "distance_m": 3000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "yeouido_park_loop",
+      "name": "여의도공원 3km loop",
+      "why": "Flat",
+      "start": [
+        126.92158,
+        37.52446
+      ],
+      "distance_m": 3000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "namsan_library_loop",
+      "name": "남산도서관 3km loop",
+      "why": "Steep uphill",
+      "start": [
+        126.98166,
+        37.55265
+      ],
+      "distance_m": 3000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "banpo_hangang_loop",
+      "name": "반포한강공원 3km loop",
+      "why": "Riverside park, few crossings",
+      "start": [
+        126.99713,
+        37.51032
+      ],
+      "distance_m": 3000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "seokchon_lake_loop",
+      "name": "석촌호수 2.5km loop",
+      "why": "Lake path",
+      "start": [
+        127.10418,
+        37.5091
+      ],
+      "distance_m": 2500,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "hongdae_to_sinchon",
+      "name": "홍대입구역 → 신촌역 2km",
+      "why": "Point-to-point, shopping streets",
+      "start": [
+        126.92294,
+        37.55607
+      ],
+      "end": [
+        126.93697,
+        37.55518
+      ],
+      "distance_m": 2000,
+      "truth": {
+        "traffic_lights": null,
+        "elevation_gain_m": null,
+        "elevation_source": "",
+        "checked_by": "",
+        "checked_on": "",
+        "notes": ""
+      }
+    }
+  ]
+}
