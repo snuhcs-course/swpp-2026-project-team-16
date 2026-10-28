@@ -202,6 +202,30 @@ class SavedRoutesListTests(SavedRoutesTestBase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_post_saves_temporary_route_generated_as_guest(self):
+        temporary_route = TemporaryRoute.objects.create(
+            user=None,
+            distance=1000,
+            briefing="Guest route",
+            route=[{
+                "type": "LineString",
+                "coordinates": [[127.0, 37.0], [127.1, 37.1]],
+            }],
+        )
+
+        response = self.call_view(
+            saved_routes_list,
+            "post",
+            data={"temporary_route_id": temporary_route.id},
+            user=self.user,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(TemporaryRoute.objects.filter(id=temporary_route.id).exists())
+        saved = UserSavedRoute.objects.get(user=self.user)
+        self.assertEqual(saved.route.created_by, self.user)
+        self.assertEqual(saved.route.briefing, "Guest route")
+
     def test_post_saves_temporary_route_and_deletes_temporary_record(self):
         temporary_route = TemporaryRoute.objects.create(
             user=self.user,

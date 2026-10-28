@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 
 from django.db import transaction
+from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -86,7 +87,10 @@ def saved_routes_list(request):
         
         if temporary_route_id:
             try:
-                temporary_route = TemporaryRoute.objects.get(id=temporary_route_id, user=request.user)
+                temporary_route = TemporaryRoute.objects.get(
+                    Q(user=request.user) | Q(user__isnull=True),
+                    id=temporary_route_id,
+                )
             except TemporaryRoute.DoesNotExist:
                 return Response({'status': 'error', 'message': 'Temporary route not found.'}, status=status.HTTP_404_NOT_FOUND)
                     

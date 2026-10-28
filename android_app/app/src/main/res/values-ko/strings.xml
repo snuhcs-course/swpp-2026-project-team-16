@@ -25,6 +25,12 @@
     <string name="title_log_in">계정에 로그인하세요</string>
     <string name="title_sign_up">새 계정을 만드세요</string>
     <string name="menu">메뉴</string>
+    <string name="action_not_now">나중에</string>
+    <string name="login_prompt_title">로그인이 필요해요</string>
+    <string name="login_prompt_trial_used">RunTime을 한 번 체험해 보셨어요. 경로를 더 만들려면 로그인하거나 회원가입하세요.</string>
+    <string name="login_prompt_save">이 경로를 저장하려면 로그인하세요. 로그인하면 이 화면으로 돌아와 저장돼요.</string>
+    <string name="guest_my_page_title">마음에 드는 경로를 저장해 보세요</string>
+    <string name="guest_my_page_message">로그인하면 경로를 저장하고, 이름을 붙이고, 여기서 언제든 다시 볼 수 있어요.</string>
     <string name="action_log_out">로그아웃</string>
     <string name="log_out_dialog_title">로그아웃할까요?</string>
     <string name="log_out_dialog_message">RunTime을 쓰려면 다시 로그인해야 합니다.</string>

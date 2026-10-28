@@ -27,6 +27,12 @@
     <string name="title_log_in">Log-in to your account</string>
     <string name="title_sign_up">Create your account</string>
     <string name="menu">Menu</string>
+    <string name="action_not_now">Not now</string>
+    <string name="login_prompt_title">Log in to continue</string>
+    <string name="login_prompt_trial_used">You\'ve tried RunTime once. Log in or sign up to generate more routes.</string>
+    <string name="login_prompt_save">Log in to save this route. You\'ll come back here and it will be saved.</string>
+    <string name="guest_my_page_title">Save the routes you like</string>
+    <string name="guest_my_page_message">Log in to save routes, rename them, and find them here anytime.</string>
     <string name="action_log_out">Log out</string>
     <string name="log_out_dialog_title">Log out?</string>
     <string name="log_out_dialog_message">You will need to log in again to use RunTime.</string>
