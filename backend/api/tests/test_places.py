@@ -8,11 +8,20 @@ from unittest import mock
 from django.test import SimpleTestCase
 from rest_framework.test import APITestCase
 
-from api.services.tmap import TMAP_POI_URL, Place, PlaceSearchError, search_places
+from api.services.tmap import (
+    TMAP_POI_URL,
+    TMAP_REVERSE_GEOCODING_URL,
+    Place,
+    PlaceSearchError,
+    reverse_geocode,
+    search_places,
+)
 
 
 SAMPLE = (Path(__file__).parent / "data" / "tmap_poi_samgakji.json").read_bytes()
+REVERSE_SAMPLE = (Path(__file__).parent / "data" / "tmap_reverse_city_hall.json").read_bytes()
 URL = "/api/v1/places/search/"
+REVERSE_URL = "/api/v1/places/reverse/"
 
 
 class FakeOpener:
@@ -107,3 +116,75 @@ class SearchPlacesApiTests(APITestCase):
     def test_search_failure_returns_503(self, search):
         response = self.client.get(URL, {"q": "삼각지"})
         self.assertEqual(response.status_code, 503)
+
+
+class ReverseGeocodeTests(SimpleTestCase):
+    def reverse(self, result):
+        opener = FakeOpener(result)
+        return reverse_geocode(37.5665, 126.978, api_key="test-key", opener=opener), opener
+
+    def test_uses_building_name_and_road_address(self):
+        place, opener = self.reverse(REVERSE_SAMPLE)
+        self.assertEqual(
+            place,
+            Place(name="서울특별시청", address="서울특별시 중구 세종대로 110", longitude=126.978, latitude=37.5665),
+        )
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(opener.request.full_url).query)
+        self.assertEqual((query["lat"], query["lon"]), (["37.5665"], ["126.978"]))
+        self.assertTrue(opener.request.full_url.startswith(TMAP_REVERSE_GEOCODING_URL))
+
+    def test_falls_back_to_road_then_lot_address(self):
+        road = '{"addressInfo": {"city_do": "서울특별시", "roadName": "삼청로", "buildingIndex": "37"}}'.encode()
+        place, _ = self.reverse(road)
+        self.assertEqual(place.name, "삼청로 37")
+
+        lot = '{"addressInfo": {"legalDong": "신림동", "bunji": "산56-1"}}'.encode()
+        place, _ = self.reverse(lot)
+        self.assertEqual((place.name, place.address), ("신림동 산56-1", "신림동 산56-1"))
+
+    def test_empty_address_returns_none(self):
+        place, _ = self.reverse(b'{"addressInfo": {}}')
+        self.assertIsNone(place)
+
+    def test_unsupported_area_raises(self):
+        error = urllib.error.HTTPError(TMAP_REVERSE_GEOCODING_URL, 400, "error", {}, io.BytesIO(b""))
+        with self.assertRaises(PlaceSearchError):
+            self.reverse(error)
+        with self.assertRaises(PlaceSearchError):
+            self.reverse(b"not json")
+
+
+class ReverseGeocodeApiTests(APITestCase):
+    place = Place(name="서울특별시청", address="서울특별시 중구 세종대로 110", longitude=126.978, latitude=37.5665)
+
+    @mock.patch("api.views.places.reverse_geocode")
+    def test_returns_place_in_korean(self, reverse):
+        reverse.return_value = self.place
+        response = self.client.get(REVERSE_URL, {"lat": "37.5665", "lng": "126.978", "language": "ko"})
+        self.assertEqual(response.status_code, 200)
+        reverse.assert_called_once_with(37.5665, 126.978)
+        self.assertEqual(response.data["data"]["name"], "서울특별시청")
+
+    @mock.patch("api.views.places.translate_places")
+    @mock.patch("api.views.places.reverse_geocode")
+    def test_translates_place_in_english(self, reverse, translate):
+        reverse.return_value = self.place
+        translate.return_value = [Place(name="Seoul City Hall", address="110 Sejong-daero", longitude=126.978, latitude=37.5665)]
+        response = self.client.get(REVERSE_URL, {"lat": "37.5665", "lng": "126.978", "language": "en"})
+        self.assertEqual(response.data["data"]["name"], "Seoul City Hall")
+
+    @mock.patch("api.views.places.reverse_geocode")
+    def test_rejects_invalid_input(self, reverse):
+        cases = [{}, {"lat": "abc", "lng": "126.9"}, {"lat": "95", "lng": "126.9"}, {"lat": "37.5", "lng": "126.9", "language": "fr"}]
+        for params in cases:
+            with self.subTest(params=params):
+                self.assertEqual(self.client.get(REVERSE_URL, params).status_code, 400)
+        reverse.assert_not_called()
+
+    @mock.patch("api.views.places.reverse_geocode", return_value=None)
+    def test_no_address_returns_404(self, reverse):
+        self.assertEqual(self.client.get(REVERSE_URL, {"lat": "37.5", "lng": "126.9"}).status_code, 404)
+
+    @mock.patch("api.views.places.reverse_geocode", side_effect=PlaceSearchError("down"))
+    def test_failure_returns_503(self, reverse):
+        self.assertEqual(self.client.get(REVERSE_URL, {"lat": "37.5", "lng": "126.9"}).status_code, 503)

@@ -1,0 +1,20 @@
+{
+ "addressInfo": {
+  "fullAddress": "서울특별시 중구 명동,서울특별시 중구 태평로1가 31,서울특별시 중구 세종대로 110 서울특별시청",
+  "addressType": "A10",
+  "city_do": "서울특별시",
+  "gu_gun": "중구",
+  "eup_myun": "",
+  "adminDong": "명동",
+  "adminDongCode": "1114055000",
+  "legalDong": "태평로1가",
+  "legalDongCode": "1114010300",
+  "ri": "",
+  "bunji": "31",
+  "roadName": "세종대로",
+  "buildingIndex": "110",
+  "buildingName": "서울특별시청",
+  "mappingDistance": "25.28",
+  "roadCode": "111402005001"
+ }
+}

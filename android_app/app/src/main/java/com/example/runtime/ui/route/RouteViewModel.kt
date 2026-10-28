@@ -19,7 +19,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -199,14 +201,33 @@ class RouteViewModel(
         longitude: Double,
         latitude: Double,
     ) {
+        val point = GeoJsonPoint.of(longitude, latitude)
         selectPlace(
             field,
             Place(
                 name = name,
                 address = "%.5f, %.5f".format(Locale.US, latitude, longitude),
-                point = GeoJsonPoint.of(longitude, latitude),
+                point = point,
             ),
         )
+
+        val language = searchLanguage
+        field.searchJob = sessionScope.launch {
+            field.isSearching = true
+            try {
+                val place = repository.reversePlace(latitude, longitude, language)
+                if (place != null && field.selected?.point == point) {
+                    field.selected = place.copy(point = point)
+                    field.input = place.name
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("RouteViewModel", "Could not name the selected point", e)
+            } finally {
+                field.isSearching = false
+            }
+        }
     }
 
     fun showError(message: UiText) {
@@ -253,9 +274,15 @@ class RouteViewModel(
 
         sessionScope.launch {
             try {
+                withTimeoutOrNull(NAME_LOOKUP_TIMEOUT_MS) {
+                    listOfNotNull(startField.searchJob, endField.searchJob).joinAll()
+                }
+                val end = pendingEnd
+                val namedStart = startField.selected?.takeIf { it.point == start.point } ?: start
+                val namedEnd = end?.let { endField.selected?.takeIf { it.point == end.point } ?: end }
                 val generatedData = repository.generate(
-                    startingPoint = start,
-                    endPoint = pendingEnd,
+                    startingPoint = namedStart,
+                    endPoint = namedEnd,
                     distanceMeters = distanceMeters,
                     language = pendingLanguage,
                 )
@@ -614,6 +641,7 @@ class RouteViewModel(
         private const val MIN_DISTANCE_METERS = 100
         private const val MIN_QUERY_LENGTH = 2
         private const val SEARCH_DEBOUNCE_MS = 300L
+        private const val NAME_LOOKUP_TIMEOUT_MS = 3_000L
 
         private const val SAMPLE_INTERVAL_METERS = 250.0
         private const val STEEP_SLOPE_THRESHOLD = 5.0

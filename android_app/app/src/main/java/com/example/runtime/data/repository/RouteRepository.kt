@@ -39,6 +39,9 @@ class RouteRepository(
     suspend fun searchPlaces(query: String, language: String): List<Place> =
         api.searchPlaces(query, language).data.orEmpty()
 
+    suspend fun reversePlace(latitude: Double, longitude: Double, language: String): Place? =
+        api.reversePlace(latitude, longitude, language).data
+
     suspend fun saveTemporaryRoute(temporaryRouteId: Int) {
         api.saveRoute(SaveRouteRequest(temporaryRouteId = temporaryRouteId))
     }

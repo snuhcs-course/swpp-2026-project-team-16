@@ -29,6 +29,7 @@ open class FakeApiService : ApiService {
     override suspend fun renameSavedRoute(routeId: Int, body: RenameRouteRequest): ApiResponse<RenamedRoute> = unexpected()
     override suspend fun deleteSavedRoute(routeId: Int): ApiResponse<Unit> = unexpected()
     override suspend fun searchPlaces(query: String, language: String): ApiResponse<List<Place>> = unexpected()
+    override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> = unexpected()
 
     private fun unexpected(): Nothing = throw AssertionError("Unexpected API call")
 }
