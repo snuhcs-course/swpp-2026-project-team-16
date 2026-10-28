@@ -1,5 +1,6 @@
 package com.example.runtime.ui.auth
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,10 +17,18 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onSignUpClick: () -> Unit,
     onGoogleSignUpRequired: (String) -> Unit,
+    onNotNow: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val uiState = authViewModel.uiState
+
+    fun leave() {
+        authViewModel.clearError()
+        onNotNow()
+    }
+
+    BackHandler(onBack = ::leave)
 
     AuthLayout(title = stringResource(R.string.title_log_in), error = uiState.error) {
         AuthTextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.label_name))
@@ -47,6 +56,9 @@ fun LoginScreen(
             enabled = !uiState.isLoading
         ) {
             Text(stringResource(R.string.switch_to_sign_up))
+        }
+        TextButton(onClick = ::leave, enabled = !uiState.isLoading) {
+            Text(stringResource(R.string.action_not_now))
         }
     }
 }

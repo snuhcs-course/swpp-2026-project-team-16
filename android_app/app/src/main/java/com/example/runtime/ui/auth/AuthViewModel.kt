@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
+import com.example.runtime.data.auth.GuestTrialStorage
 import com.example.runtime.data.auth.TokenStorage
 import com.example.runtime.data.repository.AuthRepository
 import com.example.runtime.ui.common.UiText
@@ -24,9 +25,22 @@ data class AuthUiState(
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AuthRepository(TokenStorage(application))
+    private val guestTrialStorage = GuestTrialStorage(application)
 
     var uiState by mutableStateOf(AuthUiState())
         private set
+
+    var isLoggedIn by mutableStateOf(false)
+        private set
+
+    var isGuestTrialUsed by mutableStateOf(false)
+        private set
+
+    fun markGuestTrialUsed() {
+        if (isLoggedIn || isGuestTrialUsed) return
+        isGuestTrialUsed = true
+        viewModelScope.launch { guestTrialStorage.markTrialUsed() }
+    }
 
     fun login(username: String, password: String, onSuccess: () -> Unit) {
         if (username.isBlank() || password.isEmpty()) {
@@ -70,6 +84,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val token = repository.clearSession()
             uiState = AuthUiState()
+            isLoggedIn = false
             onDone()
             token?.let { repository.revokeToken(it) }
         }
@@ -79,6 +94,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.clearSession()
             uiState = AuthUiState(error = UiText.Resource(R.string.error_auth_required))
+            isLoggedIn = false
             onDone()
         }
     }
@@ -89,7 +105,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun restoreSession(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            onResult(repository.restoreSession())
+            isGuestTrialUsed = guestTrialStorage.isTrialUsed()
+            isLoggedIn = repository.restoreSession()
+            onResult(isLoggedIn)
         }
     }
 
@@ -104,6 +122,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 request()
                 uiState = AuthUiState()
+                isLoggedIn = true
                 onSuccess()
             } catch (e: CancellationException) {
                 throw e

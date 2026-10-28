@@ -17,8 +17,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.runtime.data.remote.SessionEvents
 import com.example.runtime.ui.auth.AuthViewModel
+import com.example.runtime.ui.auth.LoginPromptDialog
 import com.example.runtime.ui.auth.LoginScreen
 import com.example.runtime.ui.auth.SignUpScreen
+import com.example.runtime.ui.mypage.GuestMyPageScreen
 import com.example.runtime.ui.mypage.MyPageScreen
 import com.example.runtime.ui.mypage.MyPageViewModel
 import com.example.runtime.ui.mypage.SavedRouteDetailScreen
@@ -67,6 +69,26 @@ fun RunTimeApp() {
     val myPageViewModel: MyPageViewModel = viewModel()
     var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var signUpEmail by rememberSaveable { mutableStateOf("") }
+    var loginReturnScreen by rememberSaveable { mutableStateOf("route_input") }
+    var saveAfterLogin by rememberSaveable { mutableStateOf(false) }
+    var loginPrompt by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun openAuth(screen: String, returnTo: String, save: Boolean) {
+        loginReturnScreen = returnTo
+        saveAfterLogin = save
+        signUpEmail = ""
+        authViewModel.clearError()
+        currentScreen = screen
+    }
+
+    fun onAuthenticated() {
+        myPageViewModel.reset()
+        currentScreen = loginReturnScreen
+        if (saveAfterLogin) {
+            saveAfterLogin = false
+            routeViewModel.save()
+        }
+    }
 
     LaunchedEffect(Unit) {
         SessionEvents.expired.collect {
@@ -75,6 +97,8 @@ fun RunTimeApp() {
                 routeViewModel.reset()
                 myPageViewModel.reset()
                 selectedRouteId = null
+                loginReturnScreen = "route_input"
+                saveAfterLogin = false
                 currentScreen = "login"
             }
         }
@@ -105,11 +129,11 @@ fun RunTimeApp() {
             when (currentScreen) {
                 "splash" -> SplashScreen(
                     authViewModel = authViewModel,
-                    onNext = { loggedIn -> currentScreen = if (loggedIn) "route_input" else "login" }
+                    onNext = { currentScreen = "route_input" }
                 )
                 "login" -> LoginScreen(
                     authViewModel = authViewModel,
-                    onLoginSuccess = { currentScreen = "route_input" },
+                    onLoginSuccess = ::onAuthenticated,
                     onSignUpClick = {
                         signUpEmail = ""
                         currentScreen = "signup"
@@ -117,25 +141,46 @@ fun RunTimeApp() {
                     onGoogleSignUpRequired = { email ->
                         signUpEmail = email
                         currentScreen = "signup"
+                    },
+                    onNotNow = {
+                        saveAfterLogin = false
+                        currentScreen = loginReturnScreen
                     }
                 )
                 "signup" -> SignUpScreen(
                     authViewModel = authViewModel,
                     initialEmail = signUpEmail,
-                    onSignUpSuccess = { currentScreen = "route_input" },
+                    onSignUpSuccess = ::onAuthenticated,
                     onLogInClick = { currentScreen = "login" }
                 )
                 "route_input" -> RouteInputScreen(
                     routeViewModel = routeViewModel,
-                    onGenerate = { currentScreen = "generating" }
+                    onGenerate = {
+                        if (!authViewModel.isLoggedIn && authViewModel.isGuestTrialUsed) {
+                            loginPrompt = LOGIN_PROMPT_TRIAL
+                        } else {
+                            currentScreen = "generating"
+                        }
+                    }
                 )
                 "generating" -> GeneratingScreen(
                     routeViewModel = routeViewModel,
-                    onComplete = { currentScreen = "route_result" },
+                    onComplete = {
+                        authViewModel.markGuestTrialUsed()
+                        currentScreen = "route_result"
+                    },
                     onFailure = { currentScreen = "route_input" }
                 )
-                "route_result" -> RouteResultScreen(routeViewModel = routeViewModel)
-                "MyPage" -> MyPageScreen(
+                "route_result" -> RouteResultScreen(
+                    routeViewModel = routeViewModel,
+                    onSave = {
+                        if (authViewModel.isLoggedIn) routeViewModel.save() else loginPrompt = LOGIN_PROMPT_SAVE
+                    }
+                )
+                "MyPage" -> if (!authViewModel.isLoggedIn) GuestMyPageScreen(
+                    onLogIn = { openAuth("login", returnTo = "MyPage", save = false) },
+                    onSignUp = { openAuth("signup", returnTo = "MyPage", save = false) }
+                ) else MyPageScreen(
                     myPageViewModel = myPageViewModel,
                     onRouteClick = { routeId ->
                         selectedRouteId = routeId
@@ -146,7 +191,7 @@ fun RunTimeApp() {
                             routeViewModel.reset()
                             myPageViewModel.reset()
                             selectedRouteId = null
-                            currentScreen = "login"
+                            currentScreen = "route_input"
                         }
                     }
                 )
@@ -158,6 +203,24 @@ fun RunTimeApp() {
                     )
                 }
             }
+
+            loginPrompt?.let { reason ->
+                LoginPromptDialog(
+                    message = if (reason == LOGIN_PROMPT_SAVE) R.string.login_prompt_save else R.string.login_prompt_trial_used,
+                    onLogIn = {
+                        loginPrompt = null
+                        if (reason == LOGIN_PROMPT_SAVE) {
+                            openAuth("login", returnTo = "route_result", save = true)
+                        } else {
+                            openAuth("login", returnTo = "route_input", save = false)
+                        }
+                    },
+                    onDismiss = { loginPrompt = null }
+                )
+            }
         }
     }
 }
+
+private const val LOGIN_PROMPT_TRIAL = "trial"
+private const val LOGIN_PROMPT_SAVE = "save"
