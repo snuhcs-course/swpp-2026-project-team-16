@@ -5,15 +5,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.data.remote.Place
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.theme.Spacing
 
 private const val MAX_VISIBLE_SUGGESTIONS = 5
 
@@ -32,7 +30,8 @@ fun PlaceSearchField(
             onValueChange = onInputChange,
             label = { Text(label) },
             singleLine = true,
-            supportingText = field.selected?.let { place -> { Text(place.address) } },
+            shape = MaterialTheme.shapes.medium,
+            supportingText = field.selected?.let { place -> { Text(place.address, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
             trailingIcon = when {
                 field.isSearching -> {
                     { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
@@ -42,24 +41,27 @@ fun PlaceSearchField(
             modifier = Modifier.fillMaxWidth()
         )
         when {
-            field.suggestions.isNotEmpty() -> Card(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            field.suggestions.isNotEmpty() -> Card(
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
                 field.suggestions.take(MAX_VISIBLE_SUGGESTIONS).forEach { place ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(place) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .padding(horizontal = Spacing.m, vertical = 10.dp)
                     ) {
                         Text(
                             place.name,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             place.address,
-                            color = Color.Gray,
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -68,13 +70,15 @@ fun PlaceSearchField(
             }
             field.noResults -> Text(
                 stringResource(R.string.no_places_found),
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.xs, start = Spacing.xs)
             )
             field.searchError != null -> Text(
                 field.searchError!!.asString(),
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                modifier = Modifier.padding(top = Spacing.xs, start = Spacing.xs)
             )
         }
     }

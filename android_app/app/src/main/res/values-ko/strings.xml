@@ -1,6 +1,7 @@
 <resources>
     <string name="nav_route">경로</string>
     <string name="nav_my_page">마이페이지</string>
+    <string name="splash_tagline">나에게 맞는 러닝 경로</string>
 
     <string name="label_name">이름:</string>
     <string name="label_email">이메일:</string>
@@ -41,21 +42,37 @@
 
     <string name="label_start_point">출발지</string>
     <string name="label_end_point">도착지 (선택)</string>
-    <string name="label_distance">"거리 : "</string>
-    <string name="unit_km">" km"</string>
+    <string name="label_distance">거리</string>
+    <string name="unit_km">km</string>
     <string name="action_generate">경로 생성</string>
-    <string name="generating_route">경로 생성 중</string>
+    <string name="route_input_title">어디서 달려볼까요?</string>
+    <string name="route_input_subtitle">출발지와 거리를 정해 주세요. 도착지는 선택이에요.</string>
+    <string name="generating_route">경로를 만들고 있어요</string>
+    <string name="generating_step_route">경로 탐색 중</string>
+    <string name="generating_step_elevation">고도 계산 중</string>
+    <string name="generating_step_briefing">브리핑 작성 중</string>
 
-    <string name="distance_value">거리 : %1$s</string>
     <string name="shortest_path_notice">입력한 거리로는 도착지까지 갈 수 없어 최단 경로(%1$s)를 안내합니다.</string>
-    <string name="llm_briefing">LLM 브리핑:</string>
+    <string name="llm_briefing">AI 브리핑</string>
     <string name="action_share">공유</string>
     <string name="action_save">저장</string>
     <string name="saving">저장 중...</string>
     <string name="saved">저장됨</string>
+    <string name="route_saved_message">마이페이지에 저장했어요</string>
+    <string name="route_option_label">옵션 %1$d</string>
+    <string name="previous_route_option">이전 경로</string>
+    <string name="next_route_option">다음 경로</string>
+    <string name="stat_climb">오르막</string>
+    <string name="stat_traffic_lights">신호등</string>
+    <string name="value_meters">%1$dm</string>
 
     <string name="no_saved_routes">아직 저장된 경로가 없습니다.</string>
-    <string name="saved_date">저장일 : %1$s</string>
+    <string name="no_saved_routes_message">경로를 만들고 저장하면 여기에서 볼 수 있어요.</string>
+    <string name="action_create_route">경로 만들기</string>
+    <string name="saved_routes_count">저장한 경로 · %1$d</string>
+    <string name="route_deleted_message">경로를 삭제했어요</string>
+    <string name="route_renamed_message">이름을 바꿨어요</string>
+    <string name="saved_date">%1$s 저장</string>
     <string name="action_back">뒤로</string>
     <string name="action_delete">삭제</string>
     <string name="deleting">삭제 중...</string>
@@ -67,6 +84,10 @@
 
     <string name="language">언어</string>
     <string name="language_system">시스템 설정</string>
+    <string name="theme">테마</string>
+    <string name="theme_system">시스템 설정</string>
+    <string name="theme_light">라이트</string>
+    <string name="theme_dark">다크</string>
 
     <string name="current_location">현재 위치</string>
     <string name="use_current_location">현재 위치 사용</string>
@@ -96,10 +117,6 @@
     <string name="error_username_password_required">이름과 비밀번호를 입력하세요.</string>
 
     <string name="route_option_recommended">추천</string>
-    <string name="route_option_climb">↑ %1$dm</string>
-    <string name="route_option_climb_unknown">↑ –</string>
-    <string name="route_option_traffic_lights">신호 %1$d</string>
-    <string name="traffic_light_count">신호등: %1$d개</string>
     <string name="elevation_information">고도 정보</string>
     <string name="elevation_unavailable">고도 정보를 불러오지 못했습니다.</string>
 

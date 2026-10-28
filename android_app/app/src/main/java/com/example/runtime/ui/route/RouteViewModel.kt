@@ -85,9 +85,12 @@ class RouteViewModel(
     var elevationLoadState by mutableStateOf(ElevationLoadState.Error)
         private set
 
-    private var pendingStart: Place? = null
-    private var pendingEnd: Place? = null
-    private var pendingDistanceMeters: Int? = null
+    var pendingStart: Place? = null
+        private set
+    var pendingEnd: Place? = null
+        private set
+    var pendingDistanceMeters: Int? = null
+        private set
     private var pendingLanguage: String = DEFAULT_LANGUAGE
     private var searchLanguage: String = DEFAULT_LANGUAGE
     private var isGenerating = false
