@@ -432,12 +432,12 @@ Any other value returns `400 Bad Request`.
 Options are ranked by a score (lower is better):
 
 ```
-score = 1.0 x elevation_gain_m + 10 x traffic_light_count + 5 x distance error (%)
+score = 1.0 x elevation_gain_m + 10 x signalized crossing events + 5 x distance error (%)
 ```
 
 Only candidates within 15% of the requested distance are ranked; if none are, the closest one is returned alone.
 
-`elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing leaves out elevation. The briefing uses the measured distance, elevation gain, traffic lights, and uphill sections.
+`traffic_light_count` is the number of signalized pedestrian crossing events matched to the generated route using Seoul's crosswalk inventory. The field name is retained for API compatibility. `elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing leaves out elevation. The briefing uses the measured distance, elevation gain, signalized crossing events, and uphill sections.
 
 Use `temporary_route_id` to save the route.
 

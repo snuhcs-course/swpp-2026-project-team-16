@@ -1,15 +1,14 @@
 import json
 from pathlib import Path
 
-from api.route_algorithm import street_graph
 from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.classes import GeoJSONPoint
+from api.route_algorithm.crosswalk_counter import SignalizedCrosswalkCounter
 from api.route_algorithm.elevation import _distance_m, climb_profiles
 
 DATA_DIR = Path(__file__).resolve().parent / "ground_truth"
 CASES_PATH = DATA_DIR / "cases.json"
 ROUTES_DIR = DATA_DIR / "routes"
-COORDINATE_DIGITS = 7
 
 
 def load_cases(path=CASES_PATH):
@@ -64,27 +63,19 @@ def generate_route(case):
     return [tuple(point) for point in best.route[0].coordinates]
 
 
-def _key(point):
-    return round(point[0], COORDINATE_DIGITS), round(point[1], COORDINATE_DIGITS)
-
-
 class SignalCounter:
-    def __init__(self, graph):
-        self.signals = {
-            _key((data["x"], data["y"]))
-            for _, data in graph.nodes(data=True)
-            if data.get("traffic_signal")
-        }
+    def __init__(self, counter=None):
+        self.counter = counter or SignalizedCrosswalkCounter.from_csv()
 
     def count(self, coordinates):
-        return sum(1 for point in coordinates if _key(point) in self.signals)
+        return self.counter.count(coordinates)
 
 
 def local_signal_counter():
-    local = street_graph._load_local()
-    if local is None:
-        raise RuntimeError("Run `python manage.py build_street_graph` first.")
-    return SignalCounter(local.graph)
+    try:
+        return SignalCounter()
+    except (FileNotFoundError, ValueError) as error:
+        raise RuntimeError(f"Could not load Seoul's signalized-crosswalk data: {error}") from error
 
 
 def route_length_m(coordinates):

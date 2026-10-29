@@ -30,7 +30,7 @@ class Command(BaseCommand):
         signals = sum(1 for _, data in graph.nodes(data=True) if data.get("traffic_signal"))
         self.stdout.write(self.style.SUCCESS(
             f"Saved {GRAPH_PATH} in {time.perf_counter() - started:.0f}s: "
-            f"{len(graph):,} nodes, {len(graph.edges):,} edges, {signals:,} traffic signals"
+            f"{len(graph):,} nodes, {len(graph.edges):,} edges, {signals:,} OSM-tagged signal nodes"
         ))
 
     def download(self, refresh):

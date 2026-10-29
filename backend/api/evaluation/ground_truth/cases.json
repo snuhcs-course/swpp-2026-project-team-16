@@ -1,5 +1,5 @@
 {
-  "description": "Ground truth for traffic lights and elevation gain on fixed routes. Routes are in routes/<id>.geojson. Fill in `truth` by hand; do not change `thresholds` after truth values are added.",
+  "description": "Ground truth for signalized crossing events and elevation gain on fixed routes. Routes are in routes/<id>.geojson. Fill in `truth` by hand; do not change `thresholds` after truth values are added.",
   "thresholds": {
     "declared": "2026-10-21",
     "traffic_lights": {

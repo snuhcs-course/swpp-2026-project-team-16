@@ -29,11 +29,11 @@ class GenerateBriefingTests(SimpleTestCase):
     def test_falls_back_when_llm_fails(self):
         self.assertEqual(
             generate_briefing(SAMPLE_FEATURES, "ko", llm=failing_llm),
-            "총 5km, 누적 상승 45m, 신호등 3개가 있는 코스입니다. 2km 지점의 오르막 전에 페이스를 조절하세요.",
+            "총 5km, 누적 상승 45m, 보행신호 횡단 3회가 있는 코스입니다. 2km 지점의 오르막 전에 페이스를 조절하세요.",
         )
         self.assertEqual(
             generate_briefing(SAMPLE_FEATURES, "en", llm=failing_llm),
-            "This 5km route has 45m of climbing and 3 traffic lights. Ease your pace before the uphill at 2km.",
+            "This 5km route has 45m of climbing and 3 signalized crossings. Ease your pace before the uphill at 2km.",
         )
 
     def test_falls_back_when_llm_text_is_too_long(self):
@@ -47,7 +47,7 @@ class GenerateBriefingTests(SimpleTestCase):
         features = RouteFeatures(distance_m=1500, total_elevation_gain_m=5, traffic_light_count=1)
         self.assertEqual(
             fallback_briefing(features, "ko"),
-            "총 1.5km, 누적 상승 5m, 신호등 1개가 있는 코스입니다.",
+            "총 1.5km, 누적 상승 5m, 보행신호 횡단 1회가 있는 코스입니다.",
         )
 
 
@@ -57,7 +57,7 @@ class BuildBriefingPromptTests(SimpleTestCase):
         self.assertIn("한국어", prompt["system"])
         self.assertIn("총 거리: 5km", prompt["user"])
         self.assertIn("총 상승 고도: 45m", prompt["user"])
-        self.assertIn("신호등: 3개", prompt["user"])
+        self.assertIn("보행신호 횡단: 3회", prompt["user"])
         self.assertIn("2km 지점부터 300m 구간 (+20m)", prompt["user"])
 
     def test_english_prompt_contains_sample_data(self):
@@ -65,7 +65,7 @@ class BuildBriefingPromptTests(SimpleTestCase):
         self.assertIn("in English", prompt["system"])
         self.assertIn("Total distance: 5km", prompt["user"])
         self.assertIn("Total elevation gain: 45m", prompt["user"])
-        self.assertIn("Traffic lights: 3", prompt["user"])
+        self.assertIn("Signalized crossings: 3", prompt["user"])
         self.assertIn("300m starting at 2km (+20m)", prompt["user"])
 
     def test_route_without_uphills(self):
@@ -80,8 +80,8 @@ class BuildBriefingPromptTests(SimpleTestCase):
             user = build_briefing_prompt(features, language)["user"]
             for word in words:
                 self.assertNotIn(word, user)
-        self.assertEqual(fallback_briefing(features, "ko"), "총 3km, 신호등 2개가 있는 코스입니다.")
-        self.assertEqual(fallback_briefing(features, "en"), "This 3km route has 2 traffic lights.")
+        self.assertEqual(fallback_briefing(features, "ko"), "총 3km, 보행신호 횡단 2회가 있는 코스입니다.")
+        self.assertEqual(fallback_briefing(features, "en"), "This 3km route has 2 signalized crossings.")
 
     def test_crosswalks_line_only_when_known(self):
         self.assertNotIn("횡단보도", build_briefing_prompt(SAMPLE_FEATURES, "ko")["user"])

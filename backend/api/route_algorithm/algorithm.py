@@ -31,6 +31,7 @@ from api.route_algorithm.classes import (
     GeoJSONLineString,
     RunningRoute,
 )
+from api.route_algorithm.crosswalk_counter import count_signalized_crossings
 from api.route_algorithm.elevation import climb_profiles
 from api.route_algorithm.scoring import score_route
 from api.route_algorithm.street_graph import street_graph
@@ -331,7 +332,9 @@ def create_routes(
     pool = pool[:MAX_SCORED_CANDIDATES]
 
     coordinates = [[(graph.nodes[n]["x"], graph.nodes[n]["y"]) for n in c.path] for c in pool]
-    signals = [sum(1 for n in c.path if graph.nodes[n].get("traffic_signal") is True) for c in pool]
+    # Count pedestrian-signal crossing events from Seoul's crosswalk inventory.
+    # OSM traffic_signal tags are incomplete and are not the source of this value.
+    signals = [count_signalized_crossings(route_coordinates) for route_coordinates in coordinates]
     profiles = climb_profiles(coordinates) or [None] * len(pool)
 
     features = [

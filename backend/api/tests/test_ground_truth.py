@@ -7,7 +7,7 @@ from django.test import SimpleTestCase
 
 from api.evaluation import ground_truth as gt
 from api.route_algorithm.elevation import ClimbProfile
-from api.tests.fakes import SNU, grid_graph
+from api.tests.fakes import SNU
 
 THRESHOLDS = {
     "traffic_lights": {"within": 2, "min_pass_rate": 0.75},
@@ -26,14 +26,13 @@ def case(case_id, lights=None, gain=None):
 
 
 class SignalCounterTests(SimpleTestCase):
-    def test_counts_route_points_on_signal_nodes(self):
-        graph = grid_graph()
-        nodes = list(graph.nodes)
-        graph.nodes[nodes[1]]["traffic_signal"] = True
-        graph.nodes[nodes[3]]["traffic_signal"] = True
-        route = [(graph.nodes[n]["x"], graph.nodes[n]["y"]) for n in nodes[:5] + [nodes[1]]]
+    def test_delegates_to_signalized_crosswalk_counter(self):
+        route = [(126.95, 37.46), (126.951, 37.46)]
+        counter = mock.Mock()
+        counter.count.return_value = 3
 
-        self.assertEqual(gt.SignalCounter(graph).count(route), 3)
+        self.assertEqual(gt.SignalCounter(counter).count(route), 3)
+        counter.count.assert_called_once_with(route)
 
 
 class EvaluateTests(SimpleTestCase):
