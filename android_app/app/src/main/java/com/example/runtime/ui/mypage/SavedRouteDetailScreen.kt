@@ -1,109 +1,171 @@
 package com.example.runtime.ui.mypage
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.runtime.R
+import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.asString
-import com.example.runtime.ui.common.formatDistance
+import com.example.runtime.ui.common.formatKm
+import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.common.routeTitle
+import com.example.runtime.ui.common.sharedElement
 import com.example.runtime.ui.route.FullScreenRouteMap
 import com.example.runtime.ui.route.RouteMap
+import com.example.runtime.ui.theme.Spacing
 
 @Composable
 fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBack: () -> Unit) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFullMap by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    val messages = LocalAppMessages.current
+    val haptic = LocalHapticFeedback.current
+    val deletedMessage = stringResource(R.string.route_deleted_message)
+    val renamedMessage = stringResource(R.string.route_renamed_message)
 
     LaunchedEffect(routeId) {
         myPageViewModel.loadDetail(routeId)
     }
     BackHandler(onBack = onBack)
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         val route = myPageViewModel.detail
-        if (route == null) {
-            myPageViewModel.detailError?.let {
-                Text(it.asString(), color = MaterialTheme.colorScheme.error)
-            } ?: CircularProgressIndicator()
-            return@Column
-        }
-        val defaultTitle = routeTitle(route.startName, route.endName, route.distance)
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.action_back))
+            }
             Column(modifier = Modifier.weight(1f)) {
-                Text(route.name.ifBlank { defaultTitle }, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                if (route.name.isNotBlank()) {
-                    Text(defaultTitle, color = Color.Gray, fontSize = 13.sp)
+                if (route == null) {
+                    Box(modifier = Modifier.size(width = 180.dp, height = 22.dp).placeholder())
+                } else {
+                    val defaultTitle = routeTitle(route.startName, route.endName, route.distance)
+                    Text(
+                        route.name.ifBlank { defaultTitle },
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.sharedElement("route-title-${route.id}")
+                    )
+                    if (route.name.isNotBlank()) {
+                        Text(
+                            defaultTitle,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
-            IconButton(onClick = { showRenameDialog = true }, enabled = !myPageViewModel.isRenaming) {
+            IconButton(
+                onClick = { showRenameDialog = true },
+                enabled = route != null && !myPageViewModel.isRenaming
+            ) {
                 Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.rename_route))
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Box(
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.m)
         ) {
-            RouteMap(
-                lines = route.route,
-                modifier = Modifier.fillMaxSize(),
-                onClick = { showFullMap = true }
+            if (route == null) {
+                myPageViewModel.detailError?.let {
+                    Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                } ?: run {
+                    Box(modifier = Modifier.fillMaxWidth().height(280.dp).placeholder(MaterialTheme.shapes.large))
+                    Spacer(modifier = Modifier.height(Spacing.l))
+                    Box(modifier = Modifier.size(width = 120.dp, height = 44.dp).placeholder())
+                    Spacer(modifier = Modifier.height(Spacing.m))
+                    Box(modifier = Modifier.fillMaxWidth().height(120.dp).placeholder(MaterialTheme.shapes.medium))
+                }
+                return@Column
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+                    .clip(MaterialTheme.shapes.large)
+            ) {
+                RouteMap(
+                    lines = route.route,
+                    modifier = Modifier.fillMaxSize(),
+                    onClick = { showFullMap = true }
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.l))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(formatKm(route.distance), style = MaterialTheme.typography.displayLarge)
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(
+                    stringResource(R.string.unit_km),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
+            Text(
+                stringResource(R.string.saved_date, route.savedAt.take(10)),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.distance_value, formatDistance(route.distance)),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(stringResource(R.string.saved_date, route.savedAt.take(10)), color = Color.Gray)
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.llm_briefing), fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(route.briefing)
+            Spacer(modifier = Modifier.height(Spacing.m))
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(Spacing.m)) {
+                    Text(
+                        stringResource(R.string.llm_briefing),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xs))
+                    Text(route.briefing, style = MaterialTheme.typography.bodyMedium)
+                }
             }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            OutlinedButton(onClick = onBack) {
-                Text(stringResource(R.string.action_back))
+            myPageViewModel.detailError?.let {
+                Spacer(modifier = Modifier.height(Spacing.s))
+                Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
-            Button(
+            Spacer(modifier = Modifier.height(Spacing.l))
+            OutlinedButton(
                 onClick = { showDeleteDialog = true },
                 enabled = !myPageViewModel.isDeleting,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
-                Text(stringResource(if (myPageViewModel.isDeleting) R.string.deleting else R.string.action_delete))
+                Icon(painterResource(R.drawable.ic_delete), contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(Spacing.s))
+                Text(
+                    stringResource(if (myPageViewModel.isDeleting) R.string.deleting else R.string.action_delete),
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
-        }
-        myPageViewModel.detailError?.let {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(it.asString(), color = MaterialTheme.colorScheme.error)
+            Spacer(modifier = Modifier.height(Spacing.l))
         }
     }
 
@@ -118,7 +180,12 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
             placeholder = routeTitle(detailRoute.startName, detailRoute.endName, detailRoute.distance),
             isSaving = myPageViewModel.isRenaming,
             onDismiss = { showRenameDialog = false },
-            onSave = { name -> myPageViewModel.rename(routeId, name) { showRenameDialog = false } }
+            onSave = { name ->
+                myPageViewModel.rename(routeId, name) {
+                    showRenameDialog = false
+                    messages?.show(renamedMessage)
+                }
+            }
         )
     }
 
@@ -130,9 +197,13 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    myPageViewModel.delete(routeId, onBack)
+                    myPageViewModel.delete(routeId) {
+                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                        messages?.show(deletedMessage)
+                        onBack()
+                    }
                 }) {
-                    Text(stringResource(R.string.action_delete))
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -164,6 +235,7 @@ private fun RenameRouteDialog(
                 label = { Text(stringResource(R.string.label_route_name)) },
                 placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 singleLine = true,
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             )
         },
