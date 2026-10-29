@@ -75,3 +75,11 @@ class UserSavedRoute(models.Model):
         ]
 
 
+class ElevationCache(models.Model):
+    """Elevation returned by Open-Meteo for a six-decimal coordinate."""
+
+    coordinate_key = models.CharField(max_length=32, primary_key=True)
+    elevation_m = models.FloatField()
+    cached_at = models.DateTimeField(auto_now_add=True)
+
+

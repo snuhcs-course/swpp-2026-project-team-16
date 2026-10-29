@@ -1,8 +1,9 @@
 from unittest import mock
 
 import requests
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
+from api.models import ElevationCache
 from api.route_algorithm.elevation import (
     ElevationError,
     climb_profile,
@@ -65,7 +66,7 @@ class ClimbProfileTests(SimpleTestCase):
         self.assertEqual([s.start_km for s in segments], [0.3, 0.7, 1.1])
 
 
-class FetchElevationsTests(SimpleTestCase):
+class FetchElevationsTests(TestCase):
     def response(self, elevations):
         response = mock.Mock()
         response.json.return_value = {"elevation": elevations}
@@ -107,3 +108,49 @@ class ScoreRouteTests(SimpleTestCase):
 
     def test_unknown_climb_counts_as_zero(self):
         self.assertEqual(score_route(None, 0, 5000, 5000), 0)
+
+
+class ElevationCacheTests(TestCase):
+    def test_fetches_and_stores_on_cache_miss_then_reuses_cached_values(self):
+        points = [(126.952, 37.46), (126.953, 37.461)]
+
+        with mock.patch(
+            "api.route_algorithm.elevation._fetch_batch",
+            side_effect=lambda batch: [120.0 + index for index, _ in enumerate(batch)],
+        ) as provider:
+            first = fetch_elevations(points)
+            second = fetch_elevations(list(reversed(points)))
+
+        self.assertEqual(first, [120.0, 121.0])
+        self.assertEqual(second, [121.0, 120.0])
+        provider.assert_called_once()
+        self.assertEqual(ElevationCache.objects.count(), 2)
+
+    def test_fetches_only_missing_unique_coordinates(self):
+        cached_point = (126.952, 37.46)
+        ElevationCache.objects.create(
+            coordinate_key="37.460000,126.952000",
+            elevation_m=88.0,
+        )
+        almost_same_point = (126.9520001, 37.4600001)
+        missing_point = (126.953, 37.46)
+
+        with mock.patch(
+            "api.route_algorithm.elevation._fetch_batch",
+            return_value=[99.0],
+        ) as provider:
+            result = fetch_elevations([cached_point, almost_same_point, missing_point, cached_point])
+
+        self.assertEqual(result, [88.0, 88.0, 99.0, 88.0])
+        provider.assert_called_once_with([missing_point])
+        self.assertEqual(ElevationCache.objects.count(), 2)
+
+    @mock.patch(
+        "api.route_algorithm.elevation._fetch_batch",
+        side_effect=ElevationError("provider unavailable"),
+    )
+    def test_does_not_cache_when_provider_fails(self, provider):
+        with self.assertRaises(ElevationError):
+            fetch_elevations([(126.952, 37.46)])
+
+        self.assertFalse(ElevationCache.objects.exists())

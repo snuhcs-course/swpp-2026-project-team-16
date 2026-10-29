@@ -3,9 +3,8 @@ package com.example.runtime.data.repository
 import android.util.Log
 import com.example.runtime.data.remote.ApiClient
 import com.example.runtime.data.remote.ApiService
-import com.example.runtime.data.remote.ElevationPoint
-import com.example.runtime.data.remote.ElevationRequest
-import com.example.runtime.data.remote.OpenElevationClient
+import com.example.runtime.data.remote.ElevationCoordinate
+import com.example.runtime.data.remote.ElevationLookupRequest
 import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.Place
@@ -13,11 +12,9 @@ import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.SavedRoute
 import kotlinx.coroutines.CancellationException
-import com.example.runtime.data.remote.OpenElevationApiService
 
 class RouteRepository(
     private val api: ApiService = ApiClient.api,
-    private val elevationApi: OpenElevationApiService = OpenElevationClient.api,
 ) {
     suspend fun generate(
         startingPoint: Place,
@@ -54,7 +51,7 @@ class RouteRepository(
         api.deleteSavedRoute(routeId)
     }
 
-    // Open-Elevation API 연동, 고도 받아오기
+    // Fetch elevations through the backend so repeated coordinates can use its persistent cache.
     suspend fun getElevations(
         coordinates: List<Pair<Double, Double>>,
     ): Result<List<Double>> {
@@ -64,16 +61,15 @@ class RouteRepository(
 
         return try {
             val points = coordinates.map { (lat, lng) ->
-                ElevationPoint(latitude = lat, longitude = lng)
+                ElevationCoordinate(latitude = lat, longitude = lng)
             }
-            val request = ElevationRequest(locations = points)
-            val response = elevationApi.getElevation(request)
+            val response = api.getElevations(ElevationLookupRequest(coordinates = points)).requireData()
 
-            require(response.results.size == points.size) {
+            require(response.elevations.size == points.size) {
                 "Elevation response size did not match the request size."
             }
 
-            Result.success(response.results.map { it.elevation })
+            Result.success(response.elevations)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
