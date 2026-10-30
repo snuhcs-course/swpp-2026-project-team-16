@@ -2,6 +2,7 @@ from unittest import mock
 
 import requests
 from django.test import SimpleTestCase, TestCase
+from django.db import DatabaseError
 
 from api.models import ElevationCache
 from api.route_algorithm.elevation import (
@@ -79,7 +80,7 @@ class FetchElevationsTests(TestCase):
             [float(i) for i in range(len(params["latitude"].split(",")))]
         )
 
-        elevations = fetch_elevations([north(i) for i in range(250)])
+        elevations = fetch_elevations([north(i*20) for i in range(250)])
 
         self.assertEqual(get.call_count, 3)
         self.assertEqual(len(elevations), 250)
@@ -129,7 +130,7 @@ class ElevationCacheTests(TestCase):
     def test_fetches_only_missing_unique_coordinates(self):
         cached_point = (126.952, 37.46)
         ElevationCache.objects.create(
-            coordinate_key="37.460000,126.952000",
+            coordinate_key="37.4600,126.9520",
             elevation_m=88.0,
         )
         almost_same_point = (126.9520001, 37.4600001)
@@ -154,3 +155,30 @@ class ElevationCacheTests(TestCase):
             fetch_elevations([(126.952, 37.46)])
 
         self.assertFalse(ElevationCache.objects.exists())
+
+class ElevationCacheFailureTests(TestCase):
+    @mock.patch(
+        "api.route_algorithm.elevation._fetch_missing_elevations",
+        return_value=[123.0],
+    )
+    def test_returns_fetched_elevations_when_cache_write_fails(self, _fetch):
+        with mock.patch(
+            "api.route_algorithm.elevation.ElevationCache.objects.bulk_create",
+            side_effect=DatabaseError("database is locked"),
+        ):
+            elevations = fetch_elevations([(126.952, 37.46)])
+
+        self.assertEqual(elevations, [123.0])
+
+    @mock.patch(
+        "api.route_algorithm.elevation._fetch_missing_elevations",
+        return_value=[123.0],
+    )
+    def test_returns_fetched_elevations_when_cache_readback_fails(self, _fetch):
+        with mock.patch(
+            "api.route_algorithm.elevation._cached_elevations",
+            side_effect=[{}, DatabaseError("database is locked")],
+        ):
+            elevations = fetch_elevations([(126.952, 37.46)])
+
+        self.assertEqual(elevations, [123.0])

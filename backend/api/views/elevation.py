@@ -1,21 +1,23 @@
 import math
 
 from rest_framework import status
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework.decorators import api_view, throttle_classes
 
 from api.route_algorithm.elevation import ElevationError, fetch_elevations
 
 
-MAX_COORDINATES_PER_REQUEST = 1000
+MAX_COORDINATES_PER_REQUEST = 200
 
 
 @api_view(["POST"])
+@throttle_classes([AnonRateThrottle])
 def elevations_api(request):
     coordinates = request.data.get("coordinates")
     if not isinstance(coordinates, list) or len(coordinates) > MAX_COORDINATES_PER_REQUEST:
         return Response(
-            {"status": "error", "message": "coordinates must be a list of at most 1000 points"},
+            {"status": "error", "message": "coordinates must be a list of at most 200 points"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

@@ -1,18 +1,22 @@
+import logging
 import math
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import requests
-from django.db import transaction
+from django.db import DatabaseError, transaction
 
 from api.models import ElevationCache
 from api.route_algorithm.briefing import UphillSegment
+
+
+logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/elevation"
 BATCH_SIZE = 100
 REQUEST_TIMEOUT_SECONDS = 10
 MAX_PARALLEL_REQUESTS = 4
-COORDINATE_DECIMAL_PLACES = 6
+COORDINATE_DECIMAL_PLACES = 4
 DB_LOOKUP_BATCH_SIZE = 500
 
 SAMPLE_SPACING_M = 50
@@ -119,12 +123,20 @@ def fetch_elevations(points: list[tuple[float, float]]) -> list[float]:
             ElevationCache(coordinate_key=key, elevation_m=elevation)
             for key, elevation in zip(missing_keys, missing_elevations)
         ]
-        # Concurrent route requests can fill the same coordinate; the existing row wins.
-        with transaction.atomic():
-            ElevationCache.objects.bulk_create(rows, ignore_conflicts=True)
 
-        # Read back rows so a concurrent insert is handled consistently.
-        cached.update(_cached_elevations(missing_keys))
+        try:
+            # Concurrent route requests can fill the same coordinate;
+            # the existing row wins.
+            with transaction.atomic():
+                ElevationCache.objects.bulk_create(rows, ignore_conflicts=True)
+
+            # Read back rows so a concurrent insert is handled consistently.
+            cached.update(_cached_elevations(missing_keys))
+        except DatabaseError:
+            logger.warning(
+                "Could not persist or read back elevation cache entries.",
+                exc_info=True,
+            )
 
     return [cached[key] for key in keys]
 
