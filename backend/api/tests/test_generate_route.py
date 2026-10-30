@@ -36,6 +36,9 @@ class FakeMapTestCase(APITestCase):
         patcher = mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=fake_elevations)
         self.elevation = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch("api.route_algorithm.algorithm.count_signalized_crossings", return_value=0)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
 
 @mock.patch("api.route_algorithm.briefing.generate_text", side_effect=LLMError("offline"))
@@ -49,7 +52,7 @@ class GenerateRouteLanguageTests(FakeMapTestCase):
     def test_english_briefing(self, llm):
         response = self.client.post(URL, body(language="en"), format="json")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("traffic lights", response.data["data"]["route"]["briefing"])
+        self.assertIn("signalized crossings", response.data["data"]["route"]["briefing"])
         self.assertIn("in English", llm.call_args.args[0]["system"])
 
     def test_defaults_to_korean(self, llm):

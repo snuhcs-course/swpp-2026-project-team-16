@@ -1,15 +1,14 @@
 import json
 from pathlib import Path
 
-from api.route_algorithm import street_graph
 from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.classes import GeoJSONPoint
+from api.route_algorithm.crosswalk_counter import SignalizedCrosswalkCounter
 from api.route_algorithm.elevation import _distance_m, climb_profiles
 
 DATA_DIR = Path(__file__).resolve().parent / "ground_truth"
 CASES_PATH = DATA_DIR / "cases.json"
 ROUTES_DIR = DATA_DIR / "routes"
-COORDINATE_DIGITS = 7
 
 
 def load_cases(path=CASES_PATH):
@@ -64,27 +63,19 @@ def generate_route(case):
     return [tuple(point) for point in best.route[0].coordinates]
 
 
-def _key(point):
-    return round(point[0], COORDINATE_DIGITS), round(point[1], COORDINATE_DIGITS)
-
-
 class SignalCounter:
-    def __init__(self, graph):
-        self.signals = {
-            _key((data["x"], data["y"]))
-            for _, data in graph.nodes(data=True)
-            if data.get("traffic_signal")
-        }
+    def __init__(self, counter=None):
+        self.counter = counter or SignalizedCrosswalkCounter.from_csv()
 
     def count(self, coordinates):
-        return sum(1 for point in coordinates if _key(point) in self.signals)
+        return self.counter.count(coordinates)
 
 
 def local_signal_counter():
-    local = street_graph._load_local()
-    if local is None:
-        raise RuntimeError("Run `python manage.py build_street_graph` first.")
-    return SignalCounter(local.graph)
+    try:
+        return SignalCounter()
+    except (FileNotFoundError, ValueError) as error:
+        raise RuntimeError(f"Could not load Seoul's signalized-crosswalk data: {error}") from error
 
 
 def route_length_m(coordinates):
@@ -96,7 +87,7 @@ def system_values(routes, signal_counter):
     return [
         {
             "distance_m": round(route_length_m(coordinates)),
-            "traffic_lights": signal_counter.count(coordinates),
+            "signalized_crossings": signal_counter.count(coordinates),
             "elevation_gain_m": profile.total_gain_m if profile else None,
         }
         for coordinates, profile in zip(routes, profiles)
@@ -115,9 +106,9 @@ def evaluate(cases, systems, thresholds):
         truth = case["truth"]
         rows.append({
             "id": case["id"],
-            "system_lights": system["traffic_lights"],
-            "truth_lights": truth.get("traffic_lights"),
-            "lights_ok": within(system["traffic_lights"], truth.get("traffic_lights"), thresholds["traffic_lights"]["within"]),
+            "system_lights": system["signalized_crossings"],
+            "truth_lights": truth.get("signalized_crossings"),
+            "lights_ok": within(system["signalized_crossings"], truth.get("signalized_crossings"), thresholds["signalized_crossings"]["within"]),
             "system_gain": system["elevation_gain_m"],
             "truth_gain": truth.get("elevation_gain_m"),
             "gain_ok": within(
@@ -139,6 +130,6 @@ def evaluate(cases, systems, thresholds):
         }
 
     return rows, {
-        "traffic_lights": summary("lights_ok", "system_lights", "truth_lights"),
+        "signalized_crossings": summary("lights_ok", "system_lights", "truth_lights"),
         "elevation_gain_m": summary("gain_ok", "system_gain", "truth_gain"),
     }

@@ -104,6 +104,8 @@
     <string name="route_option_climb_unknown">↑ –</string>
     <string name="route_option_traffic_lights">Lights %1$d</string>
     <string name="traffic_light_count">Traffic lights: %1$d</string>
+    <string name="route_option_traffic_lights_unknown">Lights: —</string>
+    <string name="traffic_light_count_unknown">Traffic lights: unavailable</string>
     <string name="elevation_information">Elevation information</string>
     <string name="elevation_unavailable">Elevation information is unavailable.</string>
 

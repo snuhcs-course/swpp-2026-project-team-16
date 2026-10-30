@@ -22,7 +22,7 @@ class UphillSegment:
 class RouteFeatures:
     distance_m: int
     total_elevation_gain_m: int | None
-    traffic_light_count: int
+    traffic_light_count: int | None  # Signalized crossing events, retained for API compatibility.
     crosswalk_count: int | None = None
     uphill_segments: list[UphillSegment] = field(default_factory=list)
 
@@ -41,7 +41,7 @@ SYSTEM_PROMPTS = {
         "규칙:\n"
         "- 반드시 한국어로, 2~3문장, 공백 포함 200자 이내로 작성하세요.\n"
         "- 데이터에 있는 사실만 사용하고, 없는 정보(날씨, 지명 등)는 지어내지 마세요.\n"
-        "- 신호등 개수와, 데이터에 오르막이 있으면 그 위치를 언급하고, 페이스 조절 팁을 하나 포함하세요.\n"
+        "- 보행신호가 있는 횡단 이벤트 횟수와, 데이터에 오르막이 있으면 그 위치를 언급하고, 페이스 조절 팁을 하나 포함하세요.\n"
         "- 목록이나 마크다운 없이 자연스러운 문장으로 작성하세요."
     ),
     "en": (
@@ -49,7 +49,7 @@ SYSTEM_PROMPTS = {
         "Rules:\n"
         "- Write in English, in 2-3 sentences, under 200 characters in total.\n"
         "- Use only facts from the data. Do not invent anything else (weather, place names, etc.).\n"
-        "- Mention how many traffic lights there are and, if the data has uphills, where they are. Include one pacing tip.\n"
+        "- Mention the number of signalized pedestrian crossing events and, if the data has uphills, where they are. Include one pacing tip.\n"
         "- Write natural sentences with no lists or markdown."
     ),
 }
@@ -80,7 +80,7 @@ def _user_prompt(features: RouteFeatures, language: str) -> str:
         lines = [
             "경로 데이터:",
             f"- 총 거리: {distance_km}km",
-            f"- 신호등: {features.traffic_light_count}개",
+            f"- 보행신호 횡단: {features.traffic_light_count}회",
         ]
         if features.total_elevation_gain_m is not None:
             lines.insert(2, f"- 총 상승 고도: {features.total_elevation_gain_m}m")
@@ -93,7 +93,7 @@ def _user_prompt(features: RouteFeatures, language: str) -> str:
         lines = [
             "Route data:",
             f"- Total distance: {distance_km}km",
-            f"- Traffic lights: {features.traffic_light_count}",
+            f"- Signalized crossings: {features.traffic_light_count}",
         ]
         if features.total_elevation_gain_m is not None:
             lines.insert(2, f"- Total elevation gain: {features.total_elevation_gain_m}m")
@@ -120,12 +120,12 @@ def fallback_briefing(features: RouteFeatures, language: str = DEFAULT_LANGUAGE)
     climb_known = features.total_elevation_gain_m is not None
     if language == "ko":
         climb = f"누적 상승 {features.total_elevation_gain_m}m, " if climb_known else ""
-        text = f"총 {distance_km}km, {climb}신호등 {features.traffic_light_count}개가 있는 코스입니다."
+        text = f"총 {distance_km}km, {climb}보행신호 횡단 {features.traffic_light_count}회가 있는 코스입니다."
         if first_uphill:
             text += f" {_trim(first_uphill.start_km)}km 지점의 오르막 전에 페이스를 조절하세요."
         return text
     climb = f"{features.total_elevation_gain_m}m of climbing and " if climb_known else ""
-    text = f"This {distance_km}km route has {climb}{features.traffic_light_count} traffic lights."
+    text = f"This {distance_km}km route has {climb}{features.traffic_light_count} signalized crossings."
     if first_uphill:
         text += f" Ease your pace before the uphill at {_trim(first_uphill.start_km)}km."
     return text

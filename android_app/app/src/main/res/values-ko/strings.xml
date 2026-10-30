@@ -100,6 +100,8 @@
     <string name="route_option_climb_unknown">↑ –</string>
     <string name="route_option_traffic_lights">신호 %1$d</string>
     <string name="traffic_light_count">신호등: %1$d개</string>
+    <string name="route_option_traffic_lights_unknown">신호 —</string>
+    <string name="traffic_light_count_unknown">신호등: 정보 없음</string>
     <string name="elevation_information">고도 정보</string>
     <string name="elevation_unavailable">고도 정보를 불러오지 못했습니다.</string>
 
