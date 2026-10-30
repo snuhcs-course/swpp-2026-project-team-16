@@ -29,6 +29,9 @@ interface ApiService {
     @POST("api/v1/routes/generate/")
     suspend fun generateRoute(@Body body: GenerateRouteRequest): ApiResponse<GeneratedRouteData>
 
+    @POST("api/v1/elevations/")
+    suspend fun getElevations(@Body body: ElevationLookupRequest): ApiResponse<ElevationData>
+
     @GET("api/v1/routes/saved/")
     suspend fun savedRoutes(): List<SavedRoute>
 

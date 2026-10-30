@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from django.db import connections, close_old_connections
 
 import requests
 from osmnx._errors import InsufficientResponseError, ResponseStatusCodeError
@@ -18,6 +19,15 @@ MAX_PLACE_NAME_LENGTH = 100
 MAP_UNAVAILABLE_MESSAGE = "Could not load map data. Please try again later."
 
 route_executor = ThreadPoolExecutor(max_workers=4)
+
+
+def _create_routes_with_connection_cleanup(**kwargs):
+    close_old_connections()
+    try:
+        return create_routes(**kwargs)
+    finally:
+        # The executor reuses threads, so release the ORM connection after each route task.
+        connections.close_all()
 
 
 def unavailable_response(message):
@@ -152,7 +162,7 @@ def generate_route_api(request):
     # Call route algorithm
 
     future = route_executor.submit(
-        create_routes,
+        _create_routes_with_connection_cleanup,
         starting_point=starting_point,
         end_point=end_point,
         distance=distance,
