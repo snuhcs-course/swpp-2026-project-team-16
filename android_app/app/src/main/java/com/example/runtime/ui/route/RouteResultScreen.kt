@@ -90,12 +90,11 @@ fun RouteResultScreen(routeViewModel: RouteViewModel, onSave: () -> Unit) {
         }
 
         Text(
-            stringResource(
-                R.string.traffic_light_count,
-                generated.route.trafficLightCount
-            ),
+            text = generated.route.trafficLightCount?.let { count ->
+                stringResource(R.string.traffic_light_count, count)
+            } ?: stringResource(R.string.traffic_light_count_unknown),
             fontSize = 16.sp
-        ) // AI-assited with ChatGPT, 2026-10-16 ; reviewd by Soonyoung
+        ) // AI-assited with ChatGPT, 2026-10-30 ; reviewd by Soonyoung
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -271,7 +270,12 @@ private fun RouteOptionCards(options: List<GeneratedRouteData>, selected: Int, o
                             ?: stringResource(R.string.route_option_climb_unknown),
                         fontSize = 13.sp
                     )
-                    Text(stringResource(R.string.route_option_traffic_lights, route.trafficLightCount), fontSize = 13.sp)
+                    Text(
+                        text = route.trafficLightCount?.let { count ->
+                            stringResource(R.string.route_option_traffic_lights, count)
+                        } ?: stringResource(R.string.route_option_traffic_lights_unknown),
+                        fontSize = 13.sp
+                    )
                 }
             }
         }

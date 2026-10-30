@@ -437,7 +437,9 @@ score = 1.0 x elevation_gain_m + 10 x signalized crossing events + 5 x distance 
 
 Only candidates within 15% of the requested distance are ranked; if none are, the closest one is returned alone.
 
-`traffic_light_count` is the number of signalized pedestrian crossing events matched to the generated route using Seoul's crosswalk inventory. The field name is retained for API compatibility. `elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing leaves out elevation. The briefing uses the measured distance, elevation gain, signalized crossing events, and uphill sections.
+`traffic_light_count` is th`traffic_light_count` is an integer when the entire route is within the Seoul signalized-crosswalk inventory coverage. It is `null` when any part of the route is outside that coverage. The field name is retained for API compatibility. When the count is `null`, the briefing omits it.
+
+`elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing omits elevation. The briefing includes the available route data and uphill sections.
 
 Use `temporary_route_id` to save the route.
 

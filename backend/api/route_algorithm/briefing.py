@@ -22,7 +22,7 @@ class UphillSegment:
 class RouteFeatures:
     distance_m: int
     total_elevation_gain_m: int | None
-    traffic_light_count: int  # Signalized crossing events, retained for API compatibility.
+    traffic_light_count: int | None  # Signalized crossing events, retained for API compatibility.
     crosswalk_count: int | None = None
     uphill_segments: list[UphillSegment] = field(default_factory=list)
 

@@ -11,11 +11,14 @@ import math
 import threading
 from dataclasses import dataclass
 from pathlib import Path
+import json
+from shapely.geometry import LineString, shape
 
 from pyproj import Transformer
 
 
 DATA_PATH = Path(__file__).resolve().parent / "data" / "seoul_signalized_crosswalks.csv"
+BOUNDARY_PATH = Path(__file__).parent / "data" / "seoul_boundary.geojson"
 MATCH_RADIUS_METERS = 15.0
 EVENT_MERGE_DISTANCE_METERS = 30.0
 GRID_CELL_METERS = 100.0
@@ -51,13 +54,19 @@ class SignalizedCrosswalkCounter:
         match_radius_m: float = MATCH_RADIUS_METERS,
         event_merge_distance_m: float = EVENT_MERGE_DISTANCE_METERS,
         grid_cell_m: float = GRID_CELL_METERS,
+        coverage_geometry=None,
     ):
         if match_radius_m < 0 or event_merge_distance_m < 0 or grid_cell_m <= 0:
-            raise ValueError("matching distances must be non-negative and grid_cell_m must be positive")
+            raise ValueError(
+                "matching distances must be non-negative and grid_cell_m must be positive"
+            )
+
         self.records = tuple(records)
         self.match_radius_m = match_radius_m
         self.event_merge_distance_m = event_merge_distance_m
         self.grid_cell_m = grid_cell_m
+        self.coverage_geometry = coverage_geometry
+
         self._grid: dict[tuple[int, int], list[SignalizedCrosswalk]] = {}
         for record in self.records:
             cell = self._cell(record.easting_m, record.northing_m)
@@ -112,7 +121,13 @@ class SignalizedCrosswalkCounter:
                 f"Seoul signalized-crosswalk data is empty: {path}"
             )
 
-        return cls(records)
+        with BOUNDARY_PATH.open(encoding="utf-8") as file:
+            boundary_geojson = json.load(file)
+
+        boundary_geometry = shape(
+            boundary_geojson["features"][0]["geometry"]
+        )
+        return cls(records, coverage_geometry=boundary_geometry)
 
     def _cell(self, x: float, y: float) -> tuple[int, int]:
         return math.floor(x / self.grid_cell_m), math.floor(y / self.grid_cell_m)
@@ -194,7 +209,15 @@ class SignalizedCrosswalkCounter:
                     previous = position
         return count
 
-    def count(self, coordinates: list[tuple[float, float]]) -> int:
+    def count(self, coordinates: list[tuple[float, float]]) -> int | None:
+        if self.coverage_geometry is None or len(coordinates) < 2:
+            return None
+
+        route_line = LineString(coordinates)
+
+        if not self.coverage_geometry.covers(route_line):
+            return None
+
         return self.count_projected_route(project_route(coordinates))
 
 

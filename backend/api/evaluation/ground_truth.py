@@ -87,7 +87,7 @@ def system_values(routes, signal_counter):
     return [
         {
             "distance_m": round(route_length_m(coordinates)),
-            "traffic_lights": signal_counter.count(coordinates),
+            "signalized_crossings": signal_counter.count(coordinates),
             "elevation_gain_m": profile.total_gain_m if profile else None,
         }
         for coordinates, profile in zip(routes, profiles)
@@ -106,9 +106,9 @@ def evaluate(cases, systems, thresholds):
         truth = case["truth"]
         rows.append({
             "id": case["id"],
-            "system_lights": system["traffic_lights"],
-            "truth_lights": truth.get("traffic_lights"),
-            "lights_ok": within(system["traffic_lights"], truth.get("traffic_lights"), thresholds["traffic_lights"]["within"]),
+            "system_lights": system["signalized_crossings"],
+            "truth_lights": truth.get("signalized_crossings"),
+            "lights_ok": within(system["signalized_crossings"], truth.get("signalized_crossings"), thresholds["signalized_crossings"]["within"]),
             "system_gain": system["elevation_gain_m"],
             "truth_gain": truth.get("elevation_gain_m"),
             "gain_ok": within(
@@ -130,6 +130,6 @@ def evaluate(cases, systems, thresholds):
         }
 
     return rows, {
-        "traffic_lights": summary("lights_ok", "system_lights", "truth_lights"),
+        "signalized_crossings": summary("lights_ok", "system_lights", "truth_lights"),
         "elevation_gain_m": summary("gain_ok", "system_gain", "truth_gain"),
     }

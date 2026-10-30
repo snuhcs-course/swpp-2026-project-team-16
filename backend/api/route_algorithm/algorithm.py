@@ -335,6 +335,11 @@ def create_routes(
     # Count pedestrian-signal crossing events from Seoul's crosswalk inventory.
     # OSM traffic_signal tags are incomplete and are not the source of this value.
     signals = [count_signalized_crossings(route_coordinates) for route_coordinates in coordinates]
+    signals_for_scoring = (
+        signals
+        if all(signal is not None for signal in signals)
+        else [None] * len(signals)
+    )
     profiles = climb_profiles(coordinates) or [None] * len(pool)
 
     features = [

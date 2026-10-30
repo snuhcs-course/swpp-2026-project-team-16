@@ -10,7 +10,7 @@ from api.route_algorithm.elevation import ClimbProfile
 from api.tests.fakes import SNU
 
 THRESHOLDS = {
-    "traffic_lights": {"within": 2, "min_pass_rate": 0.75},
+    "signalized_crossings": {"within": 2, "min_pass_rate": 0.75},
     "elevation_gain_m": {"within_m": 10, "within_ratio": 0.3, "min_pass_rate": 0.75},
 }
 
@@ -21,7 +21,7 @@ def case(case_id, lights=None, gain=None):
         "name": case_id,
         "start": list(SNU),
         "distance_m": 3000,
-        "truth": {"traffic_lights": lights, "elevation_gain_m": gain},
+        "truth": {"signalized_crossings": lights, "elevation_gain_m": gain},
     }
 
 
@@ -46,22 +46,22 @@ class EvaluateTests(SimpleTestCase):
     def test_pass_rate_and_error_only_count_cases_with_truth(self):
         cases = [case("a", lights=3, gain=40), case("b", lights=0, gain=10), case("c")]
         systems = [
-            {"traffic_lights": 4, "elevation_gain_m": 45},
-            {"traffic_lights": 5, "elevation_gain_m": 35},
-            {"traffic_lights": 1, "elevation_gain_m": None},
+            {"signalized_crossings": 4, "elevation_gain_m": 45},
+            {"signalized_crossings": 5, "elevation_gain_m": 35},
+            {"signalized_crossings": 1, "elevation_gain_m": None},
         ]
 
         rows, metrics = gt.evaluate(cases, systems, THRESHOLDS)
 
         self.assertEqual([r["lights_ok"] for r in rows], [True, False, None])
         self.assertEqual([r["gain_ok"] for r in rows], [True, False, None])
-        self.assertEqual(metrics["traffic_lights"], {"cases": 2, "pass_rate": 0.5, "mean_abs_error": 3.0})
+        self.assertEqual(metrics["signalized_crossings"], {"cases": 2, "pass_rate": 0.5, "mean_abs_error": 3.0})
         self.assertEqual(metrics["elevation_gain_m"], {"cases": 2, "pass_rate": 0.5, "mean_abs_error": 15.0})
 
     def test_no_truth_yet(self):
-        _, metrics = gt.evaluate([case("a")], [{"traffic_lights": 1, "elevation_gain_m": 5}], THRESHOLDS)
-        self.assertEqual(metrics["traffic_lights"]["cases"], 0)
-        self.assertIsNone(metrics["traffic_lights"]["pass_rate"])
+        _, metrics = gt.evaluate([case("a")], [{"signalized_crossings": 1, "elevation_gain_m": 5}], THRESHOLDS)
+        self.assertEqual(metrics["signalized_crossings"]["cases"], 0)
+        self.assertIsNone(metrics["signalized_crossings"]["pass_rate"])
 
 
 class SystemValuesTests(SimpleTestCase):
@@ -70,7 +70,7 @@ class SystemValuesTests(SimpleTestCase):
         counter = mock.Mock(count=mock.Mock(return_value=2))
         with mock.patch.object(gt, "climb_profiles", return_value=[ClimbProfile(total_gain_m=12, uphill_segments=[])]):
             values = gt.system_values([route], counter)
-        self.assertEqual(values, [{"distance_m": 88, "traffic_lights": 2, "elevation_gain_m": 12}])
+        self.assertEqual(values, [{"distance_m": 88, "signalized_crossings": 2, "elevation_gain_m": 12}])
 
     def test_unknown_elevation_when_lookup_fails(self):
         counter = mock.Mock(count=mock.Mock(return_value=0))
@@ -96,4 +96,4 @@ class CommittedCasesTests(SimpleTestCase):
         self.assertGreaterEqual(len(data["cases"]), 8)
         for item in data["cases"]:
             self.assertTrue(gt.route_path(item["id"]).exists(), item["id"])
-            self.assertLessEqual({"traffic_lights", "elevation_gain_m", "elevation_source", "checked_by"}, set(item["truth"]))
+            self.assertLessEqual({"signalized_crossings", "elevation_gain_m", "elevation_source", "checked_by"}, set(item["truth"]))
