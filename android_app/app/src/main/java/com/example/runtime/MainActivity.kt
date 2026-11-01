@@ -41,6 +41,7 @@ import com.example.runtime.ui.mypage.MyPageViewModel
 import com.example.runtime.ui.mypage.SavedRouteDetailScreen
 import com.example.runtime.ui.route.GeneratingScreen
 import com.example.runtime.ui.route.RouteInputScreen
+import com.example.runtime.ui.route.RunNavigationScreen
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
 import com.example.runtime.ui.splash.SplashScreen
@@ -140,7 +141,7 @@ fun RunTimeApp() {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
-            if (currentScreen !in setOf("splash", "generating", "login", "signup")) {
+            if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation")) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     NavigationBarItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
@@ -222,10 +223,20 @@ fun RunTimeApp() {
                                     )
                                     "route_result" -> RouteResultScreen(
                                         routeViewModel = routeViewModel,
+                                        onStartRun = { currentScreen = "run_navigation" },
                                         onSave = {
                                             if (authViewModel.isLoggedIn) routeViewModel.save() else loginPrompt = LOGIN_PROMPT_SAVE
                                         }
                                     )
+                                    "run_navigation" -> routeViewModel.generated?.let { generated ->
+                                        RunNavigationScreen(
+                                            lines = generated.route.route,
+                                            routeDistanceMeters = generated.route.distance,
+                                            onFinish = {currentScreen = "route_result"},
+                                        )
+                                    } ?: run {
+                                        currentScreen = "route_input"
+                                    }
                                     "MyPage" -> if (!authViewModel.isLoggedIn) GuestMyPageScreen(
                                         onLogIn = { openAuth("login", returnTo = "MyPage", save = false) },
                                         onSignUp = { openAuth("signup", returnTo = "MyPage", save = false) }

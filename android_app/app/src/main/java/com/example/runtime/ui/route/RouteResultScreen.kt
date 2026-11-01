@@ -48,11 +48,15 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
 private val CARD_HEIGHT = 340.dp
-private val PANEL_HEIGHT = 440.dp
+private val PANEL_HEIGHT = 520.dp
 
 // 6. Route Result Screen (화면 6)
 @Composable
-fun RouteResultScreen(routeViewModel: RouteViewModel, onSave: () -> Unit) {
+fun RouteResultScreen(
+    routeViewModel: RouteViewModel,
+    onStartRun: () -> Unit,
+    onSave: () -> Unit,
+) {
     val generated = routeViewModel.generated ?: return
     val saveState = routeViewModel.saveState
     val elevationLoadState = routeViewModel.elevationLoadState
@@ -131,6 +135,17 @@ fun RouteResultScreen(routeViewModel: RouteViewModel, onSave: () -> Unit) {
                 if (options.size > 1) {
                     PageDots(count = options.size, selected = pagerState.currentPage)
                 }
+                
+                Button(
+                    onClick = onStartRun,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.l)
+                ) {
+                    Text(stringResource(R.string.run_start))
+                }
+                Spacer(modifier = Modifier.height(Spacing.s))
+                
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
