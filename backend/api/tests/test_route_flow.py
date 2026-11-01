@@ -54,7 +54,7 @@ class RouteFlowTests(APITestCase):
             self.assertIsNotNone(route["elevation_gain_m"])
             self.assertGreaterEqual(route["traffic_light_count"], 0)
             self.assertIn(f"누적 상승 {route['elevation_gain_m']}m", route["briefing"])
-            self.assertIn(f"신호등 {route['traffic_light_count']}개", route["briefing"])
+            self.assertIn(f"보행신호 횡단 {route['traffic_light_count']}회", route["briefing"])
 
         saved = self.client.post(SAVED_URL, {"temporary_route_id": options[-1]["temporary_route_id"]}, format="json")
         self.assertEqual(saved.status_code, 201)

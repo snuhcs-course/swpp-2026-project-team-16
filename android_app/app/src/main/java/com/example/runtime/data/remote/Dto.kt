@@ -95,7 +95,7 @@ data class RouteBody(
     val briefing: String,
     val route: List<GeoJsonLineString>,
     @SerialName("is_shortest_path") val isShortestPath: Boolean = false,
-    @SerialName("traffic_light_count") val trafficLightCount: Int = 0,
+    @SerialName("traffic_light_count") val trafficLightCount: Int? = null,
     @SerialName("elevation_gain_m") val elevationGainM: Int? = null,
 )
 

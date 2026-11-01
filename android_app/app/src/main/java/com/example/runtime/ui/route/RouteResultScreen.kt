@@ -295,7 +295,7 @@ private fun RouteOptionCard(
                 )
                 StatItem(
                     label = stringResource(R.string.stat_traffic_lights),
-                    value = route.trafficLightCount.toString(),
+                    value = route.trafficLightCount?.toString() ?: "—",
                     icon = R.drawable.ic_traffic,
                     modifier = Modifier.weight(1f)
                 ) // AI-assited with ChatGPT, 2026-10-16 ; reviewd by Soonyoung
