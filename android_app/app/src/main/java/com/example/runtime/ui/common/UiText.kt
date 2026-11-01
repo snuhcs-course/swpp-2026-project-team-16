@@ -33,7 +33,9 @@ private val serverMessages = mapOf(
     "Multiple accounts use this email" to R.string.error_google_multiple_accounts,
     "Password must be at least 8 characters" to R.string.error_password_short,
     "Route not found." to R.string.error_route_not_found,
+    "Run this route before sharing it." to R.string.error_run_before_share,
     "Temporary route not found." to R.string.error_temporary_route_not_found,
+    "This route is already shared." to R.string.error_already_shared,
     "Username already exists" to R.string.error_username_exists,
     "Username and password are required" to R.string.error_username_password_required,
 )

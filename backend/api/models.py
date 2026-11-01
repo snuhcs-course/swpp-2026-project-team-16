@@ -10,6 +10,7 @@ class TemporaryRoute(models.Model):
     route = models.JSONField(null=False, blank=False) 
     start_name = models.CharField(max_length=100, blank=True, default="")
     end_name = models.CharField(max_length=100, blank=True, default="")
+    saved_route = models.ForeignKey("Route", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
 
     def _validate_route(self):
         if not isinstance(self.route, list):
@@ -29,6 +30,8 @@ class TemporaryRoute(models.Model):
 
     
     def create_route(self, created_by: User) -> "Route":
+        if self.saved_route is not None:
+            return self.saved_route
         route =  Route.objects.create(
             created_by=created_by,
             distance=self.distance,
@@ -83,3 +86,20 @@ class ElevationCache(models.Model):
     cached_at = models.DateTimeField(auto_now_add=True)
 
 
+class RouteRun(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="runs")
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="runs")
+    distance_m = models.PositiveIntegerField()
+    duration_s = models.PositiveIntegerField()
+    finished_at = models.DateTimeField(auto_now_add=True)
+
+
+class SharedRoute(models.Model):
+    route = models.OneToOneField(Route, on_delete=models.CASCADE, related_name="shared")
+    shared_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="shared_routes")
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=300, blank=True, default="")
+    shared_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-shared_at", "-id"]

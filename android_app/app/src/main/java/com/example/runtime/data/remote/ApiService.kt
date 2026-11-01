@@ -56,4 +56,19 @@ interface ApiService {
         @Query("lng") longitude: Double,
         @Query("language") language: String,
     ): ApiResponse<Place>
+
+    @POST("api/v1/runs/")
+    suspend fun recordRun(@Body body: RecordRunRequest): ApiResponse<RunRecord>
+
+    @GET("api/v1/community/routes/")
+    suspend fun sharedRoutes(): ApiResponse<List<SharedRoute>>
+
+    @GET("api/v1/community/routes/{sharedRouteId}/")
+    suspend fun sharedRoute(@Path("sharedRouteId") sharedRouteId: Int): ApiResponse<SharedRoute>
+
+    @POST("api/v1/community/routes/")
+    suspend fun shareRoute(@Body body: ShareRouteRequest): ApiResponse<SharedRoute>
+
+    @DELETE("api/v1/community/routes/{sharedRouteId}/")
+    suspend fun deleteSharedRoute(@Path("sharedRouteId") sharedRouteId: Int): ApiResponse<Unit>
 }

@@ -164,4 +164,39 @@
     <string name="run_notification_paused">러닝 일시 정지 · %1$s km</string>
     <string name="action_ok">확인</string>
     <string name="action_done">완료</string>
+
+    <string name="nav_community">커뮤니티</string>
+    <string name="community_tab_routes">루트 공유</string>
+    <string name="community_tab_crews">러닝 크루</string>
+    <string name="crews_coming_soon_title">러닝 크루는 준비 중이에요</string>
+    <string name="crews_coming_soon_message">곧 크루를 만들고 함께 달릴 수 있어요.</string>
+    <string name="no_shared_routes">아직 공유된 루트가 없어요</string>
+    <string name="no_shared_routes_message">달리기를 마친 뒤 요약 화면에서 루트를 공유해 보세요.</string>
+    <string name="shared_by">%1$s · %2$s</string>
+    <string name="stat_runs">달린 횟수</string>
+    <string name="stat_start">출발지</string>
+    <string name="action_run_route">이 루트 달리기</string>
+    <string name="action_unshare">공유 취소</string>
+    <string name="unshare_dialog_title">커뮤니티 공유를 취소할까요?</string>
+    <string name="unshare_dialog_message">다른 러너에게 더 이상 보이지 않아요. 저장한 루트라면 마이페이지에는 남아 있어요.</string>
+    <string name="shared_route_removed_message">공유를 취소했어요</string>
+    <string name="route_shared_message">커뮤니티에 공유했어요</string>
+    <string name="login_prompt_save_shared">이 루트를 마이페이지에 저장하려면 로그인하세요.</string>
+    <string name="run_log_in_to_share">로그인하면 공유할 수 있어요</string>
+    <string name="run_record_retry">기록 다시 저장</string>
+    <string name="action_share_to_community">공유하기</string>
+    <string name="action_view_in_community">커뮤니티에서 보기</string>
+    <string name="share_dialog_title">커뮤니티에 공유</string>
+    <string name="share_dialog_message">다른 러너들이 이 루트를 보고 달릴 수 있어요.</string>
+    <string name="label_share_title">제목</string>
+    <string name="label_share_description">소개 (선택)</string>
+    <string name="sharing">공유 중...</string>
+    <string name="default_share_title">%1$s %2$s 러닝</string>
+    <string name="default_share_title_no_start">%1$s 러닝</string>
+    <string name="error_run_before_share">이 루트를 달린 뒤에 공유할 수 있어요.</string>
+    <string name="error_already_shared">이미 공유된 루트예요.</string>
+
+    <plurals name="run_count">
+        <item quantity="other">%d회</item>
+    </plurals>
 </resources>

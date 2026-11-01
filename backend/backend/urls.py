@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import auth, elevation, generate_route, places, routes
+from api.views import auth, community, elevation, generate_route, places, routes
 
 urlpatterns = [
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
@@ -16,6 +16,15 @@ urlpatterns = [
     path("api/v1/elevations/", elevation.elevations_api, name="elevations"),
     path("api/v1/routes/saved/", routes.saved_routes_list, name="saved_routes_list"),
     path("api/v1/routes/saved/<int:route_id>/", routes.saved_routes_detail, name="saved_routes_detail"),
+
+    # Community
+    path("api/v1/runs/", community.route_runs, name="route_runs"),
+    path("api/v1/community/routes/", community.shared_routes_list, name="shared_routes_list"),
+    path(
+        "api/v1/community/routes/<int:shared_route_id>/",
+        community.shared_routes_detail,
+        name="shared_routes_detail",
+    ),
 
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
     path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),

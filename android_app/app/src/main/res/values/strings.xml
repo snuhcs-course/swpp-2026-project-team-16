@@ -168,4 +168,40 @@
     <string name="run_notification_paused">Run paused · %1$s km</string>
     <string name="action_ok">OK</string>
     <string name="action_done">Done</string>
+
+    <string name="nav_community">Community</string>
+    <string name="community_tab_routes">Routes</string>
+    <string name="community_tab_crews">Crews</string>
+    <string name="crews_coming_soon_title">Running crews are coming soon</string>
+    <string name="crews_coming_soon_message">Soon you\'ll be able to make a crew and run together.</string>
+    <string name="no_shared_routes">No shared routes yet</string>
+    <string name="no_shared_routes_message">Finish a run and share the route from the summary.</string>
+    <string name="shared_by">%1$s · %2$s</string>
+    <string name="stat_runs">Runs</string>
+    <string name="stat_start">Start</string>
+    <string name="action_run_route">Run this route</string>
+    <string name="action_unshare">Remove from Community</string>
+    <string name="unshare_dialog_title">Remove this route from Community?</string>
+    <string name="unshare_dialog_message">Other runners won\'t see it anymore. If you saved it, it stays in My Page.</string>
+    <string name="shared_route_removed_message">Removed from Community</string>
+    <string name="route_shared_message">Shared to Community</string>
+    <string name="login_prompt_save_shared">Log in to save this route to My Page.</string>
+    <string name="run_log_in_to_share">Log in to share your run</string>
+    <string name="run_record_retry">Save run again</string>
+    <string name="action_share_to_community">Share</string>
+    <string name="action_view_in_community">View in Community</string>
+    <string name="share_dialog_title">Share to Community</string>
+    <string name="share_dialog_message">Other runners can see this route and run it.</string>
+    <string name="label_share_title">Title</string>
+    <string name="label_share_description">Description (optional)</string>
+    <string name="sharing">Sharing...</string>
+    <string name="default_share_title">%1$s %2$s run</string>
+    <string name="default_share_title_no_start">%1$s run</string>
+    <string name="error_run_before_share">Run this route before sharing it.</string>
+    <string name="error_already_shared">This route is already shared.</string>
+
+    <plurals name="run_count">
+        <item quantity="one">%d run</item>
+        <item quantity="other">%d runs</item>
+    </plurals>
 </resources>
