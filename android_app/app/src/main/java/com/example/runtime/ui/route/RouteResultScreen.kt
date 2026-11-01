@@ -27,7 +27,11 @@ import androidx.compose.ui.graphics.Color
 
 // 6. Route Result Screen (화면 6)
 @Composable
-fun RouteResultScreen(routeViewModel: RouteViewModel, onSave: () -> Unit) {
+fun RouteResultScreen(
+    routeViewModel: RouteViewModel,
+    onStartRun: () -> Unit,
+    onSave: () -> Unit,
+) {
     val generated = routeViewModel.generated ?: return
     val saveState = routeViewModel.saveState
     val elevationSummary = routeViewModel.steepSectionSummary
@@ -135,6 +139,10 @@ fun RouteResultScreen(routeViewModel: RouteViewModel, onSave: () -> Unit) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onStartRun, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.run_start))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
