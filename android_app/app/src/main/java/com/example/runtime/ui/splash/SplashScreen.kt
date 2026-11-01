@@ -1,16 +1,18 @@
 package com.example.runtime.ui.splash
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.ui.auth.AuthViewModel
+import com.example.runtime.ui.auth.BrandMark
+import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
 // 2. Splash Screen (화면 2)
@@ -25,8 +27,18 @@ fun SplashScreen(authViewModel: AuthViewModel, onNext: (Boolean) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(stringResource(R.string.app_name), fontSize = 36.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(24.dp))
-        CircularProgressIndicator()
+        BrandMark()
+        Spacer(modifier = Modifier.height(Spacing.s))
+        Text(
+            stringResource(R.string.splash_tagline),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(Spacing.l))
+        LinearProgressIndicator(
+            modifier = Modifier.width(96.dp).clip(CircleShape),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
     }
 }

@@ -17,4 +17,5 @@ urlpatterns = [
     path("api/v1/routes/saved/<int:route_id>/", routes.saved_routes_detail, name="saved_routes_detail"),
 
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
+    path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),
 ]

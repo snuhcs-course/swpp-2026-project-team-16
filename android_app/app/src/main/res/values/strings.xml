@@ -3,6 +3,7 @@
 
     <string name="nav_route">Route</string>
     <string name="nav_my_page">My Page</string>
+    <string name="splash_tagline">Running routes made for you</string>
 
     <string name="label_name">Username:</string>
     <string name="label_email">Email:</string>
@@ -43,21 +44,37 @@
 
     <string name="label_start_point">Start point</string>
     <string name="label_end_point">End point (optional)</string>
-    <string name="label_distance">"distance : "</string>
-    <string name="unit_km">" km"</string>
+    <string name="label_distance">Distance</string>
+    <string name="unit_km">km</string>
     <string name="action_generate">Generate</string>
-    <string name="generating_route">generating route</string>
+    <string name="route_input_title">Where do you want to run?</string>
+    <string name="route_input_subtitle">Set a start point and distance. The end point is optional.</string>
+    <string name="generating_route">Making your route</string>
+    <string name="generating_step_route">Finding routes</string>
+    <string name="generating_step_elevation">Checking elevation</string>
+    <string name="generating_step_briefing">Writing the briefing</string>
 
-    <string name="distance_value">distance : %1$s</string>
     <string name="shortest_path_notice">The end point can\'t be reached within the distance you entered, so the shortest route (%1$s) is shown.</string>
-    <string name="llm_briefing">LLM briefing:</string>
+    <string name="llm_briefing">AI briefing</string>
     <string name="action_share">Share</string>
     <string name="action_save">Save</string>
     <string name="saving">Saving...</string>
     <string name="saved">Saved</string>
+    <string name="route_saved_message">Saved to My Page</string>
+    <string name="route_option_label">Option %1$d</string>
+    <string name="previous_route_option">Previous route</string>
+    <string name="next_route_option">Next route</string>
+    <string name="stat_climb">Climb</string>
+    <string name="stat_traffic_lights">Traffic lights</string>
+    <string name="value_meters">%1$d m</string>
 
     <string name="no_saved_routes">No saved routes yet.</string>
-    <string name="saved_date">saved : %1$s</string>
+    <string name="no_saved_routes_message">Generate a route and save it to see it here.</string>
+    <string name="action_create_route">Create a route</string>
+    <string name="saved_routes_count">Saved routes · %1$d</string>
+    <string name="route_deleted_message">Route deleted</string>
+    <string name="route_renamed_message">Route renamed</string>
+    <string name="saved_date">Saved %1$s</string>
     <string name="action_back">Back</string>
     <string name="action_delete">Delete</string>
     <string name="deleting">Deleting...</string>
@@ -71,6 +88,10 @@
     <string name="language_system">System default</string>
     <string name="language_english" translatable="false">English</string>
     <string name="language_korean" translatable="false">한국어</string>
+    <string name="theme">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 
     <string name="current_location">Current location</string>
     <string name="use_current_location">Use current location</string>
@@ -100,10 +121,6 @@
     <string name="error_username_password_required">Username and password are required.</string>
 
     <string name="route_option_recommended">Recommended</string>
-    <string name="route_option_climb">↑ %1$dm</string>
-    <string name="route_option_climb_unknown">↑ –</string>
-    <string name="route_option_traffic_lights">Lights %1$d</string>
-    <string name="traffic_light_count">Traffic lights: %1$d</string>
     <string name="elevation_information">Elevation information</string>
     <string name="elevation_unavailable">Elevation information is unavailable.</string>
 
