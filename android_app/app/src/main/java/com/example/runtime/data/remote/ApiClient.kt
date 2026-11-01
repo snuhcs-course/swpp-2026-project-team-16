@@ -101,22 +101,3 @@ object ApiClient {
     }
 }
 
-object OpenElevationClient {
-    val api: OpenElevationApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://api.open-elevation.com/")
-            .client(
-                OkHttpClient.Builder()
-                    .readTimeout(15L, TimeUnit.SECONDS)
-                    .apply {
-                        if (BuildConfig.DEBUG) {
-                            addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
-                        }
-                    }
-                    .build()
-            )
-            .addConverterFactory(ApiClient.json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(OpenElevationApiService::class.java)
-    }
-}

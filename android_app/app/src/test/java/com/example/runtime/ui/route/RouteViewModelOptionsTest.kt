@@ -2,12 +2,14 @@ package com.example.runtime.ui.route
 
 import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
-import com.example.runtime.data.remote.ElevationRequest
-import com.example.runtime.data.remote.ElevationResponse
+import com.example.runtime.data.remote.ElevationData
+import com.example.runtime.data.remote.ElevationLookupRequest
 import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonLineString
+import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.OpenElevationApiService
+import com.example.runtime.data.remote.Place
 import com.example.runtime.data.remote.RouteBody
 import com.example.runtime.data.remote.RouteOption
 import com.example.runtime.data.remote.SaveRouteRequest
@@ -30,7 +32,7 @@ class RouteViewModelOptionsTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = RouteApi()
-    private val viewModel by lazy { RouteViewModel(RouteRepository(api, NoElevation)) }
+    private val viewModel by lazy { RouteViewModel(RouteRepository(api)) }
 
     @Test
     fun generate_showsAllOptionsAndSelectsTheFirst() {
@@ -154,6 +156,31 @@ class RouteViewModelOptionsTest {
         }
     }
 
+    @Test
+    fun selectPoint_usesTheRealPlaceNameAndKeepsThePickedPoint() {
+        api.reversePlace = Place("국립민속박물관", "서울특별시 종로구 삼청로 37", GeoJsonPoint.of(126.97, 37.58))
+
+        assertTrue(generate())
+
+        val start = viewModel.startField.selected!!
+        assertEquals("국립민속박물관", start.name)
+        assertEquals("국립민속박물관", viewModel.startField.input)
+        assertEquals(GeoJsonPoint.of(126.952, 37.46), start.point)
+        assertEquals("국립민속박물관", api.requests.single().startingPointName)
+        assertEquals(listOf(37.46 to 126.952), api.reverseRequests)
+    }
+
+    @Test
+    fun selectPoint_keepsTheFallbackNameWhenLookupFails() {
+        api.failReverse = true
+
+        assertTrue(generate())
+
+        assertEquals("Start", viewModel.startField.selected?.name)
+        assertEquals("Start", api.requests.single().startingPointName)
+        assertFalse(viewModel.startField.isSearching)
+    }
+
     private fun generate(): Boolean {
         viewModel.selectPoint(viewModel.startField, "Start", 126.952, 37.46)
         viewModel.distanceInput = "3"
@@ -181,13 +208,24 @@ class RouteViewModelOptionsTest {
         var response: GeneratedRouteData? = null
         var failGenerate = false
         var failSave = false
+        var reversePlace: Place? = null
+        var failReverse = false
         val requests = mutableListOf<GenerateRouteRequest>()
         val savedIds = mutableListOf<Int>()
+        val reverseRequests = mutableListOf<Pair<Double, Double>>()
 
         override suspend fun generateRoute(body: GenerateRouteRequest): ApiResponse<GeneratedRouteData> {
             requests += body
             if (failGenerate) throw IOException("offline")
             return ApiResponse(status = "success", data = response)
+        }
+
+        override suspend fun getElevations(body: ElevationLookupRequest): ApiResponse<ElevationData> =
+            throw IOException("offline")
+        override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> {
+            reverseRequests += latitude to longitude
+            if (failReverse) throw IOException("offline")
+            return ApiResponse(status = "success", data = reversePlace)
         }
 
         override suspend fun saveRoute(body: SaveRouteRequest): SaveRouteResponse {
@@ -197,7 +235,4 @@ class RouteViewModelOptionsTest {
         }
     }
 
-    private object NoElevation : OpenElevationApiService {
-        override suspend fun getElevation(request: ElevationRequest): ElevationResponse = throw IOException("offline")
-    }
 }

@@ -89,7 +89,47 @@ Authentication is made by this HTTP Header:
 ```http
 Authorization: Token <user_token>
 ```
+
+Elevation lookup is available without authentication so guests can view route slopes.
  
+
+---
+
+# Elevation Route
+
+## Get Elevations
+
+### Endpoint
+
+```
+POST /api/v1/elevations/
+```
+
+### Request
+
+Coordinates use latitude and longitude fields. The backend rounds both values to six decimal places, caches each result in the database, and sends only uncached coordinates to Open-Meteo.
+
+```json
+{
+    "coordinates": [
+        {"latitude": 37.4600, "longitude": 126.9520},
+        {"latitude": 37.4610, "longitude": 126.9530}
+    ]
+}
+```
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": {
+        "elevations": [42.0, 43.0]
+    }
+}
+```
+
+Elevation values are returned in the same order as the submitted coordinates. Requests may contain up to 1000 coordinates. Invalid coordinates return `400 Bad Request`; an unavailable elevation provider returns `503 Service Unavailable`.
 
 ---
 
@@ -432,12 +472,14 @@ Any other value returns `400 Bad Request`.
 Options are ranked by a score (lower is better):
 
 ```
-score = 1.0 x elevation_gain_m + 10 x traffic_light_count + 5 x distance error (%)
+score = 1.0 x elevation_gain_m + 10 x signalized crossing events + 5 x distance error (%)
 ```
 
 Only candidates within 15% of the requested distance are ranked; if none are, the closest one is returned alone.
 
-`elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing leaves out elevation. The briefing uses the measured distance, elevation gain, traffic lights, and uphill sections.
+`traffic_light_count` is th`traffic_light_count` is an integer when the entire route is within the Seoul signalized-crosswalk inventory coverage. It is `null` when any part of the route is outside that coverage. The field name is retained for API compatibility. When the count is `null`, the briefing omits it.
+
+`elevation_gain_m` comes from the Open-Meteo Elevation API. It is `null` when the lookup fails; the route is still returned and the briefing omits elevation. The briefing includes the available route data and uphill sections.
 
 Use `temporary_route_id` to save the route.
 

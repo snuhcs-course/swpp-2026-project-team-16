@@ -21,6 +21,9 @@ class CreateRouteTests(SimpleTestCase):
         patcher = mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=fake_elevations)
         self.elevation = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch("api.route_algorithm.algorithm.count_signalized_crossings", return_value=0)
+        self.crossings = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_loop_returns_to_start_near_target_distance(self, download, llm):
         download.return_value = self.graph
@@ -72,6 +75,9 @@ class CreateRoutesTests(SimpleTestCase):
         patcher = mock.patch("api.route_algorithm.street_graph.local_graph", return_value=None)
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch("api.route_algorithm.algorithm.count_signalized_crossings", return_value=0)
+        self.crossings = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def create(self, elevations=fake_elevations):
         with mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=elevations):
@@ -86,16 +92,15 @@ class CreateRoutesTests(SimpleTestCase):
         self.assertEqual([r.score for r in routes], sorted(r.score for r in routes))
 
     def test_briefing_uses_measured_climb_and_signals(self, download, llm):
-        for node in self.graph.nodes:
-            self.graph.nodes[node]["highway"] = "traffic_signals"
+        self.crossings.return_value = 2
         download.return_value = self.graph
         route = self.create()[0]
 
         self.assertIsNotNone(route.elevation_gain_m)
         self.assertGreater(route.elevation_gain_m, 0)
-        self.assertGreater(route.traffic_light_count, 0)
+        self.assertEqual(route.traffic_light_count, 2)
         self.assertIn(f"누적 상승 {route.elevation_gain_m}m", route.briefing)
-        self.assertIn(f"신호등 {route.traffic_light_count}개", route.briefing)
+        self.assertIn(f"보행신호 횡단 {route.traffic_light_count}회", route.briefing)
 
     def test_ranks_by_score_not_only_distance(self, download, llm):
         download.return_value = self.graph
@@ -116,24 +121,9 @@ class CreateRoutesTests(SimpleTestCase):
         self.assertIsNone(routes[0].elevation_gain_m)
         self.assertNotIn("누적 상승", routes[0].briefing)
 
-    def test_counts_only_signal_nodes_on_generated_route(self, download, llm):
-        signal_coordinates = set()
-
-        # 그래프 노드 일부를 신호등으로 표시
-        for node, data in self.graph.nodes(data=True):
-            if node % 3 == 0:
-                data["highway"] = "traffic_signals"
-                signal_coordinates.add((data["x"], data["y"]))
-
+    def test_uses_signalized_crossing_count_for_generated_route(self, download, llm):
+        self.crossings.return_value = 4
         download.return_value = self.graph
         route = self.create()[0]
-        route_coordinates = route.route[0].coordinates
-
-        # 반환된 좌표 중 신호등 개수 직접 counting
-        expected_count = sum(
-            tuple(coordinate) in signal_coordinates
-            for coordinate in route_coordinates
-        )
-
-        self.assertGreater(expected_count, 0)
-        self.assertEqual(route.traffic_light_count, expected_count)
+        self.assertEqual(route.traffic_light_count, 4)
+        self.assertTrue(self.crossings.called)

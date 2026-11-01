@@ -70,6 +70,22 @@ data class GenerateRouteRequest(
 )
 
 @Serializable
+data class ElevationCoordinate(
+    val latitude: Double,
+    val longitude: Double,
+)
+
+@Serializable
+data class ElevationLookupRequest(
+    val coordinates: List<ElevationCoordinate>,
+)
+
+@Serializable
+data class ElevationData(
+    val elevations: List<Double>,
+)
+
+@Serializable
 data class Place(
     val name: String,
     val address: String,
@@ -95,7 +111,7 @@ data class RouteBody(
     val briefing: String,
     val route: List<GeoJsonLineString>,
     @SerialName("is_shortest_path") val isShortestPath: Boolean = false,
-    @SerialName("traffic_light_count") val trafficLightCount: Int = 0,
+    @SerialName("traffic_light_count") val trafficLightCount: Int? = null,
     @SerialName("elevation_gain_m") val elevationGainM: Int? = null,
 )
 
