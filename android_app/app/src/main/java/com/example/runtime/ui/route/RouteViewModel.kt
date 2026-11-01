@@ -70,6 +70,7 @@ class RouteViewModel(
         private set
 
     private var saveStates by mutableStateOf<Map<Int, SaveState>>(emptyMap())
+    private var savedRouteIds = emptyMap<Int, Int>()
 
     val saveState: SaveState
         get() = generated?.let { saveStates[it.temporaryRouteId] } ?: SaveState.Idle
@@ -121,6 +122,7 @@ class RouteViewModel(
         options = emptyList()
         selectedOption = 0
         saveStates = emptyMap()
+        savedRouteIds = emptyMap()
         elevationJob = null
         elevations = emptyList()
         slopes = emptyList()
@@ -292,6 +294,7 @@ class RouteViewModel(
                 selectedOption = 0
                 generated = options.first()
                 saveStates = emptyMap()
+                savedRouteIds = emptyMap()
 
                 onSuccess()
 
@@ -617,7 +620,7 @@ class RouteViewModel(
         saveStates = saveStates + (id to SaveState.Saving)
         sessionScope.launch {
             val result = try {
-                repository.saveTemporaryRoute(id)
+                repository.saveTemporaryRoute(id)?.let { savedRouteIds = savedRouteIds + (id to it) }
                 SaveState.Saved
             } catch (e: CancellationException) {
                 throw e
@@ -627,6 +630,8 @@ class RouteViewModel(
             saveStates = saveStates + (id to result)
         }
     }
+
+    fun savedRouteId(temporaryRouteId: Int): Int? = savedRouteIds[temporaryRouteId]
 
     private fun normalizeLanguage(language: String): String =
         if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE

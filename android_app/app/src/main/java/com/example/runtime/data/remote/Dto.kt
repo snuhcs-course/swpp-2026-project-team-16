@@ -151,3 +151,43 @@ data class SavedRoute(
     @SerialName("created_by") val createdBy: String? = null,
     @SerialName("saved_at") val savedAt: String,
 )
+
+@Serializable
+data class RecordRunRequest(
+    @SerialName("route_id") val routeId: Int? = null,
+    @SerialName("temporary_route_id") val temporaryRouteId: Int? = null,
+    @SerialName("distance_m") val distanceMeters: Int,
+    @SerialName("duration_s") val durationSeconds: Long,
+)
+
+@Serializable
+data class RunRecord(
+    val id: Int,
+    @SerialName("route_id") val routeId: Int,
+    @SerialName("shared_route_id") val sharedRouteId: Int? = null,
+)
+
+@Serializable
+data class ShareRouteRequest(
+    @SerialName("route_id") val routeId: Int,
+    val title: String,
+    val description: String,
+)
+
+@Serializable
+data class SharedRoute(
+    val id: Int,
+    @SerialName("route_id") val routeId: Int,
+    val title: String,
+    val description: String = "",
+    @SerialName("shared_by") val sharedBy: String,
+    @SerialName("shared_at") val sharedAt: String,
+    val distance: Int,
+    @SerialName("start_name") val startName: String = "",
+    @SerialName("end_name") val endName: String = "",
+    @SerialName("run_count") val runCount: Int = 0,
+    @SerialName("is_mine") val isMine: Boolean = false,
+    val briefing: String = "",
+    val route: List<GeoJsonLineString> = emptyList(),
+)
+

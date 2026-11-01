@@ -63,6 +63,8 @@ fun RunNavigationScreen(
     lines: List<GeoJsonLineString>,
     routeDistanceMeters: Int,
     onFinish: () -> Unit,
+    onRunFinished: (distanceMeters: Int, elapsedSeconds: Long) -> Unit = { _, _ -> },
+    summaryAction: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
     val metrics by RunTrackingState.metrics.collectAsState()
@@ -280,6 +282,7 @@ fun RunNavigationScreen(
                     onClick = {
                         showFinishConfirmation = false
                         sendServiceAction(RunTrackingService.ACTION_STOP)
+                        onRunFinished(metrics.distanceMeters.roundToInt(), metrics.elapsedSeconds)
                         showRunSummary = true
                     },
                 ) { Text(stringResource(R.string.run_finish)) }
@@ -306,6 +309,7 @@ fun RunNavigationScreen(
             confirmButton = {
                 TextButton(onClick = onFinish) { Text(stringResource(R.string.action_done)) }
             },
+            dismissButton = summaryAction,
         )
     }
 }

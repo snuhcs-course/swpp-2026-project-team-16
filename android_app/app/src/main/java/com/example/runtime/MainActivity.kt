@@ -35,6 +35,10 @@ import com.example.runtime.ui.common.LocalAnimatedVisibilityScope
 import com.example.runtime.ui.common.LocalSharedTransitionScope
 import com.example.runtime.ui.common.AppMessages
 import com.example.runtime.ui.common.LocalAppMessages
+import com.example.runtime.ui.community.CommunityScreen
+import com.example.runtime.ui.community.CommunityViewModel
+import com.example.runtime.ui.community.RunShareAction
+import com.example.runtime.ui.community.SharedRouteDetailScreen
 import com.example.runtime.ui.mypage.GuestMyPageScreen
 import com.example.runtime.ui.mypage.MyPageScreen
 import com.example.runtime.ui.mypage.MyPageViewModel
@@ -44,6 +48,8 @@ import com.example.runtime.ui.route.RouteInputScreen
 import com.example.runtime.ui.route.RunNavigationScreen
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
+import com.example.runtime.ui.route.RunTarget
+import com.example.runtime.ui.route.RunViewModel
 import com.example.runtime.ui.splash.SplashScreen
 import com.example.runtime.ui.theme.RunTimeTheme
 import com.example.runtime.ui.theme.ThemeMode
@@ -97,7 +103,11 @@ fun RunTimeApp() {
     val authViewModel: AuthViewModel = viewModel()
     val routeViewModel: RouteViewModel = viewModel()
     val myPageViewModel: MyPageViewModel = viewModel()
+    val runViewModel: RunViewModel = viewModel()
+    val communityViewModel: CommunityViewModel = viewModel()
     var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedSharedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var runReturnScreen by rememberSaveable { mutableStateOf("route_result") }
     var signUpEmail by rememberSaveable { mutableStateOf("") }
     var loginReturnScreen by rememberSaveable { mutableStateOf("route_input") }
     var saveAfterLogin by rememberSaveable { mutableStateOf(false) }
@@ -105,6 +115,7 @@ fun RunTimeApp() {
     val snackbarHostState = remember { SnackbarHostState() }
     val appScope = rememberCoroutineScope()
     val appMessages = remember { AppMessages(snackbarHostState, appScope) }
+    val sharedMessage = stringResource(R.string.route_shared_message)
 
     fun openAuth(screen: String, returnTo: String, save: Boolean) {
         loginReturnScreen = returnTo
@@ -148,6 +159,12 @@ fun RunTimeApp() {
                         onClick = { currentScreen = "route_input" },
                         icon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_route)) }
+                    )
+                    NavigationBarItem(
+                        selected = currentScreen == "community" || currentScreen == "community_detail",
+                        onClick = { currentScreen = "community" },
+                        icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_community)) }
                     )
                     NavigationBarItem(
                         selected = currentScreen == "MyPage" || currentScreen == "saved_detail",
@@ -223,19 +240,80 @@ fun RunTimeApp() {
                                     )
                                     "route_result" -> RouteResultScreen(
                                         routeViewModel = routeViewModel,
-                                        onStartRun = { currentScreen = "run_navigation" },
+                                        onStartRun = {
+                                            routeViewModel.generated?.let { generated ->
+                                                runViewModel.start(
+                                                    RunTarget(
+                                                        lines = generated.route.route,
+                                                        distanceMeters = generated.route.distance,
+                                                        routeId = routeViewModel.savedRouteId(generated.temporaryRouteId),
+                                                        temporaryRouteId = generated.temporaryRouteId,
+                                                        startName = routeViewModel.pendingStart?.name.orEmpty()
+                                                    )
+                                                )
+                                                runReturnScreen = "route_result"
+                                                currentScreen = "run_navigation"
+                                            }
+                                        },
                                         onSave = {
                                             if (authViewModel.isLoggedIn) routeViewModel.save() else loginPrompt = LOGIN_PROMPT_SAVE
                                         }
                                     )
-                                    "run_navigation" -> routeViewModel.generated?.let { generated ->
+                                    "run_navigation" -> runViewModel.target?.let { target ->
                                         RunNavigationScreen(
-                                            lines = generated.route.route,
-                                            routeDistanceMeters = generated.route.distance,
-                                            onFinish = {currentScreen = "route_result"},
+                                            lines = target.lines,
+                                            routeDistanceMeters = target.distanceMeters,
+                                            onFinish = { currentScreen = runReturnScreen },
+                                            onRunFinished = { distanceMeters, elapsedSeconds ->
+                                                if (authViewModel.isLoggedIn) runViewModel.recordRun(distanceMeters, elapsedSeconds)
+                                            },
+                                            summaryAction = {
+                                                RunShareAction(
+                                                    runViewModel = runViewModel,
+                                                    isLoggedIn = authViewModel.isLoggedIn,
+                                                    onShared = { sharedRouteId ->
+                                                        appMessages.show(sharedMessage)
+                                                        selectedSharedRouteId = sharedRouteId
+                                                        currentScreen = "community_detail"
+                                                    },
+                                                    onOpenShared = { sharedRouteId ->
+                                                        selectedSharedRouteId = sharedRouteId
+                                                        currentScreen = "community_detail"
+                                                    }
+                                                )
+                                            },
                                         )
                                     } ?: run {
                                         currentScreen = "route_input"
+                                    }
+                                    "community" -> CommunityScreen(
+                                        communityViewModel = communityViewModel,
+                                        onRouteClick = { sharedRouteId ->
+                                            selectedSharedRouteId = sharedRouteId
+                                            currentScreen = "community_detail"
+                                        }
+                                    )
+                                    "community_detail" -> selectedSharedRouteId?.let { sharedRouteId ->
+                                        SharedRouteDetailScreen(
+                                            communityViewModel = communityViewModel,
+                                            sharedRouteId = sharedRouteId,
+                                            onBack = { currentScreen = "community" },
+                                            onRun = { shared ->
+                                                runViewModel.start(
+                                                    RunTarget(
+                                                        lines = shared.route,
+                                                        distanceMeters = shared.distance,
+                                                        routeId = shared.routeId
+                                                    )
+                                                )
+                                                runReturnScreen = "community_detail"
+                                                currentScreen = "run_navigation"
+                                            },
+                                            onSave = {
+                                                if (authViewModel.isLoggedIn) communityViewModel.save()
+                                                else loginPrompt = LOGIN_PROMPT_SAVE_SHARED
+                                            }
+                                        )
                                     }
                                     "MyPage" -> if (!authViewModel.isLoggedIn) GuestMyPageScreen(
                                         onLogIn = { openAuth("login", returnTo = "MyPage", save = false) },
@@ -272,13 +350,17 @@ fun RunTimeApp() {
 
             loginPrompt?.let { reason ->
                 LoginPromptDialog(
-                    message = if (reason == LOGIN_PROMPT_SAVE) R.string.login_prompt_save else R.string.login_prompt_trial_used,
+                    message = when (reason) {
+                        LOGIN_PROMPT_SAVE -> R.string.login_prompt_save
+                        LOGIN_PROMPT_SAVE_SHARED -> R.string.login_prompt_save_shared
+                        else -> R.string.login_prompt_trial_used
+                    },
                     onLogIn = {
                         loginPrompt = null
-                        if (reason == LOGIN_PROMPT_SAVE) {
-                            openAuth("login", returnTo = "route_result", save = true)
-                        } else {
-                            openAuth("login", returnTo = "route_input", save = false)
+                        when (reason) {
+                            LOGIN_PROMPT_SAVE -> openAuth("login", returnTo = "route_result", save = true)
+                            LOGIN_PROMPT_SAVE_SHARED -> openAuth("login", returnTo = "community_detail", save = false)
+                            else -> openAuth("login", returnTo = "route_input", save = false)
                         }
                     },
                     onDismiss = { loginPrompt = null }
@@ -291,3 +373,4 @@ fun RunTimeApp() {
 private val FULL_BLEED_SCREENS = setOf("route_input", "generating", "route_result")
 private const val LOGIN_PROMPT_TRIAL = "trial"
 private const val LOGIN_PROMPT_SAVE = "save"
+private const val LOGIN_PROMPT_SAVE_SHARED = "save_shared"

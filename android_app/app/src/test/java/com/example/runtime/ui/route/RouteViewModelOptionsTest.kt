@@ -158,6 +158,7 @@ class RouteViewModelOptionsTest {
 
     @Test
     fun selectPoint_usesTheRealPlaceNameAndKeepsThePickedPoint() {
+        api.response = generated(option(1, 3010))
         api.reversePlace = Place("국립민속박물관", "서울특별시 종로구 삼청로 37", GeoJsonPoint.of(126.97, 37.58))
 
         assertTrue(generate())
@@ -172,6 +173,7 @@ class RouteViewModelOptionsTest {
 
     @Test
     fun selectPoint_keepsTheFallbackNameWhenLookupFails() {
+        api.response = generated(option(1, 3010))
         api.failReverse = true
 
         assertTrue(generate())
