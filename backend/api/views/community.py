@@ -51,7 +51,11 @@ def _shared_route_data(shared_route, user, include_route=False):
 
 
 def _shared_routes():
-    return SharedRoute.objects.select_related("route", "shared_by").annotate(run_count=Count("route__runs"))
+    return (
+        SharedRoute.objects.select_related("route", "shared_by")
+        .annotate(run_count=Count("route__runs"))
+        .order_by("-shared_at", "-id")
+    )
 
 
 @api_view(["POST"])
