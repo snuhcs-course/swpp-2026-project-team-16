@@ -41,7 +41,7 @@ class Command(BaseCommand):
             self.stderr.write("Elevation lookup failed (Open-Meteo may be rate limiting). Run again in a minute.")
         rows, metrics = gt.evaluate(cases, systems, data["thresholds"])
 
-        self.stdout.write(f"{'case':24s} {'dist':>6s}  {'lights sys/truth':>16s}  {'gain sys/truth':>14s}")
+        self.stdout.write(f"{'case':24s} {'dist':>6s}  {'crossings sys/truth':>20s}  {'gain sys/truth':>14s}")
         for case, system, row in zip(cases, systems, rows):
             self.stdout.write(
                 f"{row['id']:24s} {system['distance_m']:6d}  "

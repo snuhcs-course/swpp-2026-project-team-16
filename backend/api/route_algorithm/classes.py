@@ -120,7 +120,7 @@ class RunningRoute:
     briefing: str
     route: list[GeoJSONLineString]
     is_shortest_path: bool = False
-    traffic_light_count: int = 0
+    traffic_light_count: int | None = None
     elevation_gain_m: int | None = None
     score: float | None = None
 

@@ -1,8 +1,8 @@
 {
-  "description": "Ground truth for traffic lights and elevation gain on fixed routes. Routes are in routes/<id>.geojson. Fill in `truth` by hand; do not change `thresholds` after truth values are added.",
+  "description": "Ground truth for signalized crossing events and elevation gain on fixed routes. Routes are in routes/<id>.geojson. Fill in `truth` by hand; do not change `thresholds` after truth values are added.",
   "thresholds": {
     "declared": "2026-10-21",
-    "traffic_lights": {
+    "signalized_crossings": {
       "within": 2,
       "min_pass_rate": 0.75
     },
@@ -23,7 +23,7 @@
       ],
       "distance_m": 3000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -41,7 +41,7 @@
       ],
       "distance_m": 3000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -59,7 +59,7 @@
       ],
       "distance_m": 3000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -77,7 +77,7 @@
       ],
       "distance_m": 3000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -95,7 +95,7 @@
       ],
       "distance_m": 3000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -113,7 +113,7 @@
       ],
       "distance_m": 3000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -131,7 +131,7 @@
       ],
       "distance_m": 2500,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",
@@ -153,7 +153,7 @@
       ],
       "distance_m": 2000,
       "truth": {
-        "traffic_lights": null,
+        "signalized_crossings": null,
         "elevation_gain_m": null,
         "elevation_source": "",
         "checked_by": "",

@@ -7,8 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.example.runtime.R
+import com.example.runtime.ui.theme.Spacing
 
 // 3. Login Screen (화면 3)
 @Composable
@@ -32,9 +32,9 @@ fun LoginScreen(
 
     AuthLayout(title = stringResource(R.string.title_log_in), error = uiState.error) {
         AuthTextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.label_name))
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Spacing.m))
         PasswordField(value = password, onValueChange = { password = it }, label = stringResource(R.string.label_password))
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.l))
         PrimaryAuthButton(
             text = stringResource(R.string.action_log_in),
             isLoading = uiState.isLoading,
@@ -47,7 +47,7 @@ fun LoginScreen(
             onSuccess = onLoginSuccess,
             onSignUpRequired = onGoogleSignUpRequired
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.s))
         TextButton(
             onClick = {
                 authViewModel.clearError()

@@ -1,6 +1,7 @@
 package com.example.runtime.ui.auth
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,19 +10,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.runtime.R
-import com.example.runtime.ui.common.LanguageMenu
+import com.example.runtime.ui.common.PreferenceButtons
 import com.example.runtime.ui.common.UiText
+import com.example.runtime.ui.common.accentButtonColors
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
@@ -30,33 +32,50 @@ fun AuthLayout(
     error: UiText?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    var showLanguageMenu by remember { mutableStateOf(false) }
-
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 48.dp),
+                .imePadding()
+                .padding(horizontal = Spacing.l, vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(stringResource(R.string.app_name), fontSize = 32.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(32.dp))
+            BrandMark()
+            Spacer(modifier = Modifier.height(Spacing.s))
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.l))
             content()
             error?.let {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(it.asString(), color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(Spacing.m))
+                Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
         }
-        Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-            IconButton(onClick = { showLanguageMenu = true }) {
-                Icon(painterResource(R.drawable.ic_language), contentDescription = stringResource(R.string.language))
-            }
-            LanguageMenu(expanded = showLanguageMenu, onDismiss = { showLanguageMenu = false })
+        Box(modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.s)) {
+            PreferenceButtons()
         }
+    }
+}
+
+@Composable
+fun BrandMark(modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_directions_run),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Spacer(modifier = Modifier.width(Spacing.s))
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
     }
 }
 
@@ -72,6 +91,7 @@ fun AuthTextField(
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
+        shape = MaterialTheme.shapes.medium,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = Modifier.fillMaxWidth()
     )
@@ -86,6 +106,7 @@ fun PasswordField(value: String, onValueChange: (String) -> Unit, label: String)
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
+        shape = MaterialTheme.shapes.medium,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         trailingIcon = {
@@ -102,11 +123,17 @@ fun PasswordField(value: String, onValueChange: (String) -> Unit, label: String)
 
 @Composable
 fun PrimaryAuthButton(text: String, isLoading: Boolean, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = !isLoading, modifier = Modifier.fillMaxWidth()) {
+    Button(
+        onClick = onClick,
+        enabled = !isLoading,
+        colors = accentButtonColors(),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+    ) {
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-            Text(text)
+            Text(text, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -115,13 +142,14 @@ fun PrimaryAuthButton(text: String, isLoading: Boolean, onClick: () -> Unit) {
 fun OrDivider() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.m)
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f))
         Text(
             stringResource(R.string.or),
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = Spacing.m)
         )
         HorizontalDivider(modifier = Modifier.weight(1f))
     }
@@ -153,10 +181,15 @@ fun GoogleSignInButton(
             }
         },
         enabled = enabled && !isRequesting,
-        modifier = Modifier.fillMaxWidth()
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().height(52.dp)
     ) {
         Image(painterResource(R.drawable.ic_google), contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(stringResource(R.string.continue_with_google), color = MaterialTheme.colorScheme.onSurface)
+        Spacer(modifier = Modifier.width(Spacing.s))
+        Text(
+            stringResource(R.string.continue_with_google),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
