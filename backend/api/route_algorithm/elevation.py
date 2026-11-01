@@ -1,15 +1,23 @@
+import logging
 import math
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import requests
+from django.db import DatabaseError, transaction
 
+from api.models import ElevationCache
 from api.route_algorithm.briefing import UphillSegment
+
+
+logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/elevation"
 BATCH_SIZE = 100
 REQUEST_TIMEOUT_SECONDS = 10
 MAX_PARALLEL_REQUESTS = 4
+COORDINATE_DECIMAL_PLACES = 4
+DB_LOOKUP_BATCH_SIZE = 500
 
 SAMPLE_SPACING_M = 50
 MAX_SAMPLES_PER_ROUTE = 200
@@ -48,16 +56,89 @@ def _fetch_batch(points):
 
     if len(elevations) != len(points) or any(e is None for e in elevations):
         raise ElevationError("Elevation response did not match the request.")
-    return [float(e) for e in elevations]
+    try:
+        values = [float(elevation) for elevation in elevations]
+    except (TypeError, ValueError) as error:
+        raise ElevationError("Elevation response contained an invalid value.") from error
+    if any(not math.isfinite(value) for value in values):
+        raise ElevationError("Elevation response contained an invalid value.")
+    return values
 
 
-def fetch_elevations(points: list[tuple[float, float]]) -> list[float]:
+def _coordinate_key(point: tuple[float, float]) -> str:
+    lon, lat = point
+    return f"{lat:.{COORDINATE_DECIMAL_PLACES}f},{lon:.{COORDINATE_DECIMAL_PLACES}f}"
+
+
+def _cached_elevations(keys: list[str]) -> dict[str, float]:
+    cached = {}
+    for offset in range(0, len(keys), DB_LOOKUP_BATCH_SIZE):
+        batch = keys[offset:offset + DB_LOOKUP_BATCH_SIZE]
+        cached.update(
+            ElevationCache.objects.filter(coordinate_key__in=batch)
+            .values_list("coordinate_key", "elevation_m")
+        )
+    return cached
+
+
+def _fetch_missing_elevations(points: list[tuple[float, float]]) -> list[float]:
     batches = [points[i:i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
     if not batches:
         return []
     with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL_REQUESTS, len(batches))) as pool:
         results = list(pool.map(_fetch_batch, batches))
-    return [e for batch in results for e in batch]
+    return [elevation for batch in results for elevation in batch]
+
+
+def fetch_elevations(points: list[tuple[float, float]]) -> list[float]:
+    if not points:
+        return []
+
+    if any(
+        not math.isfinite(lon)
+        or not math.isfinite(lat)
+        or not -180 <= lon <= 180
+        or not -90 <= lat <= 90
+        for lon, lat in points
+    ):
+        raise ElevationError("Coordinates must be finite latitude/longitude values.")
+
+    # Match the precision sent to Open-Meteo so equivalent requests share a cache row.
+    normalized_points = [
+        (float(f"{lon:.{COORDINATE_DECIMAL_PLACES}f}"), float(f"{lat:.{COORDINATE_DECIMAL_PLACES}f}"))
+        for lon, lat in points
+    ]
+    keys = [_coordinate_key(point) for point in normalized_points]
+    unique_keys = list(dict.fromkeys(keys))
+    cached = _cached_elevations(unique_keys)
+    missing_keys = [key for key in unique_keys if key not in cached]
+
+    if missing_keys:
+        points_by_key = dict(zip(keys, normalized_points))
+        missing_points = [points_by_key[key] for key in missing_keys]
+        missing_elevations = _fetch_missing_elevations(missing_points)
+        cached.update(zip(missing_keys, missing_elevations))
+
+        rows = [
+            ElevationCache(coordinate_key=key, elevation_m=elevation)
+            for key, elevation in zip(missing_keys, missing_elevations)
+        ]
+
+        try:
+            # Concurrent route requests can fill the same coordinate;
+            # the existing row wins.
+            with transaction.atomic():
+                ElevationCache.objects.bulk_create(rows, ignore_conflicts=True)
+
+            # Read back rows so a concurrent insert is handled consistently.
+            cached.update(_cached_elevations(missing_keys))
+        except DatabaseError:
+            logger.warning(
+                "Could not persist or read back elevation cache entries.",
+                exc_info=True,
+            )
+
+    return [cached[key] for key in keys]
 
 
 def _distance_m(a, b):

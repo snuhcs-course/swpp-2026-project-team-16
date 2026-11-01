@@ -70,6 +70,22 @@ data class GenerateRouteRequest(
 )
 
 @Serializable
+data class ElevationCoordinate(
+    val latitude: Double,
+    val longitude: Double,
+)
+
+@Serializable
+data class ElevationLookupRequest(
+    val coordinates: List<ElevationCoordinate>,
+)
+
+@Serializable
+data class ElevationData(
+    val elevations: List<Double>,
+)
+
+@Serializable
 data class Place(
     val name: String,
     val address: String,

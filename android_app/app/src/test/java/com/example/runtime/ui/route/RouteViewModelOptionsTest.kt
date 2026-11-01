@@ -2,8 +2,8 @@ package com.example.runtime.ui.route
 
 import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
-import com.example.runtime.data.remote.ElevationRequest
-import com.example.runtime.data.remote.ElevationResponse
+import com.example.runtime.data.remote.ElevationData
+import com.example.runtime.data.remote.ElevationLookupRequest
 import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonLineString
@@ -32,7 +32,7 @@ class RouteViewModelOptionsTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = RouteApi()
-    private val viewModel by lazy { RouteViewModel(RouteRepository(api, NoElevation)) }
+    private val viewModel by lazy { RouteViewModel(RouteRepository(api)) }
 
     @Test
     fun generate_showsAllOptionsAndSelectsTheFirst() {
@@ -220,6 +220,8 @@ class RouteViewModelOptionsTest {
             return ApiResponse(status = "success", data = response)
         }
 
+        override suspend fun getElevations(body: ElevationLookupRequest): ApiResponse<ElevationData> =
+            throw IOException("offline")
         override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> {
             reverseRequests += latitude to longitude
             if (failReverse) throw IOException("offline")
@@ -233,7 +235,4 @@ class RouteViewModelOptionsTest {
         }
     }
 
-    private object NoElevation : OpenElevationApiService {
-        override suspend fun getElevation(request: ElevationRequest): ElevationResponse = throw IOException("offline")
-    }
 }

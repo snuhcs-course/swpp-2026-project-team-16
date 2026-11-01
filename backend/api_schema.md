@@ -89,7 +89,47 @@ Authentication is made by this HTTP Header:
 ```http
 Authorization: Token <user_token>
 ```
+
+Elevation lookup is available without authentication so guests can view route slopes.
  
+
+---
+
+# Elevation Route
+
+## Get Elevations
+
+### Endpoint
+
+```
+POST /api/v1/elevations/
+```
+
+### Request
+
+Coordinates use latitude and longitude fields. The backend rounds both values to six decimal places, caches each result in the database, and sends only uncached coordinates to Open-Meteo.
+
+```json
+{
+    "coordinates": [
+        {"latitude": 37.4600, "longitude": 126.9520},
+        {"latitude": 37.4610, "longitude": 126.9530}
+    ]
+}
+```
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": {
+        "elevations": [42.0, 43.0]
+    }
+}
+```
+
+Elevation values are returned in the same order as the submitted coordinates. Requests may contain up to 1000 coordinates. Invalid coordinates return `400 Bad Request`; an unavailable elevation provider returns `503 Service Unavailable`.
 
 ---
 

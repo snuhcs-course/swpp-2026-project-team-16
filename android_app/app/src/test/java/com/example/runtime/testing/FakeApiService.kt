@@ -2,6 +2,8 @@ package com.example.runtime.testing
 
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.ApiService
+import com.example.runtime.data.remote.ElevationData
+import com.example.runtime.data.remote.ElevationLookupRequest
 import com.example.runtime.data.remote.AuthData
 import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
@@ -23,6 +25,7 @@ open class FakeApiService : ApiService {
     override suspend fun logout(authorization: String): ApiResponse<Unit> = unexpected()
     override suspend fun myProfile(): ApiResponse<ProfileData> = unexpected()
     override suspend fun generateRoute(body: GenerateRouteRequest): ApiResponse<GeneratedRouteData> = unexpected()
+    override suspend fun getElevations(body: ElevationLookupRequest): ApiResponse<ElevationData> = unexpected()
     override suspend fun savedRoutes(): List<SavedRoute> = unexpected()
     override suspend fun saveRoute(body: SaveRouteRequest): SaveRouteResponse = unexpected()
     override suspend fun savedRoute(routeId: Int): ApiResponse<SavedRoute> = unexpected()
