@@ -15,6 +15,8 @@ import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.RegisterRequest
 import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.RenamedRoute
+import com.example.runtime.data.remote.ReviewRequest
+import com.example.runtime.data.remote.RouteReview
 import com.example.runtime.data.remote.RunRecord
 import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.SaveRouteResponse
@@ -38,10 +40,14 @@ open class FakeApiService : ApiService {
     override suspend fun searchPlaces(query: String, language: String): ApiResponse<List<Place>> = unexpected()
     override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> = unexpected()
     override suspend fun recordRun(body: RecordRunRequest): ApiResponse<RunRecord> = unexpected()
-    override suspend fun sharedRoutes(): ApiResponse<List<SharedRoute>> = unexpected()
+    override suspend fun sharedRoutes(sort: String): ApiResponse<List<SharedRoute>> = unexpected()
     override suspend fun sharedRoute(sharedRouteId: Int): ApiResponse<SharedRoute> = unexpected()
     override suspend fun shareRoute(body: ShareRouteRequest): ApiResponse<SharedRoute> = unexpected()
     override suspend fun deleteSharedRoute(sharedRouteId: Int): ApiResponse<Unit> = unexpected()
+    override suspend fun reviews(sharedRouteId: Int): ApiResponse<List<RouteReview>> = unexpected()
+    override suspend fun createReview(sharedRouteId: Int, body: ReviewRequest): ApiResponse<RouteReview> = unexpected()
+    override suspend fun updateReview(reviewId: Int, body: ReviewRequest): ApiResponse<RouteReview> = unexpected()
+    override suspend fun deleteReview(reviewId: Int): ApiResponse<Unit> = unexpected()
 
     private fun unexpected(): Nothing = throw AssertionError("Unexpected API call")
 }

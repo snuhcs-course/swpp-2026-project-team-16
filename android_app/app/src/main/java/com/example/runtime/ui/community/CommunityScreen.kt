@@ -69,6 +69,19 @@ private fun SharedRoutesTab(communityViewModel: CommunityViewModel, onRouteClick
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.m)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            modifier = Modifier.padding(top = Spacing.m)
+        ) {
+            RouteSort.entries.forEach { sort ->
+                FilterChip(
+                    selected = communityViewModel.sort == sort,
+                    onClick = { communityViewModel.changeSort(sort) },
+                    label = { Text(stringResource(sort.label)) },
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+            }
+        }
         communityViewModel.error?.let {
             Text(
                 it.asString(),
@@ -157,6 +170,8 @@ private fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit) {
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.s))
+            RatingLabel(average = route.ratingAverage, count = route.reviewCount)
+            Spacer(modifier = Modifier.height(Spacing.xs))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painterResource(R.drawable.ic_directions_run),

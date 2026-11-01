@@ -61,7 +61,7 @@ interface ApiService {
     suspend fun recordRun(@Body body: RecordRunRequest): ApiResponse<RunRecord>
 
     @GET("api/v1/community/routes/")
-    suspend fun sharedRoutes(): ApiResponse<List<SharedRoute>>
+    suspend fun sharedRoutes(@Query("sort") sort: String): ApiResponse<List<SharedRoute>>
 
     @GET("api/v1/community/routes/{sharedRouteId}/")
     suspend fun sharedRoute(@Path("sharedRouteId") sharedRouteId: Int): ApiResponse<SharedRoute>
@@ -71,4 +71,16 @@ interface ApiService {
 
     @DELETE("api/v1/community/routes/{sharedRouteId}/")
     suspend fun deleteSharedRoute(@Path("sharedRouteId") sharedRouteId: Int): ApiResponse<Unit>
+
+    @GET("api/v1/community/routes/{sharedRouteId}/reviews/")
+    suspend fun reviews(@Path("sharedRouteId") sharedRouteId: Int): ApiResponse<List<RouteReview>>
+
+    @POST("api/v1/community/routes/{sharedRouteId}/reviews/")
+    suspend fun createReview(@Path("sharedRouteId") sharedRouteId: Int, @Body body: ReviewRequest): ApiResponse<RouteReview>
+
+    @PATCH("api/v1/community/reviews/{reviewId}/")
+    suspend fun updateReview(@Path("reviewId") reviewId: Int, @Body body: ReviewRequest): ApiResponse<RouteReview>
+
+    @DELETE("api/v1/community/reviews/{reviewId}/")
+    suspend fun deleteReview(@Path("reviewId") reviewId: Int): ApiResponse<Unit>
 }

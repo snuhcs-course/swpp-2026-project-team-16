@@ -1,14 +1,19 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
+from datetime import timedelta
+
+from django.db.models import Avg, Count, F, Q
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.models import Route, RouteRun, SharedRoute, TemporaryRoute
+from api.models import Route, RouteReview, RouteRun, SharedRoute, TemporaryRoute, UserSavedRoute
 
 
 MAX_TITLE_LENGTH = 60
 MAX_DESCRIPTION_LENGTH = 300
+MAX_COMMENT_LENGTH = 500
+SORTS = ("latest", "rating", "reviews")
+EDITED_AFTER = timedelta(seconds=1)
 
 
 def _error(message, code):
@@ -42,20 +47,68 @@ def _shared_route_data(shared_route, user, include_route=False):
         "start_name": route.start_name,
         "end_name": route.end_name,
         "run_count": shared_route.run_count,
+        "review_count": shared_route.review_count,
+        "rating_average": (
+            round(shared_route.rating_average, 1) if shared_route.rating_average is not None else None
+        ),
         "is_mine": user.is_authenticated and shared_route.shared_by_id == user.id,
     }
     if include_route:
+        counts = dict(shared_route.reviews.order_by().values_list("rating").annotate(count=Count("id")))
+        my_review = shared_route.reviews.filter(user=user).first() if user.is_authenticated else None
         data["briefing"] = route.briefing
         data["route"] = route.route
+        data["rating_counts"] = {str(rating): counts.get(rating, 0) for rating in range(1, 6)}
+        data["can_review"] = _can_review(user, shared_route)
+        data["my_review_id"] = my_review.id if my_review else None
     return data
 
 
-def _shared_routes():
-    return (
-        SharedRoute.objects.select_related("route", "shared_by")
-        .annotate(run_count=Count("route__runs"))
-        .order_by("-shared_at", "-id")
+def _shared_routes(sort="latest"):
+    shared_routes = SharedRoute.objects.select_related("route", "shared_by").annotate(
+        run_count=Count("route__runs", distinct=True),
+        review_count=Count("reviews", distinct=True),
+        rating_average=Avg("reviews__rating"),
     )
+    if sort == "rating":
+        return shared_routes.order_by(F("rating_average").desc(nulls_last=True), "-review_count", "-shared_at")
+    if sort == "reviews":
+        return shared_routes.order_by("-review_count", "-shared_at")
+    return shared_routes.order_by("-shared_at", "-id")
+
+
+def _can_review(user, shared_route):
+    if not user.is_authenticated or shared_route.shared_by_id == user.id:
+        return False
+    return (
+        RouteRun.objects.filter(user=user, route_id=shared_route.route_id).exists()
+        or UserSavedRoute.objects.filter(user=user, route_id=shared_route.route_id).exists()
+    )
+
+
+def _review_data(review, user):
+    return {
+        "id": review.id,
+        "rating": review.rating,
+        "comment": review.comment,
+        "author": review.user.username,
+        "created_at": review.created_at,
+        "edited": review.updated_at - review.created_at > EDITED_AFTER,
+        "is_mine": user.is_authenticated and review.user_id == user.id,
+    }
+
+
+def _parse_review(data):
+    rating = data.get("rating")
+    comment = data.get("comment") or ""
+    if isinstance(rating, bool) or not isinstance(rating, int) or not 1 <= rating <= 5:
+        return None, None, _error("Rating must be a whole number from 1 to 5.", status.HTTP_400_BAD_REQUEST)
+    if not isinstance(comment, str) or len(comment.strip()) > MAX_COMMENT_LENGTH:
+        return None, None, _error(
+            f"The comment must be {MAX_COMMENT_LENGTH} characters or fewer.",
+            status.HTTP_400_BAD_REQUEST,
+        )
+    return rating, comment.strip(), None
 
 
 @api_view(["POST"])
@@ -115,7 +168,10 @@ def route_runs(request):
 @api_view(["GET", "POST"])
 def shared_routes_list(request):
     if request.method == "GET":
-        data = [_shared_route_data(shared_route, request.user) for shared_route in _shared_routes()]
+        sort = request.query_params.get("sort") or "latest"
+        if sort not in SORTS:
+            return _error(f"sort must be one of: {', '.join(SORTS)}", status.HTTP_400_BAD_REQUEST)
+        data = [_shared_route_data(shared_route, request.user) for shared_route in _shared_routes(sort)]
         return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     if not request.user.is_authenticated:
@@ -179,3 +235,61 @@ def shared_routes_detail(request, shared_route_id):
 
     shared_route.delete()
     return Response({"status": "success", "message": "Shared route removed."}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+def shared_route_reviews(request, shared_route_id):
+    try:
+        shared_route = SharedRoute.objects.get(id=shared_route_id)
+    except SharedRoute.DoesNotExist:
+        return _error("Shared route not found.", status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        reviews = shared_route.reviews.select_related("user")
+        return Response(
+            {"status": "success", "data": [_review_data(review, request.user) for review in reviews]},
+            status=status.HTTP_200_OK,
+        )
+
+    if not request.user.is_authenticated:
+        return _auth_required()
+    if shared_route.shared_by_id == request.user.id:
+        return _error("You can't review a route you shared.", status.HTTP_403_FORBIDDEN)
+    if not _can_review(request.user, shared_route):
+        return _error("Run or save this route before reviewing it.", status.HTTP_403_FORBIDDEN)
+
+    rating, comment, error = _parse_review(request.data)
+    if error:
+        return error
+
+    try:
+        with transaction.atomic():
+            review = RouteReview.objects.create(
+                shared_route=shared_route, user=request.user, rating=rating, comment=comment
+            )
+    except IntegrityError:
+        return _error("You already reviewed this route.", status.HTTP_409_CONFLICT)
+
+    return Response({"status": "success", "data": _review_data(review, request.user)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PATCH", "DELETE"])
+def review_detail(request, review_id):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    try:
+        review = RouteReview.objects.select_related("user").get(id=review_id, user=request.user)
+    except RouteReview.DoesNotExist:
+        return _error("Review not found.", status.HTTP_404_NOT_FOUND)
+
+    if request.method == "DELETE":
+        review.delete()
+        return Response({"status": "success", "message": "Review deleted."}, status=status.HTTP_200_OK)
+
+    rating, comment, error = _parse_review(request.data)
+    if error:
+        return error
+    review.rating = rating
+    review.comment = comment
+    review.save(update_fields=["rating", "comment", "updated_at"])
+    return Response({"status": "success", "data": _review_data(review, request.user)}, status=status.HTTP_200_OK)

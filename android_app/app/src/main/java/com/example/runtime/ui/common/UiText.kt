@@ -32,12 +32,16 @@ private val serverMessages = mapOf(
     "Invalid username or password" to R.string.error_invalid_credentials,
     "Multiple accounts use this email" to R.string.error_google_multiple_accounts,
     "Password must be at least 8 characters" to R.string.error_password_short,
+    "Rating must be a whole number from 1 to 5." to R.string.review_need_rating,
     "Route not found." to R.string.error_route_not_found,
+    "Run or save this route before reviewing it." to R.string.review_eligibility,
     "Run this route before sharing it." to R.string.error_run_before_share,
     "Temporary route not found." to R.string.error_temporary_route_not_found,
     "This route is already shared." to R.string.error_already_shared,
     "Username already exists" to R.string.error_username_exists,
     "Username and password are required" to R.string.error_username_password_required,
+    "You already reviewed this route." to R.string.error_already_reviewed,
+    "You can't review a route you shared." to R.string.review_own_route,
 )
 
 private fun serverText(message: String): UiText =

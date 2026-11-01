@@ -187,7 +187,29 @@ data class SharedRoute(
     @SerialName("end_name") val endName: String = "",
     @SerialName("run_count") val runCount: Int = 0,
     @SerialName("is_mine") val isMine: Boolean = false,
+    @SerialName("review_count") val reviewCount: Int = 0,
+    @SerialName("rating_average") val ratingAverage: Double? = null,
     val briefing: String = "",
     val route: List<GeoJsonLineString> = emptyList(),
+    @SerialName("rating_counts") val ratingCounts: Map<String, Int> = emptyMap(),
+    @SerialName("can_review") val canReview: Boolean = false,
+    @SerialName("my_review_id") val myReviewId: Int? = null,
+)
+
+@Serializable
+data class RouteReview(
+    val id: Int,
+    val rating: Int,
+    val comment: String = "",
+    val author: String,
+    @SerialName("created_at") val createdAt: String,
+    val edited: Boolean = false,
+    @SerialName("is_mine") val isMine: Boolean = false,
+)
+
+@Serializable
+data class ReviewRequest(
+    val rating: Int,
+    val comment: String,
 )
 
