@@ -21,6 +21,8 @@ import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.common.sharedElement
+import com.example.runtime.ui.board.BoardTab
+import com.example.runtime.ui.board.BoardViewModel
 import com.example.runtime.ui.group.GroupsTab
 import com.example.runtime.ui.group.GroupsViewModel
 import com.example.runtime.ui.mypage.DistanceBadge
@@ -28,15 +30,19 @@ import com.example.runtime.ui.theme.Spacing
 
 private const val TAB_ROUTES = 0
 private const val TAB_CREWS = 1
+private const val TAB_BOARD = 2
 
 @Composable
 fun CommunityScreen(
     communityViewModel: CommunityViewModel,
     groupsViewModel: GroupsViewModel,
+    boardViewModel: BoardViewModel,
     isLoggedIn: Boolean,
     onRouteClick: (Int) -> Unit,
     onGroupClick: (Int) -> Unit,
     onCreateGroup: () -> Unit,
+    onPostClick: (Int) -> Unit,
+    onWritePost: () -> Unit,
     onLogInRequired: () -> Unit,
 ) {
     val selectedTab = communityViewModel.selectedTab
@@ -58,9 +64,21 @@ fun CommunityScreen(
                 onClick = { communityViewModel.selectedTab = TAB_CREWS },
                 text = { Text(stringResource(R.string.community_tab_crews), style = MaterialTheme.typography.titleSmall) }
             )
+            Tab(
+                selected = selectedTab == TAB_BOARD,
+                onClick = { communityViewModel.selectedTab = TAB_BOARD },
+                text = { Text(stringResource(R.string.community_tab_board), style = MaterialTheme.typography.titleSmall) }
+            )
         }
         when (selectedTab) {
             TAB_ROUTES -> SharedRoutesTab(communityViewModel, onRouteClick)
+            TAB_BOARD -> BoardTab(
+                boardViewModel = boardViewModel,
+                isLoggedIn = isLoggedIn,
+                onPostClick = onPostClick,
+                onWrite = onWritePost,
+                onLogInRequired = onLogInRequired
+            )
             else -> GroupsTab(
                 groupsViewModel = groupsViewModel,
                 isLoggedIn = isLoggedIn,

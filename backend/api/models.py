@@ -163,3 +163,67 @@ class GroupMessage(models.Model):
 
     class Meta:
         ordering = ["id"]
+
+
+REPORT_REASONS = ["spam", "abuse", "inappropriate", "other"]
+REPORTS_TO_HIDE = 5
+
+
+class Post(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+    title = models.CharField(max_length=100)
+    body = models.CharField(max_length=2000)
+    anonymous = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class PostLike(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_likes")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["post", "user"], name="unique_post_like")]
+
+
+class PostScrap(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="scraps")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_scraps")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["post", "user"], name="unique_post_scrap")]
+
+
+class PostReport(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="reports")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_reports")
+    reason = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["post", "user"], name="unique_post_report")]
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
+    body = models.CharField(max_length=500)
+    anonymous = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+
+class CommentReport(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="reports")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comment_reports")
+    reason = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["comment", "user"], name="unique_comment_report")]

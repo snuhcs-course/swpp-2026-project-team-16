@@ -285,3 +285,51 @@ data class GroupMessage(
 
 @Serializable
 data class SendMessageRequest(val text: String)
+
+@Serializable
+data class BoardPost(
+    val id: Int,
+    val title: String,
+    val body: String,
+    val author: String? = null,
+    val anonymous: Boolean = true,
+    @SerialName("is_mine") val isMine: Boolean = false,
+    @SerialName("created_at") val createdAt: String,
+    val edited: Boolean = false,
+    @SerialName("like_count") val likeCount: Int = 0,
+    @SerialName("scrap_count") val scrapCount: Int = 0,
+    @SerialName("comment_count") val commentCount: Int = 0,
+    val liked: Boolean = false,
+    val scrapped: Boolean = false,
+    val reported: Boolean = false,
+    val comments: List<BoardComment> = emptyList(),
+)
+
+@Serializable
+data class BoardComment(
+    val id: Int,
+    val body: String,
+    val author: String? = null,
+    val anonymous: Boolean = true,
+    @SerialName("anonymous_number") val anonymousNumber: Int? = null,
+    @SerialName("is_post_author") val isPostAuthor: Boolean = false,
+    @SerialName("is_mine") val isMine: Boolean = false,
+    val reported: Boolean = false,
+    @SerialName("created_at") val createdAt: String,
+)
+
+@Serializable
+data class PostRequest(
+    val title: String,
+    val body: String,
+    val anonymous: Boolean? = null,
+)
+
+@Serializable
+data class CommentRequest(val body: String, val anonymous: Boolean)
+
+@Serializable
+data class ReportRequest(val reason: String)
+
+@Serializable
+data class ReportResult(val hidden: Boolean = false)

@@ -115,4 +115,43 @@ interface ApiService {
 
     @POST("api/v1/groups/{groupId}/messages/")
     suspend fun sendGroupMessage(@Path("groupId") groupId: Int, @Body body: SendMessageRequest): ApiResponse<GroupMessage>
+
+    @GET("api/v1/board/posts/")
+    suspend fun posts(@Query("filter") filter: String, @Query("q") query: String? = null): ApiResponse<List<BoardPost>>
+
+    @GET("api/v1/board/posts/{postId}/")
+    suspend fun post(@Path("postId") postId: Int): ApiResponse<BoardPost>
+
+    @POST("api/v1/board/posts/")
+    suspend fun createPost(@Body body: PostRequest): ApiResponse<BoardPost>
+
+    @PATCH("api/v1/board/posts/{postId}/")
+    suspend fun updatePost(@Path("postId") postId: Int, @Body body: PostRequest): ApiResponse<BoardPost>
+
+    @DELETE("api/v1/board/posts/{postId}/")
+    suspend fun deletePost(@Path("postId") postId: Int): ApiResponse<Unit>
+
+    @POST("api/v1/board/posts/{postId}/like/")
+    suspend fun likePost(@Path("postId") postId: Int): ApiResponse<BoardPost>
+
+    @DELETE("api/v1/board/posts/{postId}/like/")
+    suspend fun unlikePost(@Path("postId") postId: Int): ApiResponse<BoardPost>
+
+    @POST("api/v1/board/posts/{postId}/scrap/")
+    suspend fun scrapPost(@Path("postId") postId: Int): ApiResponse<BoardPost>
+
+    @DELETE("api/v1/board/posts/{postId}/scrap/")
+    suspend fun unscrapPost(@Path("postId") postId: Int): ApiResponse<BoardPost>
+
+    @POST("api/v1/board/posts/{postId}/report/")
+    suspend fun reportPost(@Path("postId") postId: Int, @Body body: ReportRequest): ApiResponse<ReportResult>
+
+    @POST("api/v1/board/posts/{postId}/comments/")
+    suspend fun addComment(@Path("postId") postId: Int, @Body body: CommentRequest): ApiResponse<List<BoardComment>>
+
+    @DELETE("api/v1/board/comments/{commentId}/")
+    suspend fun deleteComment(@Path("commentId") commentId: Int): ApiResponse<List<BoardComment>>
+
+    @POST("api/v1/board/comments/{commentId}/report/")
+    suspend fun reportComment(@Path("commentId") commentId: Int, @Body body: ReportRequest): ApiResponse<ReportResult>
 }
