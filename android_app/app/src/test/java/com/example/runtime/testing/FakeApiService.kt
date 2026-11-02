@@ -11,6 +11,9 @@ import com.example.runtime.data.remote.GoogleLoginRequest
 import com.example.runtime.data.remote.LoginRequest
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.remote.ProfileData
+import com.example.runtime.data.remote.ProfileUpdateRequest
+import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.RegisterRequest
 import com.example.runtime.data.remote.RenameRouteRequest
@@ -41,6 +44,10 @@ open class FakeApiService : ApiService {
     override suspend fun googleLogin(body: GoogleLoginRequest): ApiResponse<AuthData> = unexpected()
     override suspend fun logout(authorization: String): ApiResponse<Unit> = unexpected()
     override suspend fun myProfile(): ApiResponse<ProfileData> = unexpected()
+    override suspend fun updateProfile(body: ProfileUpdateRequest): ApiResponse<ProfileData> = unexpected()
+    override suspend fun uploadAvatar(avatar: MultipartBody.Part): ApiResponse<ProfileData> = unexpected()
+    override suspend fun deleteAvatar(): ApiResponse<ProfileData> = unexpected()
+    override suspend fun download(url: String): ResponseBody = unexpected()
     override suspend fun generateRoute(body: GenerateRouteRequest): ApiResponse<GeneratedRouteData> = unexpected()
     override suspend fun getElevations(body: ElevationLookupRequest): ApiResponse<ElevationData> = unexpected()
     override suspend fun savedRoutes(): List<SavedRoute> = unexpected()

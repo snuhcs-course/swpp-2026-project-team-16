@@ -1,13 +1,19 @@
 package com.example.runtime.data.remote
 
+import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 interface ApiService {
 
@@ -25,6 +31,19 @@ interface ApiService {
 
     @GET("api/v1/users/my_profile/")
     suspend fun myProfile(): ApiResponse<ProfileData>
+
+    @PATCH("api/v1/users/my_profile/")
+    suspend fun updateProfile(@Body body: ProfileUpdateRequest): ApiResponse<ProfileData>
+
+    @Multipart
+    @PUT("api/v1/users/my_profile/avatar/")
+    suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): ApiResponse<ProfileData>
+
+    @DELETE("api/v1/users/my_profile/avatar/")
+    suspend fun deleteAvatar(): ApiResponse<ProfileData>
+
+    @GET
+    suspend fun download(@Url url: String): ResponseBody
 
     @POST("api/v1/routes/generate/")
     suspend fun generateRoute(@Body body: GenerateRouteRequest): ApiResponse<GeneratedRouteData>

@@ -3,6 +3,7 @@ package com.example.runtime.ui.mypage
 import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.ProfileData
+import com.example.runtime.data.remote.ProfileUpdateRequest
 import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.RunHistoryItem
@@ -13,6 +14,9 @@ import com.example.runtime.data.repository.UserRepository
 import com.example.runtime.testing.FakeApiService
 import com.example.runtime.testing.MainDispatcherRule
 import com.example.runtime.ui.common.UiText
+import okhttp3.MultipartBody
+import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -35,6 +39,44 @@ class MyPageViewModelTest {
         assertEquals("runner", viewModel.username)
         assertEquals("runner@test.com", viewModel.email)
         assertEquals(listOf(1, 2, 3), viewModel.routes.map { it.id })
+    }
+
+    @Test
+    fun refresh_loadsTheProfileAndAvatarOnce() {
+        viewModel.refresh()
+        viewModel.refresh()
+
+        assertEquals("Yewon", viewModel.displayName)
+        assertEquals("Easy runs", viewModel.statusMessage)
+        assertEquals(listOf(1, 2, 3), viewModel.avatar?.map { it.toInt() })
+        assertEquals(listOf("api/v1/users/1/avatar/?v=1"), api.downloads)
+    }
+
+    @Test
+    fun saveProfile_trimsAndShowsTheSavedValues() {
+        viewModel.refresh()
+        var saved = false
+
+        viewModel.saveProfile("  Dana ", " Sub-30 5k ") { saved = true }
+
+        assertTrue(saved)
+        assertEquals(listOf(ProfileUpdateRequest("Dana", "Sub-30 5k")), api.profileUpdates)
+        assertEquals("Dana", viewModel.displayName)
+        assertEquals(ProfileEditState.Idle, viewModel.profileState)
+    }
+
+    @Test
+    fun avatar_uploadUsesTheNewPhotoAndRemoveClearsIt() {
+        viewModel.refresh()
+        val photo = byteArrayOf(9, 9)
+
+        viewModel.uploadAvatar(photo) {}
+
+        assertEquals(1, api.uploads)
+        assertTrue(viewModel.avatar.contentEquals(photo))
+        assertEquals(1, api.downloads.size)
+        viewModel.removeAvatar {}
+        assertNull(viewModel.avatar)
     }
 
     @Test
@@ -139,8 +181,34 @@ class MyPageViewModelTest {
         val deletedIds = mutableListOf<Int>()
         private val routes = listOf(route(1), route(2), route(3))
 
-        override suspend fun myProfile() =
-            ApiResponse(status = "success", data = ProfileData("runner", "runner@test.com"))
+        var profile = ProfileData("runner", "runner@test.com", displayName = "Yewon", statusMessage = "Easy runs", avatarUrl = "api/v1/users/1/avatar/?v=1")
+        val profileUpdates = mutableListOf<ProfileUpdateRequest>()
+        val downloads = mutableListOf<String>()
+        var uploads = 0
+
+        override suspend fun myProfile() = ApiResponse(status = "success", data = profile)
+
+        override suspend fun updateProfile(body: ProfileUpdateRequest): ApiResponse<ProfileData> {
+            profileUpdates += body
+            profile = profile.copy(displayName = body.displayName, statusMessage = body.statusMessage)
+            return ApiResponse(status = "success", data = profile)
+        }
+
+        override suspend fun uploadAvatar(avatar: MultipartBody.Part): ApiResponse<ProfileData> {
+            uploads++
+            profile = profile.copy(avatarUrl = "api/v1/users/1/avatar/?v=2")
+            return ApiResponse(status = "success", data = profile)
+        }
+
+        override suspend fun deleteAvatar(): ApiResponse<ProfileData> {
+            profile = profile.copy(avatarUrl = null)
+            return ApiResponse(status = "success", data = profile)
+        }
+
+        override suspend fun download(url: String): ResponseBody {
+            downloads += url
+            return byteArrayOf(1, 2, 3).toResponseBody()
+        }
 
         override suspend fun savedRoutes() = routes
 

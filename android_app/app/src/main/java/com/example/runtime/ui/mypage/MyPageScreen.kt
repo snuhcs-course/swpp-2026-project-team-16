@@ -62,19 +62,11 @@ fun MyPageScreen(
             modifier = Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f).padding(start = Spacing.s)) {
-                Text(
-                    stringResource(R.string.nav_my_page),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                val username = myPageViewModel.username
-                if (username == null) {
-                    Box(modifier = Modifier.padding(top = Spacing.xs).size(width = 120.dp, height = 24.dp).placeholder())
-                } else {
-                    Text(username, style = MaterialTheme.typography.headlineSmall)
-                }
-            }
+            Text(
+                stringResource(R.string.nav_my_page),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f).padding(start = Spacing.s)
+            )
             PreferenceButtons()
             Box {
                 IconButton(onClick = { showAccountMenu = true }) {
@@ -101,6 +93,7 @@ fun MyPageScreen(
                 }
             }
         }
+        ProfileSection(myPageViewModel = myPageViewModel, modifier = Modifier.padding(bottom = Spacing.s))
         myPageViewModel.error?.let {
             Text(
                 it.asString(),

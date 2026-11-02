@@ -9,6 +9,8 @@ from rest_framework import status
 
 from rest_framework.authtoken.models import Token
 
+from api.views.profile import profile_data, update_profile
+
 from google.auth.exceptions import GoogleAuthError, TransportError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
@@ -216,7 +218,7 @@ def logout_user(request):
 
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 def my_profile(request):
     user = request.user
 
@@ -226,12 +228,14 @@ def my_profile(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
 
+    if request.method == "PATCH":
+        error = update_profile(user, request.data)
+        if error:
+            return Response({'status': 'error', 'message': error}, status=status.HTTP_400_BAD_REQUEST)
+
     return Response(
         {   'status': 'success',
-            'data': {   
-                "username": user.username,
-                "email": user.email,
-            },
+            'data': profile_data(user),
         },
         status=status.HTTP_200_OK
     )

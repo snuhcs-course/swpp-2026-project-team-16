@@ -227,3 +227,12 @@ class CommentReport(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["comment", "user"], name="unique_comment_report")]
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    display_name = models.CharField(max_length=30, blank=True, default="")
+    status_message = models.CharField(max_length=100, blank=True, default="")
+    avatar = models.BinaryField(null=True, blank=True)
+    avatar_type = models.CharField(max_length=20, blank=True, default="")
+    avatar_updated_at = models.DateTimeField(null=True, blank=True)

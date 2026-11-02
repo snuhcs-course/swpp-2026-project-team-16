@@ -152,7 +152,13 @@ class ProfileTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data["data"],
-            {"username": "runner", "email": "r@test.com"},
+            {
+                "username": "runner",
+                "email": "r@test.com",
+                "display_name": "",
+                "status_message": "",
+                "avatar_url": None,
+            },
         )
 
     def test_profile_requires_token(self):
