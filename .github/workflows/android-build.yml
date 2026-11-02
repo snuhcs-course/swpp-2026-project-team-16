@@ -29,11 +29,21 @@ jobs:
       - name: Grant Gradle permission
         run: chmod +x gradlew
 
+      - name: Configure Gradle properties
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
+        run: |
+          mkdir -p ~/.gradle
+          printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" >> ~/.gradle/gradle.properties
+
       - name: Run Android unit tests
         run: ./gradlew testDebugUnitTest
 
       - name: Build Android APK
-        run: ./gradlew assemble -PRUNTIME_BASE_URL=http://77.243.80.90:8080
+        env:
+          RUNTIME_BASE_URL: ${{ vars.RUNTIME_BASE_URL }}
+        run: |
+          ./gradlew assemble "-PRUNTIME_BASE_URL=${RUNTIME_BASE_URL}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
