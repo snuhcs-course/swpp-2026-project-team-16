@@ -1,11 +1,14 @@
 package com.example.runtime.ui.mypage
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.SavedRoute
+import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.data.repository.UserRepository
 import com.example.runtime.ui.common.UiText
@@ -22,6 +25,7 @@ import kotlinx.coroutines.launch
 class MyPageViewModel(
     private val routeRepository: RouteRepository = RouteRepository(),
     private val userRepository: UserRepository = UserRepository(),
+    private val communityRepository: CommunityRepository = CommunityRepository(),
 ) : ViewModel() {
 
     var username by mutableStateOf<String?>(null)
@@ -32,6 +36,11 @@ class MyPageViewModel(
 
     var routes by mutableStateOf<List<SavedRoute>>(emptyList())
         private set
+
+    var runs by mutableStateOf<List<RunHistoryItem>>(emptyList())
+        private set
+
+    var selectedTab by mutableIntStateOf(0)
 
     var isLoading by mutableStateOf(false)
         private set
@@ -62,6 +71,8 @@ class MyPageViewModel(
         username = null
         email = null
         routes = emptyList()
+        runs = emptyList()
+        selectedTab = 0
         isLoading = false
         error = null
         detail = null
@@ -76,14 +87,17 @@ class MyPageViewModel(
         error = null
         sessionScope.launch {
             try {
-                val (profile, saved) = coroutineScope {
+                coroutineScope {
                     val profile = async { userRepository.profile() }
                     val saved = async { routeRepository.savedRoutes() }
-                    profile.await() to saved.await()
+                    val history = async { communityRepository.runs() }
+                    profile.await().let {
+                        username = it.username
+                        email = it.email
+                    }
+                    routes = saved.await()
+                    runs = history.await()
                 }
-                username = profile.username
-                email = profile.email
-                routes = saved
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

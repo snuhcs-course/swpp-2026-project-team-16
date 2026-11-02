@@ -5,7 +5,9 @@ import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.ProfileData
 import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.RenamedRoute
+import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.SavedRoute
+import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.data.repository.UserRepository
 import com.example.runtime.testing.FakeApiService
@@ -24,7 +26,7 @@ class MyPageViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = MyPageApi()
-    private val viewModel by lazy { MyPageViewModel(RouteRepository(api), UserRepository(api)) }
+    private val viewModel by lazy { MyPageViewModel(RouteRepository(api), UserRepository(api), CommunityRepository(api)) }
 
     @Test
     fun refresh_loadsProfileAndRoutes() {
@@ -33,6 +35,33 @@ class MyPageViewModelTest {
         assertEquals("runner", viewModel.username)
         assertEquals("runner@test.com", viewModel.email)
         assertEquals(listOf(1, 2, 3), viewModel.routes.map { it.id })
+    }
+
+    @Test
+    fun refresh_loadsRunHistory() {
+        viewModel.refresh()
+
+        assertEquals(listOf(11, 10), viewModel.runs.map { it.id })
+        assertEquals(7, viewModel.runs.first().sharedRouteId)
+    }
+
+    @Test
+    fun refresh_failingRunHistoryShowsTheError() {
+        api.failRuns = true
+
+        viewModel.refresh()
+
+        assertEquals(UiText.Resource(R.string.error_network), viewModel.error)
+        assertTrue(viewModel.runs.isEmpty())
+    }
+
+    @Test
+    fun reset_clearsRunHistory() {
+        viewModel.refresh()
+
+        viewModel.reset()
+
+        assertTrue(viewModel.runs.isEmpty())
     }
 
     @Test
@@ -105,6 +134,7 @@ class MyPageViewModelTest {
 
     private class MyPageApi : FakeApiService() {
         var failDelete = false
+        var failRuns = false
         val renameRequests = mutableListOf<RenameRouteRequest>()
         val deletedIds = mutableListOf<Int>()
         private val routes = listOf(route(1), route(2), route(3))
@@ -113,6 +143,21 @@ class MyPageViewModelTest {
             ApiResponse(status = "success", data = ProfileData("runner", "runner@test.com"))
 
         override suspend fun savedRoutes() = routes
+
+        override suspend fun runs(): ApiResponse<List<RunHistoryItem>> {
+            if (failRuns) throw IOException("offline")
+            return ApiResponse(status = "success", data = listOf(run(11, sharedRouteId = 7), run(10)))
+        }
+
+        private fun run(id: Int, sharedRouteId: Int? = null) = RunHistoryItem(
+            id = id,
+            routeId = id * 10,
+            distanceMeters = 3010,
+            durationSeconds = 1200,
+            finishedAt = "2026-11-02T01:00:00Z",
+            routeDistance = 3000,
+            sharedRouteId = sharedRouteId,
+        )
 
         override suspend fun savedRoute(routeId: Int) =
             ApiResponse(status = "success", data = routes.first { it.id == routeId })

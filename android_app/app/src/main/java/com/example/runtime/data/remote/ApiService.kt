@@ -60,6 +60,9 @@ interface ApiService {
     @POST("api/v1/runs/")
     suspend fun recordRun(@Body body: RecordRunRequest): ApiResponse<RunRecord>
 
+    @GET("api/v1/runs/")
+    suspend fun runs(): ApiResponse<List<RunHistoryItem>>
+
     @GET("api/v1/community/routes/")
     suspend fun sharedRoutes(@Query("sort") sort: String): ApiResponse<List<SharedRoute>>
 

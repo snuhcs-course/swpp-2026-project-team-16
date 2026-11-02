@@ -84,6 +84,42 @@ class RouteRunTests(CommunityTestBase):
                 self.assertEqual(self.record_run(**body).status_code, 400)
 
 
+class RunHistoryTests(CommunityTestBase):
+    def test_requires_authentication(self):
+        self.assertEqual(self.client.get(RUNS_URL).status_code, 401)
+
+    def test_lists_only_my_runs_newest_first(self):
+        mine = self.route(created_by=self.runner)
+        shared_route = self.route(created_by=self.other)
+        shared = SharedRoute.objects.create(route=shared_route, shared_by=self.other, title="Loop")
+        UserSavedRoute.objects.create(user=self.runner, route=mine)
+        self.log_in(self.other)
+        self.record_run(route_id=shared_route.id)
+        self.log_in(self.runner)
+        self.record_run(route_id=mine.id, distance_m=2900, duration_s=1100)
+        self.record_run(route_id=shared_route.id)
+
+        response = self.client.get(RUNS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        runs = response.data["data"]
+        self.assertEqual([run["route_id"] for run in runs], [shared_route.id, mine.id])
+        self.assertEqual(runs[0]["shared_route_id"], shared.id)
+        self.assertEqual(runs[0]["shared_title"], "Loop")
+        self.assertFalse(runs[0]["is_saved"])
+        self.assertEqual(runs[1]["distance_m"], 2900)
+        self.assertEqual(runs[1]["duration_s"], 1100)
+        self.assertEqual(runs[1]["route_distance"], 3000)
+        self.assertEqual(runs[1]["start_name"], "Start")
+        self.assertIsNone(runs[1]["shared_route_id"])
+        self.assertTrue(runs[1]["is_saved"])
+
+    def test_empty_history(self):
+        self.log_in(self.runner)
+
+        self.assertEqual(self.client.get(RUNS_URL).data["data"], [])
+
+
 class SharedRouteTests(CommunityTestBase):
     def setUp(self):
         super().setUp()

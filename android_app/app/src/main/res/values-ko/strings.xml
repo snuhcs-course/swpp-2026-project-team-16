@@ -74,6 +74,17 @@
     <string name="stat_traffic_lights">신호등</string>
     <string name="value_meters">%1$dm</string>
 
+    <string name="my_page_tab_saved">저장한 경로</string>
+    <string name="my_page_tab_runs">달리기 기록</string>
+    <string name="no_runs">아직 달린 기록이 없어요.</string>
+    <string name="no_runs_message">달리기를 완료하면 여기에서 볼 수 있어요.</string>
+    <string name="run_total_count">달린 횟수</string>
+    <string name="run_total_distance">총 거리</string>
+    <string name="run_total_time">총 시간</string>
+    <string name="run_stat_distance">거리</string>
+    <string name="run_stat_time">시간</string>
+    <string name="run_stat_pace">평균 페이스</string>
+    <string name="run_shared_route">공유된 경로</string>
     <string name="no_saved_routes">아직 저장된 경로가 없습니다.</string>
     <string name="no_saved_routes_message">경로를 만들고 저장하면 여기에서 볼 수 있어요.</string>
     <string name="action_create_route">경로 만들기</string>

@@ -76,6 +76,17 @@
     <string name="stat_traffic_lights">Traffic lights</string>
     <string name="value_meters">%1$d m</string>
 
+    <string name="my_page_tab_saved">Saved routes</string>
+    <string name="my_page_tab_runs">Run history</string>
+    <string name="no_runs">No runs yet.</string>
+    <string name="no_runs_message">Finish a run and it will show up here.</string>
+    <string name="run_total_count">Runs</string>
+    <string name="run_total_distance">Distance</string>
+    <string name="run_total_time">Time</string>
+    <string name="run_stat_distance">Distance</string>
+    <string name="run_stat_time">Time</string>
+    <string name="run_stat_pace">Avg pace</string>
+    <string name="run_shared_route">Shared route</string>
     <string name="no_saved_routes">No saved routes yet.</string>
     <string name="no_saved_routes_message">Generate a route and save it to see it here.</string>
     <string name="action_create_route">Create a route</string>
