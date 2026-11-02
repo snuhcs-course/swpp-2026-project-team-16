@@ -23,12 +23,19 @@ import com.example.runtime.ui.common.formatKm
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.common.routeTitle
 import com.example.runtime.ui.common.sharedElement
+import com.example.runtime.ui.group.CreateGroupButton
+import com.example.runtime.ui.group.GroupRouteChoice
 import com.example.runtime.ui.route.FullScreenRouteMap
 import com.example.runtime.ui.route.RouteMap
 import com.example.runtime.ui.theme.Spacing
 
 @Composable
-fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBack: () -> Unit) {
+fun SavedRouteDetailScreen(
+    myPageViewModel: MyPageViewModel,
+    routeId: Int,
+    onBack: () -> Unit,
+    onCreateGroup: (GroupRouteChoice) -> Unit,
+) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFullMap by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -151,6 +158,10 @@ fun SavedRouteDetailScreen(myPageViewModel: MyPageViewModel, routeId: Int, onBac
                 Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
             Spacer(modifier = Modifier.height(Spacing.l))
+            CreateGroupButton(onClick = {
+                onCreateGroup(GroupRouteChoice(route.id, route.name.ifBlank { routeTitle(route.startName, route.endName, route.distance) }, route.distance))
+            })
+            Spacer(modifier = Modifier.height(Spacing.s))
             OutlinedButton(
                 onClick = { showDeleteDialog = true },
                 enabled = !myPageViewModel.isDeleting,

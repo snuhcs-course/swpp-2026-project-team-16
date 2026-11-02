@@ -2,6 +2,7 @@ package com.example.runtime.ui.community
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -40,6 +41,8 @@ class CommunityViewModel(
 
     var sort by mutableStateOf(RouteSort.LATEST)
         private set
+
+    var selectedTab by mutableIntStateOf(0)
 
     var isLoading by mutableStateOf(false)
         private set

@@ -18,6 +18,7 @@ data class RunTarget(
     val routeId: Int? = null,
     val temporaryRouteId: Int? = null,
     val startName: String = "",
+    val groupId: Int? = null,
 )
 
 sealed interface RunRecordState {
@@ -67,6 +68,7 @@ class RunViewModel(
                     temporaryRouteId = target.temporaryRouteId.takeIf { target.routeId == null },
                     distanceMeters = distanceMeters,
                     durationSeconds = durationSeconds,
+                    groupId = target.groupId,
                 )
                 RunRecordState.Saved(record.routeId, record.sharedRouteId)
             } catch (e: CancellationException) {

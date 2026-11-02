@@ -45,6 +45,15 @@ class RunViewModelTest {
     }
 
     @Test
+    fun recordRun_sendsTheGroup() {
+        viewModel.start(RunTarget(emptyList(), 3000, routeId = 42, groupId = 5))
+
+        viewModel.recordRun(3010, 1200)
+
+        assertEquals(RecordRunRequest(routeId = 42, distanceMeters = 3010, durationSeconds = 1200, groupId = 5), api.runs.single())
+    }
+
+    @Test
     fun recordRun_isSentOnlyOnce() {
         viewModel.start(RunTarget(emptyList(), 3000, routeId = 42))
 

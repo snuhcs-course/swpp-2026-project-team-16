@@ -190,9 +190,7 @@
 
     <string name="nav_community">Community</string>
     <string name="community_tab_routes">Routes</string>
-    <string name="community_tab_crews">Crews</string>
-    <string name="crews_coming_soon_title">Running crews are coming soon</string>
-    <string name="crews_coming_soon_message">Soon you\'ll be able to make a crew and run together.</string>
+    <string name="community_tab_crews">Groups</string>
     <string name="no_shared_routes">No shared routes yet</string>
     <string name="no_shared_routes_message">Finish a run and share the route from the summary.</string>
     <string name="shared_by">%1$s · %2$s</string>
@@ -219,6 +217,76 @@
     <string name="error_run_before_share">Run this route before sharing it.</string>
     <string name="error_already_shared">This route is already shared.</string>
 
+    <string name="group_filter_all">All</string>
+    <string name="group_filter_closing_soon">Closing soon</string>
+    <string name="group_filter_nearby">Near me</string>
+    <string name="group_filter_mine">Joined</string>
+    <string name="group_radius_label">Within</string>
+    <string name="group_radius_km">%1$s km</string>
+    <string name="group_status_open">Open</string>
+    <string name="group_status_closing_soon">Closing soon</string>
+    <string name="group_status_full">Full</string>
+    <string name="group_status_closed">Closed</string>
+    <string name="group_deadline_passed">closed</string>
+    <string name="group_join_until">Join · %1$s</string>
+    <string name="group_member_count">%1$d/%2$d</string>
+    <string name="group_distance_from_me">%1$s away</string>
+    <string name="no_groups">No running groups yet.</string>
+    <string name="no_closing_soon_groups">No groups are closing soon.</string>
+    <string name="no_nearby_groups">No groups near you.</string>
+    <string name="no_my_groups">You haven\'t joined a group yet.</string>
+    <string name="no_groups_message">Make one from a saved or shared route and run together.</string>
+    <string name="action_create_group">Create group</string>
+    <string name="action_create_group_with_route">Make a running group with this route</string>
+    <string name="create_group_title">New running group</string>
+    <string name="label_group_route">Route</string>
+    <string name="group_pick_route">Choose a saved route</string>
+    <string name="group_no_saved_routes">You have no saved routes. Save one, or open a shared route in Community to make a group from it.</string>
+    <string name="label_group_title">Group name</string>
+    <string name="label_group_description">Description (optional)</string>
+    <string name="label_group_capacity">Members</string>
+    <string name="group_capacity_value">%1$d people</string>
+    <string name="group_capacity_increase">Add a spot</string>
+    <string name="group_capacity_hint">Including you. The group closes when it\'s full.</string>
+    <string name="label_group_meet_at">Run starts</string>
+    <string name="label_group_deadline">Join by</string>
+    <string name="error_group_deadline_after_run">The join deadline must be before the run starts.</string>
+    <string name="error_group_deadline_past">The join deadline must be in the future.</string>
+    <string name="error_group_not_found">This group no longer exists.</string>
+    <string name="error_group_full">This group is full.</string>
+    <string name="error_group_closed">This group is no longer taking members.</string>
+    <string name="error_group_already_joined">You already joined this group.</string>
+    <string name="error_group_leave_started">You can\'t leave after the run has started.</string>
+    <string name="error_group_chat_members">Join this group to see the chat.</string>
+    <string name="creating">Creating…</string>
+    <string name="joining">Joining…</string>
+    <string name="action_next">Next</string>
+    <string name="group_created_message">Your group is open</string>
+    <string name="group_hosted_by">Hosted by %1$s</string>
+    <string name="group_meet_at">Run starts %1$s</string>
+    <string name="group_join_deadline_at">Join by %1$s</string>
+    <string name="group_members_title">Members</string>
+    <string name="group_ranking_title">Ranking</string>
+    <string name="group_ranking_rule">Best average pace of each member. Runs under 80% of the route don\'t count.</string>
+    <string name="group_ranking_empty">No runs yet. Finish this route with GPS on to get ranked.</string>
+    <string name="group_ranking_me">(me)</string>
+    <string name="action_join_group">Join</string>
+    <string name="action_leave_group">Leave group</string>
+    <string name="action_delete_group">Delete group</string>
+    <string name="action_group_chat">Chat</string>
+    <string name="action_run_now">Run now</string>
+    <string name="group_joined_message">You joined the group</string>
+    <string name="group_left_message">You left the group</string>
+    <string name="group_deleted_message">Group deleted</string>
+    <string name="leave_group_title">Leave this group?</string>
+    <string name="leave_group_message">Your spot will open up for someone else.</string>
+    <string name="delete_group_title">Delete this group?</string>
+    <string name="delete_group_message">Members, chat and the ranking will be removed.</string>
+    <string name="group_chat_empty_title">No messages yet</string>
+    <string name="group_chat_empty_message">Say hi and decide where to meet.</string>
+    <string name="group_chat_placeholder">Message</string>
+    <string name="action_send">Send</string>
+    <string name="login_prompt_group">Log in to make or join a running group.</string>
     <plurals name="run_count">
         <item quantity="one">%d run</item>
         <item quantity="other">%d runs</item>
@@ -251,5 +319,17 @@
     <plurals name="review_count">
         <item quantity="one">%d review</item>
         <item quantity="other">%d reviews</item>
+    </plurals>
+    <plurals name="group_days_left">
+        <item quantity="one">%d day left</item>
+        <item quantity="other">%d days left</item>
+    </plurals>
+    <plurals name="group_hours_left">
+        <item quantity="one">%d hour left</item>
+        <item quantity="other">%d hours left</item>
+    </plurals>
+    <plurals name="group_minutes_left">
+        <item quantity="one">%d min left</item>
+        <item quantity="other">%d min left</item>
     </plurals>
 </resources>

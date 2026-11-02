@@ -26,6 +26,7 @@ import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatKm
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.common.sharedElement
+import com.example.runtime.ui.group.CreateGroupButton
 import com.example.runtime.ui.route.FullScreenRouteMap
 import com.example.runtime.ui.route.RouteMap
 import com.example.runtime.ui.route.SaveState
@@ -40,6 +41,7 @@ fun SharedRouteDetailScreen(
     onSave: () -> Unit,
     isLoggedIn: Boolean,
     onLogInToReview: () -> Unit,
+    onCreateGroup: (SharedRoute) -> Unit,
 ) {
     var showFullMap by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -190,6 +192,8 @@ fun SharedRouteDetailScreen(
                 Spacer(modifier = Modifier.height(Spacing.s))
                 Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
+            Spacer(modifier = Modifier.height(Spacing.m))
+            CreateGroupButton(onClick = { onCreateGroup(route) })
             Spacer(modifier = Modifier.height(Spacing.l))
             Text(stringResource(R.string.reviews_title), style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(Spacing.m))

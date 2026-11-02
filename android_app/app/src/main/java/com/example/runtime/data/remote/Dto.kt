@@ -160,6 +160,7 @@ data class RecordRunRequest(
     @SerialName("temporary_route_id") val temporaryRouteId: Int? = null,
     @SerialName("distance_m") val distanceMeters: Int,
     @SerialName("duration_s") val durationSeconds: Long,
+    @SerialName("group_id") val groupId: Int? = null,
 )
 
 @Serializable
@@ -230,3 +231,57 @@ data class ReviewRequest(
     val comment: String,
 )
 
+@Serializable
+data class RunningGroup(
+    val id: Int,
+    val title: String,
+    val description: String = "",
+    val host: String,
+    @SerialName("route_id") val routeId: Int,
+    @SerialName("route_distance") val routeDistance: Int,
+    @SerialName("start_name") val startName: String = "",
+    val capacity: Int,
+    @SerialName("member_count") val memberCount: Int,
+    @SerialName("meet_at") val meetAt: String,
+    @SerialName("join_deadline") val joinDeadline: String,
+    val status: String,
+    @SerialName("closing_soon") val closingSoon: Boolean = false,
+    @SerialName("is_member") val isMember: Boolean = false,
+    @SerialName("is_host") val isHost: Boolean = false,
+    @SerialName("distance_from_me_m") val distanceFromMe: Int? = null,
+    val route: List<GeoJsonLineString> = emptyList(),
+    val members: List<String> = emptyList(),
+    val ranking: List<GroupRanking> = emptyList(),
+)
+
+@Serializable
+data class GroupRanking(
+    val rank: Int,
+    val username: String,
+    @SerialName("pace_s_per_km") val paceSecondsPerKm: Int,
+    @SerialName("distance_m") val distanceMeters: Int,
+    @SerialName("duration_s") val durationSeconds: Long,
+    @SerialName("is_me") val isMe: Boolean = false,
+)
+
+@Serializable
+data class CreateGroupRequest(
+    @SerialName("route_id") val routeId: Int,
+    val title: String,
+    val description: String,
+    val capacity: Int,
+    @SerialName("meet_at") val meetAt: String,
+    @SerialName("join_deadline") val joinDeadline: String,
+)
+
+@Serializable
+data class GroupMessage(
+    val id: Int,
+    val author: String,
+    val text: String,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("is_mine") val isMine: Boolean = false,
+)
+
+@Serializable
+data class SendMessageRequest(val text: String)

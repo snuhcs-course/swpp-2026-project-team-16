@@ -18,7 +18,11 @@ import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
 import com.example.runtime.data.remote.RunHistoryItem
+import com.example.runtime.data.remote.CreateGroupRequest
+import com.example.runtime.data.remote.GroupMessage
 import com.example.runtime.data.remote.RunRecord
+import com.example.runtime.data.remote.RunningGroup
+import com.example.runtime.data.remote.SendMessageRequest
 import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.SaveRouteResponse
 import com.example.runtime.data.remote.SavedRoute
@@ -50,6 +54,15 @@ open class FakeApiService : ApiService {
     override suspend fun createReview(sharedRouteId: Int, body: ReviewRequest): ApiResponse<RouteReview> = unexpected()
     override suspend fun updateReview(reviewId: Int, body: ReviewRequest): ApiResponse<RouteReview> = unexpected()
     override suspend fun deleteReview(reviewId: Int): ApiResponse<Unit> = unexpected()
+
+    override suspend fun groups(filter: String, latitude: Double?, longitude: Double?, radiusKm: Double?): ApiResponse<List<RunningGroup>> = unexpected()
+    override suspend fun group(groupId: Int): ApiResponse<RunningGroup> = unexpected()
+    override suspend fun createGroup(body: CreateGroupRequest): ApiResponse<RunningGroup> = unexpected()
+    override suspend fun deleteGroup(groupId: Int): ApiResponse<Unit> = unexpected()
+    override suspend fun joinGroup(groupId: Int): ApiResponse<RunningGroup> = unexpected()
+    override suspend fun leaveGroup(groupId: Int): ApiResponse<RunningGroup> = unexpected()
+    override suspend fun groupMessages(groupId: Int, after: Int?): ApiResponse<List<GroupMessage>> = unexpected()
+    override suspend fun sendGroupMessage(groupId: Int, body: SendMessageRequest): ApiResponse<GroupMessage> = unexpected()
 
     private fun unexpected(): Nothing = throw AssertionError("Unexpected API call")
 }
