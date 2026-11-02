@@ -42,6 +42,9 @@ import com.example.runtime.ui.community.SharedRouteDetailScreen
 import com.example.runtime.ui.mypage.GuestMyPageScreen
 import com.example.runtime.ui.mypage.MyPageScreen
 import com.example.runtime.ui.mypage.MyPageViewModel
+import com.example.runtime.ui.board.BoardViewModel
+import com.example.runtime.ui.board.PostDetailScreen
+import com.example.runtime.ui.board.PostEditorScreen
 import com.example.runtime.ui.group.CreateGroupScreen
 import com.example.runtime.ui.group.GroupChatScreen
 import com.example.runtime.ui.group.GroupDetailScreen
@@ -111,6 +114,7 @@ fun RunTimeApp() {
     val runViewModel: RunViewModel = viewModel()
     val communityViewModel: CommunityViewModel = viewModel()
     val groupsViewModel: GroupsViewModel = viewModel()
+    val boardViewModel: BoardViewModel = viewModel()
     var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedSharedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var sharedDetailReturnScreen by rememberSaveable { mutableStateOf("community") }
@@ -118,6 +122,8 @@ fun RunTimeApp() {
     var selectedGroupId by rememberSaveable { mutableStateOf<Int?>(null) }
     var groupRouteChoice by remember { mutableStateOf<GroupRouteChoice?>(null) }
     var groupCreateReturnScreen by rememberSaveable { mutableStateOf("community") }
+    var selectedPostId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editingPostId by rememberSaveable { mutableStateOf<Int?>(null) }
     val groupCreatedMessage = stringResource(R.string.group_created_message)
     var signUpEmail by rememberSaveable { mutableStateOf("") }
     var loginReturnScreen by rememberSaveable { mutableStateOf("route_input") }
@@ -145,6 +151,7 @@ fun RunTimeApp() {
     fun onAuthenticated() {
         myPageViewModel.reset()
         groupsViewModel.reset()
+        boardViewModel.reset()
         currentScreen = loginReturnScreen
         if (saveAfterLogin) {
             saveAfterLogin = false
@@ -159,6 +166,7 @@ fun RunTimeApp() {
                 routeViewModel.reset()
                 myPageViewModel.reset()
                 groupsViewModel.reset()
+                boardViewModel.reset()
                 selectedRouteId = null
                 loginReturnScreen = "route_input"
                 saveAfterLogin = false
@@ -171,7 +179,7 @@ fun RunTimeApp() {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
-            if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation", "group_chat", "group_create")) {
+            if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation", "group_chat", "group_create", "post_detail", "post_editor")) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     NavigationBarItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
@@ -180,7 +188,7 @@ fun RunTimeApp() {
                         label = { Text(stringResource(R.string.nav_route)) }
                     )
                     NavigationBarItem(
-                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create"),
+                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor"),
                         onClick = { currentScreen = "community" },
                         icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_community)) }
@@ -310,6 +318,7 @@ fun RunTimeApp() {
                                     "community" -> CommunityScreen(
                                         communityViewModel = communityViewModel,
                                         groupsViewModel = groupsViewModel,
+                                        boardViewModel = boardViewModel,
                                         isLoggedIn = authViewModel.isLoggedIn,
                                         onRouteClick = { sharedRouteId ->
                                             selectedSharedRouteId = sharedRouteId
@@ -321,7 +330,39 @@ fun RunTimeApp() {
                                             currentScreen = "group_detail"
                                         },
                                         onCreateGroup = { openCreateGroup(null, returnTo = "community") },
-                                        onLogInRequired = { loginPrompt = LOGIN_PROMPT_GROUP }
+                                        onPostClick = { postId ->
+                                            selectedPostId = postId
+                                            currentScreen = "post_detail"
+                                        },
+                                        onWritePost = {
+                                            editingPostId = null
+                                            currentScreen = "post_editor"
+                                        },
+                                        onLogInRequired = {
+                                            loginPrompt = if (communityViewModel.selectedTab == 2) LOGIN_PROMPT_BOARD else LOGIN_PROMPT_GROUP
+                                        }
+                                    )
+                                    "post_detail" -> selectedPostId?.let { postId ->
+                                        PostDetailScreen(
+                                            boardViewModel = boardViewModel,
+                                            postId = postId,
+                                            isLoggedIn = authViewModel.isLoggedIn,
+                                            onBack = { currentScreen = "community" },
+                                            onEdit = {
+                                                editingPostId = postId
+                                                currentScreen = "post_editor"
+                                            },
+                                            onLogInRequired = { loginPrompt = LOGIN_PROMPT_POST }
+                                        )
+                                    }
+                                    "post_editor" -> PostEditorScreen(
+                                        boardViewModel = boardViewModel,
+                                        editingPostId = editingPostId,
+                                        onBack = { currentScreen = if (editingPostId == null) "community" else "post_detail" },
+                                        onSaved = { postId ->
+                                            selectedPostId = postId
+                                            currentScreen = "post_detail"
+                                        }
                                     )
                                     "group_detail" -> selectedGroupId?.let { groupId ->
                                         GroupDetailScreen(
@@ -418,6 +459,7 @@ fun RunTimeApp() {
                                                 routeViewModel.reset()
                                                 myPageViewModel.reset()
                                                 groupsViewModel.reset()
+                                                boardViewModel.reset()
                                                 selectedRouteId = null
                                                 currentScreen = "route_input"
                                             }
@@ -445,6 +487,7 @@ fun RunTimeApp() {
                         LOGIN_PROMPT_SAVE_SHARED -> R.string.login_prompt_save_shared
                         LOGIN_PROMPT_REVIEW -> R.string.login_prompt_review
                         LOGIN_PROMPT_GROUP, LOGIN_PROMPT_GROUP_DETAIL, LOGIN_PROMPT_GROUP_SHARED -> R.string.login_prompt_group
+                        LOGIN_PROMPT_BOARD, LOGIN_PROMPT_POST -> R.string.login_prompt_board
                         else -> R.string.login_prompt_trial_used
                     },
                     onLogIn = {
@@ -453,7 +496,8 @@ fun RunTimeApp() {
                             LOGIN_PROMPT_SAVE -> openAuth("login", returnTo = "route_result", save = true)
                             LOGIN_PROMPT_SAVE_SHARED, LOGIN_PROMPT_REVIEW, LOGIN_PROMPT_GROUP_SHARED ->
                                 openAuth("login", returnTo = "community_detail", save = false)
-                            LOGIN_PROMPT_GROUP -> openAuth("login", returnTo = "community", save = false)
+                            LOGIN_PROMPT_GROUP, LOGIN_PROMPT_BOARD -> openAuth("login", returnTo = "community", save = false)
+                            LOGIN_PROMPT_POST -> openAuth("login", returnTo = "post_detail", save = false)
                             LOGIN_PROMPT_GROUP_DETAIL -> openAuth("login", returnTo = "group_detail", save = false)
                             else -> openAuth("login", returnTo = "route_input", save = false)
                         }
@@ -473,3 +517,5 @@ private const val LOGIN_PROMPT_REVIEW = "review"
 private const val LOGIN_PROMPT_GROUP = "group"
 private const val LOGIN_PROMPT_GROUP_DETAIL = "group_detail"
 private const val LOGIN_PROMPT_GROUP_SHARED = "group_shared"
+private const val LOGIN_PROMPT_BOARD = "board"
+private const val LOGIN_PROMPT_POST = "post"

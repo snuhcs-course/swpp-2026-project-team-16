@@ -283,6 +283,55 @@
     <string name="group_chat_placeholder">메시지 입력</string>
     <string name="action_send">보내기</string>
     <string name="login_prompt_group">러닝 모임을 만들거나 참여하려면 로그인하세요.</string>
+    <string name="community_tab_board">자유게시판</string>
+    <string name="board_title">자유게시판</string>
+    <string name="board_filter_all">전체</string>
+    <string name="board_filter_scraps">스크랩</string>
+    <string name="board_filter_mine">내가 쓴 글</string>
+    <string name="board_search_placeholder">글 제목, 내용 검색</string>
+    <string name="action_clear">지우기</string>
+    <string name="board_empty">아직 글이 없어요.</string>
+    <string name="board_no_results">검색 결과가 없어요.</string>
+    <string name="board_no_scraps">스크랩한 글이 없어요.</string>
+    <string name="board_no_my_posts">아직 쓴 글이 없어요.</string>
+    <string name="board_empty_message">부상, 장비, 동기부여 고민을 올려 보세요. 다른 러너들이 답해 줄 거예요.</string>
+    <string name="action_write_post">글쓰기</string>
+    <string name="write_post_title">글쓰기</string>
+    <string name="edit_post_title">글 수정</string>
+    <string name="label_post_title">제목</string>
+    <string name="label_post_body">고민을 자유롭게 적어 주세요.</string>
+    <string name="board_post_anonymously">익명으로 올리기</string>
+    <string name="board_rules">신고가 5번 누적된 글과 댓글은 자동으로 숨겨져요.</string>
+    <string name="board_anonymous">익명</string>
+    <string name="board_anonymous_writer">익명(글쓴이)</string>
+    <string name="board_anonymous_number">익명%1$d</string>
+    <string name="board_named_writer">%1$s(글쓴이)</string>
+    <string name="board_no_comments">아직 댓글이 없어요. 첫 댓글을 남겨 보세요.</string>
+    <string name="board_comment_placeholder">댓글을 입력하세요</string>
+    <string name="action_like">공감</string>
+    <string name="action_scrap">스크랩</string>
+    <string name="action_report">신고</string>
+    <string name="already_reported">신고함</string>
+    <string name="report_post_title">이 글을 신고할까요?</string>
+    <string name="report_comment_title">이 댓글을 신고할까요?</string>
+    <string name="report_hint">신고 사유를 골라 주세요. 5명이 신고하면 숨겨져요.</string>
+    <string name="report_reason_spam">스팸·광고</string>
+    <string name="report_reason_abuse">욕설·비하</string>
+    <string name="report_reason_inappropriate">부적절한 내용</string>
+    <string name="report_reason_other">기타</string>
+    <string name="report_sent_message">신고가 접수됐어요</string>
+    <string name="report_hidden_message">신고가 누적되어 숨겨졌어요</string>
+    <string name="post_deleted_message">글을 삭제했어요</string>
+    <string name="delete_post_title">글을 삭제할까요?</string>
+    <string name="delete_comment_title">댓글을 삭제할까요?</string>
+    <string name="time_just_now">방금</string>
+    <string name="error_post_not_found">삭제되었거나 숨겨진 글이에요.</string>
+    <string name="error_comment_not_found">삭제되었거나 숨겨진 댓글이에요.</string>
+    <string name="error_like_own_post">내 글에는 공감할 수 없어요.</string>
+    <string name="error_report_own">내가 쓴 글은 신고할 수 없어요.</string>
+    <string name="error_already_reported">이미 신고했어요.</string>
+    <string name="error_not_your_post">내가 쓴 글만 수정하거나 삭제할 수 있어요.</string>
+    <string name="login_prompt_board">글쓰기, 댓글, 공감, 스크랩, 신고는 로그인 후 이용할 수 있어요.</string>
     <plurals name="run_count">
         <item quantity="other">%d회</item>
     </plurals>
@@ -322,5 +371,11 @@
     </plurals>
     <plurals name="group_minutes_left">
         <item quantity="other">%d분 남음</item>
+    </plurals>
+    <plurals name="time_minutes_ago">
+        <item quantity="other">%d분 전</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d시간 전</item>
     </plurals>
 </resources>

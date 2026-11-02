@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import auth, community, elevation, generate_route, groups, places, routes
+from api.views import auth, board, community, elevation, generate_route, groups, places, routes
 
 urlpatterns = [
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
@@ -35,6 +35,14 @@ urlpatterns = [
     path("api/v1/groups/<int:group_id>/", groups.groups_detail, name="groups_detail"),
     path("api/v1/groups/<int:group_id>/membership/", groups.group_membership, name="group_membership"),
     path("api/v1/groups/<int:group_id>/messages/", groups.group_messages, name="group_messages"),
+    path("api/v1/board/posts/", board.posts_list, name="posts_list"),
+    path("api/v1/board/posts/<int:post_id>/", board.posts_detail, name="posts_detail"),
+    path("api/v1/board/posts/<int:post_id>/like/", board.post_like, name="post_like"),
+    path("api/v1/board/posts/<int:post_id>/scrap/", board.post_scrap, name="post_scrap"),
+    path("api/v1/board/posts/<int:post_id>/report/", board.post_report, name="post_report"),
+    path("api/v1/board/posts/<int:post_id>/comments/", board.post_comments, name="post_comments"),
+    path("api/v1/board/comments/<int:comment_id>/", board.comment_detail, name="comment_detail"),
+    path("api/v1/board/comments/<int:comment_id>/report/", board.comment_report, name="comment_report"),
 
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
     path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),

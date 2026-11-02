@@ -18,7 +18,13 @@ import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
 import com.example.runtime.data.remote.RunHistoryItem
+import com.example.runtime.data.remote.BoardComment
+import com.example.runtime.data.remote.BoardPost
+import com.example.runtime.data.remote.CommentRequest
 import com.example.runtime.data.remote.CreateGroupRequest
+import com.example.runtime.data.remote.PostRequest
+import com.example.runtime.data.remote.ReportRequest
+import com.example.runtime.data.remote.ReportResult
 import com.example.runtime.data.remote.GroupMessage
 import com.example.runtime.data.remote.RunRecord
 import com.example.runtime.data.remote.RunningGroup
@@ -63,6 +69,19 @@ open class FakeApiService : ApiService {
     override suspend fun leaveGroup(groupId: Int): ApiResponse<RunningGroup> = unexpected()
     override suspend fun groupMessages(groupId: Int, after: Int?): ApiResponse<List<GroupMessage>> = unexpected()
     override suspend fun sendGroupMessage(groupId: Int, body: SendMessageRequest): ApiResponse<GroupMessage> = unexpected()
+    override suspend fun posts(filter: String, query: String?): ApiResponse<List<BoardPost>> = unexpected()
+    override suspend fun post(postId: Int): ApiResponse<BoardPost> = unexpected()
+    override suspend fun createPost(body: PostRequest): ApiResponse<BoardPost> = unexpected()
+    override suspend fun updatePost(postId: Int, body: PostRequest): ApiResponse<BoardPost> = unexpected()
+    override suspend fun deletePost(postId: Int): ApiResponse<Unit> = unexpected()
+    override suspend fun likePost(postId: Int): ApiResponse<BoardPost> = unexpected()
+    override suspend fun unlikePost(postId: Int): ApiResponse<BoardPost> = unexpected()
+    override suspend fun scrapPost(postId: Int): ApiResponse<BoardPost> = unexpected()
+    override suspend fun unscrapPost(postId: Int): ApiResponse<BoardPost> = unexpected()
+    override suspend fun reportPost(postId: Int, body: ReportRequest): ApiResponse<ReportResult> = unexpected()
+    override suspend fun addComment(postId: Int, body: CommentRequest): ApiResponse<List<BoardComment>> = unexpected()
+    override suspend fun deleteComment(commentId: Int): ApiResponse<List<BoardComment>> = unexpected()
+    override suspend fun reportComment(commentId: Int, body: ReportRequest): ApiResponse<ReportResult> = unexpected()
 
     private fun unexpected(): Nothing = throw AssertionError("Unexpected API call")
 }
