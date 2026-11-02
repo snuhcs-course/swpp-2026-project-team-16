@@ -29,7 +29,7 @@ import com.example.runtime.ui.common.hasLocationPermission
 import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
-private val SHEET_PEEK_HEIGHT = 96.dp
+private val SHEET_PEEK_HEIGHT = 148.dp
 private val MAP_BOTTOM_PADDING = 340.dp
 
 // 4. Route Input Screen (화면 4)
@@ -43,7 +43,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
     val currentLocationName = stringResource(R.string.current_location)
     val mapPointName = stringResource(R.string.map_point)
     val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(initialValue = SheetValue.Expanded)
+        bottomSheetState = rememberStandardBottomSheetState(initialValue = SheetValue.PartiallyExpanded)
     )
 
     LaunchedEffect(language) {
@@ -206,7 +206,10 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                     val field = if (routeViewModel.pickTarget == PickTarget.START) routeViewModel.startField else routeViewModel.endField
                     routeViewModel.selectPoint(field, mapPointName, point.longitude, point.latitude)
                 },
-                contentPadding = PaddingValues(top = 72.dp, bottom = MAP_BOTTOM_PADDING),
+                contentPadding = PaddingValues(
+                    top = 72.dp,
+                    bottom = if (scaffoldState.bottomSheetState.targetValue == SheetValue.Expanded) MAP_BOTTOM_PADDING else SHEET_PEEK_HEIGHT
+                ),
                 modifier = Modifier.fillMaxSize()
             )
             MapPickBar(
