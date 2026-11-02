@@ -67,6 +67,8 @@ data class GenerateRouteRequest(
     @SerialName("end_point") val endPoint: GeoJsonPoint? = null,
     @SerialName("starting_point_name") val startingPointName: String? = null,
     @SerialName("end_point_name") val endPointName: String? = null,
+    val preferences: List<String> = emptyList(),
+    @SerialName("preference_text") val preferenceText: String = "",
 )
 
 @Serializable

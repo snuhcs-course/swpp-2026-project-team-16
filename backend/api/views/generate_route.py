@@ -12,6 +12,7 @@ from api.models import TemporaryRoute
 from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
+from api.route_algorithm.preferences import MAX_PREFERENCE_TEXT_LENGTH, validate_options
 
 
 ROUTE_TIMEOUT_SECONDS = 35
@@ -159,6 +160,23 @@ def generate_route_api(request):
         )
 
 
+    preferences = request.data.get("preferences") or []
+    error = validate_options(preferences)
+
+    if error:
+        return error_response(error)
+
+    preference_text = request.data.get("preference_text") or ""
+
+    if not isinstance(preference_text, str):
+        return error_response("preference_text must be a string")
+
+    preference_text = preference_text.strip()
+
+    if len(preference_text) > MAX_PREFERENCE_TEXT_LENGTH:
+        return error_response(f"preference_text must be {MAX_PREFERENCE_TEXT_LENGTH} characters or fewer")
+
+
     # Call route algorithm
 
     future = route_executor.submit(
@@ -167,6 +185,8 @@ def generate_route_api(request):
         end_point=end_point,
         distance=distance,
         language=language,
+        preferences=preferences,
+        preference_text=preference_text,
     )
 
     try:

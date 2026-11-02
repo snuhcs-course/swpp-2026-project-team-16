@@ -21,6 +21,8 @@ class RouteRepository(
         endPoint: Place?,
         distanceMeters: Int,
         language: String,
+        preferences: List<String> = emptyList(),
+        preferenceText: String = "",
     ): GeneratedRouteData =
         api.generateRoute(
             GenerateRouteRequest(
@@ -30,6 +32,8 @@ class RouteRepository(
                 endPoint = endPoint?.point,
                 startingPointName = startingPoint.name,
                 endPointName = endPoint?.name,
+                preferences = preferences,
+                preferenceText = preferenceText,
             )
         ).requireData()
 
