@@ -57,6 +57,15 @@ data class AuthData(
 data class ProfileData(
     val username: String,
     val email: String,
+    @SerialName("display_name") val displayName: String = "",
+    @SerialName("status_message") val statusMessage: String = "",
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+)
+
+@Serializable
+data class ProfileUpdateRequest(
+    @SerialName("display_name") val displayName: String,
+    @SerialName("status_message") val statusMessage: String,
 )
 
 @Serializable

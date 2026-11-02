@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.runtime.data.remote.ProfileData
 import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.SavedRoute
 import com.example.runtime.data.repository.CommunityRepository
@@ -22,6 +23,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
+sealed interface ProfileEditState {
+    data object Idle : ProfileEditState
+    data object Saving : ProfileEditState
+    data class Failed(val message: UiText) : ProfileEditState
+}
+
 class MyPageViewModel(
     private val routeRepository: RouteRepository = RouteRepository(),
     private val userRepository: UserRepository = UserRepository(),
@@ -33,6 +40,23 @@ class MyPageViewModel(
 
     var email by mutableStateOf<String?>(null)
         private set
+
+    var displayName by mutableStateOf("")
+        private set
+
+    var statusMessage by mutableStateOf("")
+        private set
+
+    var avatar by mutableStateOf<ByteArray?>(null)
+        private set
+
+    var profileState by mutableStateOf<ProfileEditState>(ProfileEditState.Idle)
+        private set
+
+    var isUploadingAvatar by mutableStateOf(false)
+        private set
+
+    private var avatarUrl: String? = null
 
     var routes by mutableStateOf<List<SavedRoute>>(emptyList())
         private set
@@ -70,6 +94,12 @@ class MyPageViewModel(
         sessionScope = newSessionScope()
         username = null
         email = null
+        displayName = ""
+        statusMessage = ""
+        avatar = null
+        avatarUrl = null
+        profileState = ProfileEditState.Idle
+        isUploadingAvatar = false
         routes = emptyList()
         runs = emptyList()
         selectedTab = 0
@@ -91,10 +121,7 @@ class MyPageViewModel(
                     val profile = async { userRepository.profile() }
                     val saved = async { routeRepository.savedRoutes() }
                     val history = async { communityRepository.runs() }
-                    profile.await().let {
-                        username = it.username
-                        email = it.email
-                    }
+                    showProfile(profile.await())
                     routes = saved.await()
                     runs = history.await()
                 }
@@ -104,6 +131,85 @@ class MyPageViewModel(
                 error = e.toUiText()
             } finally {
                 isLoading = false
+            }
+        }
+    }
+
+    private fun showProfile(profile: ProfileData) {
+        username = profile.username
+        email = profile.email
+        displayName = profile.displayName
+        statusMessage = profile.statusMessage
+        if (profile.avatarUrl == avatarUrl) return
+        avatarUrl = profile.avatarUrl
+        val url = profile.avatarUrl
+        if (url == null) {
+            avatar = null
+            return
+        }
+        sessionScope.launch {
+            try {
+                val bytes = userRepository.avatar(url)
+                if (avatarUrl == url) avatar = bytes
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (avatarUrl == url) avatarUrl = null
+            }
+        }
+    }
+
+    fun resetProfileEdit() {
+        profileState = ProfileEditState.Idle
+    }
+
+    fun saveProfile(name: String, status: String, onSaved: () -> Unit) {
+        if (profileState == ProfileEditState.Saving) return
+        profileState = ProfileEditState.Saving
+        sessionScope.launch {
+            profileState = try {
+                showProfile(userRepository.updateProfile(name.trim(), status.trim()))
+                onSaved()
+                ProfileEditState.Idle
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ProfileEditState.Failed(e.toUiText())
+            }
+        }
+    }
+
+    fun uploadAvatar(jpeg: ByteArray, onFailed: (UiText) -> Unit) {
+        if (isUploadingAvatar) return
+        isUploadingAvatar = true
+        sessionScope.launch {
+            try {
+                val profile = userRepository.uploadAvatar(jpeg)
+                avatar = jpeg
+                avatarUrl = profile.avatarUrl
+                showProfile(profile)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                onFailed(e.toUiText())
+            } finally {
+                isUploadingAvatar = false
+            }
+        }
+    }
+
+    fun removeAvatar(onFailed: (UiText) -> Unit) {
+        if (isUploadingAvatar) return
+        isUploadingAvatar = true
+        sessionScope.launch {
+            try {
+                showProfile(userRepository.deleteAvatar())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                onFailed(e.toUiText())
+            } finally {
+                isUploadingAvatar = false
             }
         }
     }
