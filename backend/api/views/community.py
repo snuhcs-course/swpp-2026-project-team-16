@@ -111,10 +111,34 @@ def _parse_review(data):
     return rating, comment.strip(), None
 
 
-@api_view(["POST"])
+def _run_data(run, saved_route_ids):
+    route = run.route
+    shared_route = getattr(route, "shared", None)
+    return {
+        "id": run.id,
+        "route_id": route.id,
+        "distance_m": run.distance_m,
+        "duration_s": run.duration_s,
+        "finished_at": run.finished_at,
+        "route_distance": route.distance,
+        "start_name": route.start_name,
+        "end_name": route.end_name,
+        "shared_route_id": shared_route.id if shared_route else None,
+        "shared_title": shared_route.title if shared_route else "",
+        "is_saved": route.id in saved_route_ids,
+    }
+
+
+@api_view(["GET", "POST"])
 def route_runs(request):
     if not request.user.is_authenticated:
         return _auth_required()
+
+    if request.method == "GET":
+        runs = RouteRun.objects.filter(user=request.user).select_related("route", "route__shared").order_by("-finished_at", "-id")
+        saved_route_ids = set(UserSavedRoute.objects.filter(user=request.user).values_list("route_id", flat=True))
+        data = [_run_data(run, saved_route_ids) for run in runs]
+        return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     route_id = request.data.get("route_id")
     temporary_route_id = request.data.get("temporary_route_id")

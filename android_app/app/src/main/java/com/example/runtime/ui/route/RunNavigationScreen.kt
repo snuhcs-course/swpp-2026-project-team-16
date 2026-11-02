@@ -46,6 +46,8 @@ import com.example.runtime.data.remote.GeoJsonLineString
 import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.ui.common.formatDistance
+import com.example.runtime.ui.common.formatDuration
+import com.example.runtime.ui.common.formatPace
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.map.CameraPosition
 import com.naver.maps.map.CameraUpdate
@@ -386,23 +388,6 @@ private fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordin
         ) result.add(point)
         result
     }
-
-private fun formatDuration(seconds: Long): String {
-    val hours = seconds / 3600
-    val minutes = seconds % 3600 / 60
-    val remainder = seconds % 60
-    return if (hours > 0) {
-        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, remainder)
-    } else {
-        String.format(Locale.US, "%02d:%02d", minutes, remainder)
-    }
-}
-
-private fun formatPace(speedMetersPerSecond: Double): String {
-    if (speedMetersPerSecond < 0.3) return "--:--"
-    val secondsPerKm = (1000.0 / speedMetersPerSecond).roundToInt().coerceAtMost(3599)
-    return String.format(Locale.US, "%d:%02d /km", secondsPerKm / 60, secondsPerKm % 60)
-}
 
 private const val OFF_ROUTE_DISTANCE_METERS = 40.0
 private const val NEAR_FINISH_PROGRESS = 0.95f

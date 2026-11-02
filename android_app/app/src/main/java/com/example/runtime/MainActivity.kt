@@ -107,6 +107,7 @@ fun RunTimeApp() {
     val communityViewModel: CommunityViewModel = viewModel()
     var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedSharedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var sharedDetailReturnScreen by rememberSaveable { mutableStateOf("community") }
     var runReturnScreen by rememberSaveable { mutableStateOf("route_result") }
     var signUpEmail by rememberSaveable { mutableStateOf("") }
     var loginReturnScreen by rememberSaveable { mutableStateOf("route_input") }
@@ -274,10 +275,12 @@ fun RunTimeApp() {
                                                     onShared = { sharedRouteId ->
                                                         appMessages.show(sharedMessage)
                                                         selectedSharedRouteId = sharedRouteId
+                                                        sharedDetailReturnScreen = "community"
                                                         currentScreen = "community_detail"
                                                     },
                                                     onOpenShared = { sharedRouteId ->
                                                         selectedSharedRouteId = sharedRouteId
+                                                        sharedDetailReturnScreen = "community"
                                                         currentScreen = "community_detail"
                                                     }
                                                 )
@@ -290,6 +293,7 @@ fun RunTimeApp() {
                                         communityViewModel = communityViewModel,
                                         onRouteClick = { sharedRouteId ->
                                             selectedSharedRouteId = sharedRouteId
+                                            sharedDetailReturnScreen = "community"
                                             currentScreen = "community_detail"
                                         }
                                     )
@@ -297,7 +301,7 @@ fun RunTimeApp() {
                                         SharedRouteDetailScreen(
                                             communityViewModel = communityViewModel,
                                             sharedRouteId = sharedRouteId,
-                                            onBack = { currentScreen = "community" },
+                                            onBack = { currentScreen = sharedDetailReturnScreen },
                                             onRun = { shared ->
                                                 runViewModel.start(
                                                     RunTarget(
@@ -325,6 +329,11 @@ fun RunTimeApp() {
                                         onRouteClick = { routeId ->
                                             selectedRouteId = routeId
                                             currentScreen = "saved_detail"
+                                        },
+                                        onSharedRouteClick = { sharedRouteId ->
+                                            selectedSharedRouteId = sharedRouteId
+                                            sharedDetailReturnScreen = "MyPage"
+                                            currentScreen = "community_detail"
                                         },
                                         onCreateRoute = { currentScreen = "route_input" },
                                         onLogout = {

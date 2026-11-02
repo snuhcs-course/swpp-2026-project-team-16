@@ -170,6 +170,21 @@ data class RunRecord(
 )
 
 @Serializable
+data class RunHistoryItem(
+    val id: Int,
+    @SerialName("route_id") val routeId: Int,
+    @SerialName("distance_m") val distanceMeters: Int,
+    @SerialName("duration_s") val durationSeconds: Long,
+    @SerialName("finished_at") val finishedAt: String,
+    @SerialName("route_distance") val routeDistance: Int,
+    @SerialName("start_name") val startName: String = "",
+    @SerialName("end_name") val endName: String = "",
+    @SerialName("shared_route_id") val sharedRouteId: Int? = null,
+    @SerialName("shared_title") val sharedTitle: String = "",
+    @SerialName("is_saved") val isSaved: Boolean = false,
+)
+
+@Serializable
 data class ShareRouteRequest(
     @SerialName("route_id") val routeId: Int,
     val title: String,

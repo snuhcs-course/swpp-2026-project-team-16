@@ -17,6 +17,7 @@ import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
+import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.RunRecord
 import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.SaveRouteResponse
@@ -40,6 +41,7 @@ open class FakeApiService : ApiService {
     override suspend fun searchPlaces(query: String, language: String): ApiResponse<List<Place>> = unexpected()
     override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> = unexpected()
     override suspend fun recordRun(body: RecordRunRequest): ApiResponse<RunRecord> = unexpected()
+    override suspend fun runs(): ApiResponse<List<RunHistoryItem>> = unexpected()
     override suspend fun sharedRoutes(sort: String): ApiResponse<List<SharedRoute>> = unexpected()
     override suspend fun sharedRoute(sharedRouteId: Int): ApiResponse<SharedRoute> = unexpected()
     override suspend fun shareRoute(body: ShareRouteRequest): ApiResponse<SharedRoute> = unexpected()
