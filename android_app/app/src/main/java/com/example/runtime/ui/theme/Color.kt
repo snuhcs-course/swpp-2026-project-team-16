@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 val Lime = Color(0xFFD6F94A)
 val Charcoal = Color(0xFF1C1E1C)
+val StarYellow = Color(0xFFFFB400)
 
 val Ink = Color(0xFF121412)
 val InkSurface = Color(0xFF1C1E1C)

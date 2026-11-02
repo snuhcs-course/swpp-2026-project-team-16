@@ -25,6 +25,12 @@ urlpatterns = [
         community.shared_routes_detail,
         name="shared_routes_detail",
     ),
+    path(
+        "api/v1/community/routes/<int:shared_route_id>/reviews/",
+        community.shared_route_reviews,
+        name="shared_route_reviews",
+    ),
+    path("api/v1/community/reviews/<int:review_id>/", community.review_detail, name="review_detail"),
 
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
     path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),

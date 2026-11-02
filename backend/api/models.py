@@ -103,3 +103,19 @@ class SharedRoute(models.Model):
 
     class Meta:
         ordering = ["-shared_at", "-id"]
+
+
+class RouteReview(models.Model):
+    shared_route = models.ForeignKey(SharedRoute, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="route_reviews")
+    rating = models.PositiveSmallIntegerField()
+    comment = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["shared_route", "user"], name="unique_review_per_user"),
+            models.CheckConstraint(condition=models.Q(rating__gte=1, rating__lte=5), name="rating_between_1_and_5"),
+        ]

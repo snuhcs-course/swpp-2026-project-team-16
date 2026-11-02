@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,9 +38,16 @@ fun SharedRouteDetailScreen(
     onBack: () -> Unit,
     onRun: (SharedRoute) -> Unit,
     onSave: () -> Unit,
+    isLoggedIn: Boolean,
+    onLogInToReview: () -> Unit,
 ) {
     var showFullMap by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReviewDialog by rememberSaveable { mutableStateOf(false) }
+    var deletingReviewId by remember { mutableStateOf<Int?>(null) }
+    val reviewPostedMessage = stringResource(R.string.review_posted_message)
+    val reviewUpdatedMessage = stringResource(R.string.review_updated_message)
+    val reviewDeletedMessage = stringResource(R.string.review_deleted_message)
     val messages = LocalAppMessages.current
     val haptic = LocalHapticFeedback.current
     val savedMessage = stringResource(R.string.route_saved_message)
@@ -183,6 +191,37 @@ fun SharedRouteDetailScreen(
                 Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
             Spacer(modifier = Modifier.height(Spacing.l))
+            Text(stringResource(R.string.reviews_title), style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.m))
+            RatingSummary(average = route.ratingAverage, count = route.reviewCount, counts = route.ratingCounts)
+            Spacer(modifier = Modifier.height(Spacing.m))
+            val hasMyReview = route.myReviewId != null
+            when {
+                route.isMine -> ReviewHint(stringResource(R.string.review_own_route))
+                !isLoggedIn || route.canReview -> OutlinedButton(
+                    onClick = { if (isLoggedIn) showReviewDialog = true else onLogInToReview() },
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Icon(painterResource(R.drawable.ic_rate_review), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(Spacing.s))
+                    Text(
+                        stringResource(if (hasMyReview) R.string.action_edit_review else R.string.action_write_review),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+                else -> ReviewHint(stringResource(R.string.review_eligibility))
+            }
+            communityViewModel.reviews.forEachIndexed { index, review ->
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                ReviewItem(
+                    review = review,
+                    onEdit = { showReviewDialog = true },
+                    onDelete = { deletingReviewId = review.id },
+                    modifier = Modifier.padding(top = if (index == 0) Spacing.s else 0.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.l))
         }
 
         if (route != null) {
@@ -229,6 +268,44 @@ fun SharedRouteDetailScreen(
         FullScreenRouteMap(lines = route.route, onDismiss = { showFullMap = false })
     }
 
+    if (showReviewDialog && route != null) {
+        val myReview = communityViewModel.reviews.firstOrNull { it.isMine }
+        ReviewDialog(
+            initialRating = myReview?.rating ?: 0,
+            initialComment = myReview?.comment.orEmpty(),
+            isEditing = myReview != null,
+            submitState = communityViewModel.reviewSubmitState,
+            onDismiss = { showReviewDialog = false },
+            onSubmit = { rating, comment ->
+                communityViewModel.submitReview(rating, comment) {
+                    showReviewDialog = false
+                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                    messages?.show(if (myReview != null) reviewUpdatedMessage else reviewPostedMessage)
+                }
+            }
+        )
+    }
+
+    deletingReviewId?.let { reviewId ->
+        AlertDialog(
+            onDismissRequest = { deletingReviewId = null },
+            title = { Text(stringResource(R.string.delete_review_title)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    deletingReviewId = null
+                    communityViewModel.deleteReview(reviewId) { messages?.show(reviewDeletedMessage) }
+                }) {
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingReviewId = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -252,4 +329,14 @@ fun SharedRouteDetailScreen(
             }
         )
     }
+}
+
+@Composable
+private fun ReviewHint(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(vertical = Spacing.s)
+    )
 }

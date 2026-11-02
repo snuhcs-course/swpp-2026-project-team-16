@@ -204,4 +204,33 @@
         <item quantity="one">%d run</item>
         <item quantity="other">%d runs</item>
     </plurals>
+
+    <string name="sort_latest">Latest</string>
+    <string name="sort_rating">Top rated</string>
+    <string name="sort_reviews">Most reviewed</string>
+    <string name="reviews_title">Reviews</string>
+    <string name="no_reviews_yet">No reviews yet</string>
+    <string name="star_rating_description">%1$s out of 5 stars</string>
+    <string name="action_write_review">Write a review</string>
+    <string name="action_edit_review">Edit my review</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_post_review">Post</string>
+    <string name="review_dialog_title_new">How was this route?</string>
+    <string name="review_dialog_title_edit">Edit your review</string>
+    <string name="label_review_comment">Comment (optional)</string>
+    <string name="review_need_rating">Tap a star to rate this route.</string>
+    <string name="review_eligibility">Run or save this route to write a review.</string>
+    <string name="review_own_route">You shared this route, so you can\'t review it.</string>
+    <string name="login_prompt_review">Log in to write a review.</string>
+    <string name="review_posted_message">Review posted</string>
+    <string name="review_updated_message">Review updated</string>
+    <string name="review_deleted_message">Review deleted</string>
+    <string name="delete_review_title">Delete your review?</string>
+    <string name="review_edited">edited</string>
+    <string name="error_already_reviewed">You already reviewed this route.</string>
+
+    <plurals name="review_count">
+        <item quantity="one">%d review</item>
+        <item quantity="other">%d reviews</item>
+    </plurals>
 </resources>

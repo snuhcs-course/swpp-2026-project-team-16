@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from api.models import Route, RouteRun, SharedRoute, TemporaryRoute, UserSavedRoute
+from api.models import Route, RouteReview, RouteRun, SharedRoute, TemporaryRoute, UserSavedRoute
 
 
 RUNS_URL = "/api/v1/runs/"
@@ -148,3 +148,114 @@ class SharedRouteTests(CommunityTestBase):
         self.assertEqual(self.client.delete(f"{SHARED_URL}{shared.id}/").status_code, 200)
         self.assertFalse(SharedRoute.objects.exists())
         self.assertTrue(Route.objects.filter(id=self.my_route.id).exists())
+
+
+class ReviewTests(CommunityTestBase):
+    def setUp(self):
+        super().setUp()
+        User = get_user_model()
+        self.third = User.objects.create_user(username="third", email="third@test.com", password="password123")
+        self.shared = SharedRoute.objects.create(route=self.route(created_by=self.other), shared_by=self.other, title="Loop")
+        self.reviews_url = f"{SHARED_URL}{self.shared.id}/reviews/"
+
+    def review(self, rating=5, comment="Great"):
+        return self.client.post(self.reviews_url, {"rating": rating, "comment": comment}, format="json")
+
+    def ran(self, user):
+        RouteRun.objects.create(user=user, route=self.shared.route, distance_m=3000, duration_s=1000)
+
+    def test_requires_authentication(self):
+        self.assertEqual(self.review().status_code, 401)
+
+    def test_must_run_or_save_before_reviewing(self):
+        self.log_in(self.runner)
+        self.assertEqual(self.review().status_code, 403)
+
+        UserSavedRoute.objects.create(user=self.runner, route=self.shared.route)
+        self.assertEqual(self.review().status_code, 201)
+
+    def test_sharer_cannot_review_own_route(self):
+        self.ran(self.other)
+        self.log_in(self.other)
+
+        self.assertEqual(self.review().status_code, 403)
+
+    def test_one_review_per_person(self):
+        self.ran(self.runner)
+        self.log_in(self.runner)
+
+        first = self.review(comment="  Nice and flat  ")
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual((first.data["data"]["comment"], first.data["data"]["author"]), ("Nice and flat", "runner"))
+        self.assertEqual(self.review().status_code, 409)
+
+    def test_rejects_bad_rating_or_comment(self):
+        self.ran(self.runner)
+        self.log_in(self.runner)
+        cases = [(0, ""), (6, ""), ("5", ""), (True, ""), (4.5, ""), (5, "x" * 501)]
+        for rating, comment in cases:
+            with self.subTest(rating=rating, comment=comment[:5]):
+                self.assertEqual(self.review(rating, comment).status_code, 400)
+
+    def test_summary_shows_average_counts_and_permissions(self):
+        self.ran(self.runner)
+        self.ran(self.third)
+        RouteReview.objects.create(shared_route=self.shared, user=self.runner, rating=5)
+        RouteReview.objects.create(shared_route=self.shared, user=self.third, rating=4)
+        self.log_in(self.runner)
+
+        listed = self.client.get(SHARED_URL).data["data"][0]
+        detail = self.client.get(f"{SHARED_URL}{self.shared.id}/").data["data"]
+
+        self.assertEqual((listed["review_count"], listed["rating_average"], listed["run_count"]), (2, 4.5, 2))
+        self.assertEqual(detail["rating_counts"], {"1": 0, "2": 0, "3": 0, "4": 1, "5": 1})
+        self.assertTrue(detail["can_review"])
+        self.assertIsNotNone(detail["my_review_id"])
+
+    def test_route_without_reviews_has_no_average(self):
+        listed = self.client.get(SHARED_URL).data["data"][0]
+        detail = self.client.get(f"{SHARED_URL}{self.shared.id}/").data["data"]
+
+        self.assertEqual((listed["review_count"], listed["rating_average"]), (0, None))
+        self.assertFalse(detail["can_review"])
+        self.assertIsNone(detail["my_review_id"])
+
+    def test_sort_by_rating_and_review_count(self):
+        second = SharedRoute.objects.create(route=self.route(created_by=self.other), shared_by=self.other, title="Hills")
+        RouteReview.objects.create(shared_route=self.shared, user=self.runner, rating=3)
+        RouteReview.objects.create(shared_route=self.shared, user=self.third, rating=3)
+        RouteReview.objects.create(shared_route=second, user=self.runner, rating=5)
+
+        def titles(sort):
+            return [item["title"] for item in self.client.get(SHARED_URL, {"sort": sort}).data["data"]]
+
+        self.assertEqual(titles("rating"), ["Hills", "Loop"])
+        self.assertEqual(titles("reviews"), ["Loop", "Hills"])
+        self.assertEqual(titles("latest"), ["Hills", "Loop"])
+        self.assertEqual(self.client.get(SHARED_URL, {"sort": "random"}).status_code, 400)
+
+    def test_list_reviews_is_public(self):
+        RouteReview.objects.create(shared_route=self.shared, user=self.runner, rating=4, comment="Good")
+
+        response = self.client.get(self.reviews_url)
+
+        self.assertEqual(response.status_code, 200)
+        review = response.data["data"][0]
+        self.assertEqual((review["rating"], review["comment"], review["author"]), (4, "Good", "runner"))
+        self.assertFalse(review["is_mine"])
+        self.assertFalse(review["edited"])
+
+    def test_only_the_author_can_edit_or_delete(self):
+        review = RouteReview.objects.create(shared_route=self.shared, user=self.runner, rating=4)
+        url = f"/api/v1/community/reviews/{review.id}/"
+
+        self.log_in(self.third)
+        self.assertEqual(self.client.patch(url, {"rating": 1}, format="json").status_code, 404)
+        self.assertEqual(self.client.delete(url).status_code, 404)
+
+        self.log_in(self.runner)
+        updated = self.client.patch(url, {"rating": 2, "comment": "Changed my mind"}, format="json")
+        self.assertEqual((updated.data["data"]["rating"], updated.data["data"]["comment"]), (2, "Changed my mind"))
+        self.assertEqual(self.client.delete(url).status_code, 200)
+        self.assertFalse(RouteReview.objects.exists())

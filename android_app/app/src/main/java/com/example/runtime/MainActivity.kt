@@ -312,7 +312,9 @@ fun RunTimeApp() {
                                             onSave = {
                                                 if (authViewModel.isLoggedIn) communityViewModel.save()
                                                 else loginPrompt = LOGIN_PROMPT_SAVE_SHARED
-                                            }
+                                            },
+                                            isLoggedIn = authViewModel.isLoggedIn,
+                                            onLogInToReview = { loginPrompt = LOGIN_PROMPT_REVIEW }
                                         )
                                     }
                                     "MyPage" -> if (!authViewModel.isLoggedIn) GuestMyPageScreen(
@@ -353,13 +355,15 @@ fun RunTimeApp() {
                     message = when (reason) {
                         LOGIN_PROMPT_SAVE -> R.string.login_prompt_save
                         LOGIN_PROMPT_SAVE_SHARED -> R.string.login_prompt_save_shared
+                        LOGIN_PROMPT_REVIEW -> R.string.login_prompt_review
                         else -> R.string.login_prompt_trial_used
                     },
                     onLogIn = {
                         loginPrompt = null
                         when (reason) {
                             LOGIN_PROMPT_SAVE -> openAuth("login", returnTo = "route_result", save = true)
-                            LOGIN_PROMPT_SAVE_SHARED -> openAuth("login", returnTo = "community_detail", save = false)
+                            LOGIN_PROMPT_SAVE_SHARED, LOGIN_PROMPT_REVIEW ->
+                                openAuth("login", returnTo = "community_detail", save = false)
                             else -> openAuth("login", returnTo = "route_input", save = false)
                         }
                     },
@@ -374,3 +378,4 @@ private val FULL_BLEED_SCREENS = setOf("route_input", "generating", "route_resul
 private const val LOGIN_PROMPT_TRIAL = "trial"
 private const val LOGIN_PROMPT_SAVE = "save"
 private const val LOGIN_PROMPT_SAVE_SHARED = "save_shared"
+private const val LOGIN_PROMPT_REVIEW = "review"
