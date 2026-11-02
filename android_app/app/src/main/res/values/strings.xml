@@ -48,6 +48,14 @@
     <string name="unit_km">km</string>
     <string name="action_generate">Generate</string>
     <string name="route_input_title">Where do you want to run?</string>
+    <string name="label_preferences">Running preferences</string>
+    <string name="preferences_hint">Optional. Pick as many as you like.</string>
+    <string name="preference_flat">Flat route</string>
+    <string name="preference_hills">Hill training</string>
+    <string name="preference_few_signals">Fewer traffic lights</string>
+    <string name="preference_exact_distance">Exact distance</string>
+    <string name="label_preference_text">Describe the route you want (optional)</string>
+    <string name="preference_text_placeholder">e.g. I don\'t want to stop at crossings</string>
     <string name="route_input_subtitle">Set a start point and distance. The end point is optional.</string>
     <string name="generating_route">Making your route</string>
     <string name="generating_step_route">Finding routes</string>

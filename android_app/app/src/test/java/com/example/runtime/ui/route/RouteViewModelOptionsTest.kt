@@ -47,6 +47,47 @@ class RouteViewModelOptionsTest {
     }
 
     @Test
+    fun generate_sendsNoPreferencesByDefault() {
+        api.response = generated(option(1, 3010))
+
+        generate()
+
+        assertEquals(emptyList<String>(), api.requests.single().preferences)
+        assertEquals("", api.requests.single().preferenceText)
+    }
+
+    @Test
+    fun generate_sendsSelectedPreferencesAndText() {
+        api.response = generated(option(1, 3010))
+        viewModel.togglePreference(RoutePreference.EXACT_DISTANCE)
+        viewModel.togglePreference(RoutePreference.FEW_SIGNALS)
+        viewModel.onPreferenceTextChange("  riverside please  ")
+
+        generate()
+
+        assertEquals(listOf("few_signals", "exact_distance"), api.requests.single().preferences)
+        assertEquals("riverside please", api.requests.single().preferenceText)
+    }
+
+    @Test
+    fun togglePreference_flatAndHillsReplaceEachOther() {
+        viewModel.togglePreference(RoutePreference.FLAT)
+        viewModel.togglePreference(RoutePreference.FEW_SIGNALS)
+        viewModel.togglePreference(RoutePreference.HILLS)
+        assertEquals(setOf(RoutePreference.HILLS, RoutePreference.FEW_SIGNALS), viewModel.preferences)
+
+        viewModel.togglePreference(RoutePreference.HILLS)
+        assertEquals(setOf(RoutePreference.FEW_SIGNALS), viewModel.preferences)
+    }
+
+    @Test
+    fun onPreferenceTextChange_limitsTheLength() {
+        viewModel.onPreferenceTextChange("a".repeat(MAX_PREFERENCE_TEXT_LENGTH + 20))
+
+        assertEquals(MAX_PREFERENCE_TEXT_LENGTH, viewModel.preferenceText.length)
+    }
+
+    @Test
     fun generate_withoutOptions_usesTheSingleRoute() {
         api.response = GeneratedRouteData(temporaryRouteId = 7, route = body(5000))
 

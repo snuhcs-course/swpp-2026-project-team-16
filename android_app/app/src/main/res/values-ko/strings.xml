@@ -46,6 +46,14 @@
     <string name="unit_km">km</string>
     <string name="action_generate">경로 생성</string>
     <string name="route_input_title">어디서 달려볼까요?</string>
+    <string name="label_preferences">러닝 선호</string>
+    <string name="preferences_hint">선택 사항이에요. 여러 개 고를 수 있어요.</string>
+    <string name="preference_flat">평지 위주</string>
+    <string name="preference_hills">언덕 훈련</string>
+    <string name="preference_few_signals">신호등 적게</string>
+    <string name="preference_exact_distance">거리 정확하게</string>
+    <string name="label_preference_text">원하는 코스를 적어 주세요 (선택)</string>
+    <string name="preference_text_placeholder">예: 횡단보도에서 멈추기 싫어요</string>
     <string name="route_input_subtitle">출발지와 거리를 정해 주세요. 도착지는 선택이에요.</string>
     <string name="generating_route">경로를 만들고 있어요</string>
     <string name="generating_step_route">경로 탐색 중</string>

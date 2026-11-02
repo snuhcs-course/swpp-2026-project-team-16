@@ -33,6 +33,7 @@ from api.route_algorithm.classes import (
 )
 from api.route_algorithm.crosswalk_counter import count_signalized_crossings
 from api.route_algorithm.elevation import climb_profiles
+from api.route_algorithm.preferences import resolve_multipliers, to_weights
 from api.route_algorithm.scoring import score_route
 from api.route_algorithm.street_graph import street_graph
 
@@ -46,6 +47,8 @@ MAX_ITER = 4           # 후보 하나당 보정 반복 횟수
 SCORING_TOLERANCE = 0.15
 MAX_SCORED_CANDIDATES = 6
 MAX_ROUTE_OPTIONS = 3
+
+preference_executor = ThreadPoolExecutor(max_workers=4)
 
 LOOP_ROTATIONS = (0, math.pi / 8, math.pi / 4, 3 * math.pi / 8)
 OUT_BACK_DIRECTIONS = tuple(i * math.pi / 4 for i in range(8))
@@ -194,8 +197,10 @@ def create_route(
     language: str = DEFAULT_LANGUAGE,
     end_point: GeoJSONPoint | None = None,
     mode: str | None = None,
+    preferences: list[str] | None = None,
+    preference_text: str = "",
 ) -> RunningRoute:
-    return create_routes(starting_point, distance, language, end_point, mode)[0]
+    return create_routes(starting_point, distance, language, end_point, mode, preferences, preference_text)[0]
 
 
 def create_routes(
@@ -204,6 +209,8 @@ def create_routes(
     language: str = DEFAULT_LANGUAGE,
     end_point: GeoJSONPoint | None = None,
     mode: str | None = None,
+    preferences: list[str] | None = None,
+    preference_text: str = "",
 ) -> list[RunningRoute]:
     total_timer = time.perf_counter()
 
@@ -213,6 +220,8 @@ def create_routes(
         raise ValueError(f"Unknown mode: {mode}")
     if mode == "point_to_point" and end_point is None:
         raise ValueError("point_to_point mode requires end_point.")
+
+    multipliers_future = preference_executor.submit(resolve_multipliers, preferences or [], preference_text)
 
     s_lon, s_lat = starting_point.coordinates
     frame = LocalFrame(s_lon, s_lat)
@@ -351,8 +360,11 @@ def create_routes(
         )
         for c, signal_count, profile in zip(pool, signals, profiles)
     ]
+    multipliers = multipliers_future.result()
+    weights = to_weights(multipliers)
+    log(f"  preference multipliers {multipliers}")
     scores = [
-        score_route(f.total_elevation_gain_m, f.traffic_light_count, c.length, distance)
+        score_route(f.total_elevation_gain_m, f.traffic_light_count, c.length, distance, weights)
         for c, f in zip(pool, features)
     ]
     chosen = sorted(range(len(pool)), key=lambda i: scores[i])[:MAX_ROUTE_OPTIONS]

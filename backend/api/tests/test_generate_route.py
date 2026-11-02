@@ -126,6 +126,32 @@ class GenerateRouteEndPointTests(FakeMapTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["message"], "end_point longitude must be between -180 and 180")
 
+    def test_passes_preferences_to_the_algorithm(self, llm):
+        response, spy = self.post(preferences=["few_signals"], preference_text="  강변 위주로  ")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(spy.call_args.kwargs["preferences"], ["few_signals"])
+        self.assertEqual(spy.call_args.kwargs["preference_text"], "강변 위주로")
+
+    def test_preferences_are_optional(self, llm):
+        response, spy = self.post(preferences=None, preference_text=None)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(spy.call_args.kwargs["preferences"], [])
+        self.assertEqual(spy.call_args.kwargs["preference_text"], "")
+
+    def test_rejects_invalid_preferences(self, llm):
+        cases = [
+            ({"preferences": "flat"}, "preferences must be a list of strings"),
+            ({"preferences": ["fast"]}, "preferences must be from: flat, hills, few_signals, exact_distance"),
+            ({"preferences": ["flat", "hills"]}, "preferences cannot include both flat and hills"),
+            ({"preference_text": 3}, "preference_text must be a string"),
+            ({"preference_text": "a" * 201}, "preference_text must be 200 characters or fewer"),
+        ]
+        for extra, message in cases:
+            response, spy = self.post(**extra)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.data["message"], message)
+            spy.assert_not_called()
+
     def test_starting_point_is_still_required(self, llm):
         response = self.client.post(URL, {"distance": 5000}, format="json")
         self.assertEqual(response.status_code, 400)

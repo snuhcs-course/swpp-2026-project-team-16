@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 import com.example.runtime.ui.common.AccentButton
@@ -32,7 +33,7 @@ private val SHEET_PEEK_HEIGHT = 96.dp
 private val MAP_BOTTOM_PADDING = 340.dp
 
 // 4. Route Input Screen (화면 4)
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
     val language = LocalConfiguration.current.locales[0].language
@@ -141,6 +142,46 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                         modifier = Modifier.width(140.dp)
                     )
                 }
+                Spacer(modifier = Modifier.height(Spacing.m))
+                Text(stringResource(R.string.label_preferences), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.preferences_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(Spacing.s))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    RoutePreference.entries.forEach { preference ->
+                        val selected = preference in routeViewModel.preferences
+                        FilterChip(
+                            selected = selected,
+                            onClick = { routeViewModel.togglePreference(preference) },
+                            label = { Text(stringResource(preference.label)) },
+                            leadingIcon = if (selected) {
+                                { Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                            } else null,
+                            shape = MaterialTheme.shapes.extraLarge
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(Spacing.s))
+                OutlinedTextField(
+                    value = routeViewModel.preferenceText,
+                    onValueChange = routeViewModel::onPreferenceTextChange,
+                    label = { Text(stringResource(R.string.label_preference_text)) },
+                    placeholder = { Text(stringResource(R.string.preference_text_placeholder)) },
+                    supportingText = {
+                        Text(
+                            "${routeViewModel.preferenceText.length}/$MAX_PREFERENCE_TEXT_LENGTH",
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
+                    minLines = 2,
+                    maxLines = 4,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 routeViewModel.error?.let {
                     Spacer(modifier = Modifier.height(Spacing.s))
                     Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)

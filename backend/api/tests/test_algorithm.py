@@ -106,12 +106,25 @@ class CreateRoutesTests(SimpleTestCase):
         download.return_value = self.graph
         with mock.patch(
             "api.route_algorithm.algorithm.score_route",
-            side_effect=lambda gain, signals, length, target: -length,
+            side_effect=lambda gain, signals, length, target, weights: -length,
         ):
             routes = self.create()
 
         self.assertEqual([r.distance for r in routes], sorted((r.distance for r in routes), reverse=True))
         self.assertNotEqual(routes[0].distance, 3000)
+
+    def test_scores_with_preference_weights(self, download, llm):
+        download.return_value = self.graph
+        with (
+            mock.patch("api.route_algorithm.elevation.fetch_elevations", side_effect=fake_elevations),
+            mock.patch("api.route_algorithm.algorithm.score_route", return_value=0) as score,
+        ):
+            create_routes(self.start, 3000, "ko", preferences=["flat", "few_signals"])
+
+        weights = score.call_args.args[4]
+        self.assertEqual(weights.per_climb_m, 3.0)
+        self.assertEqual(weights.per_traffic_light, 30.0)
+        self.assertEqual(weights.per_distance_error_percent, 5.0)
 
     def test_works_without_elevation(self, download, llm):
         download.return_value = self.graph

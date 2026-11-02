@@ -1,6 +1,7 @@
 package com.example.runtime.ui.route
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -42,6 +43,20 @@ class PlaceField {
 }
 
 enum class PickTarget { START, END }
+
+enum class RoutePreference(val apiValue: String, @StringRes val label: Int) {
+    FLAT("flat", R.string.preference_flat),
+    HILLS("hills", R.string.preference_hills),
+    FEW_SIGNALS("few_signals", R.string.preference_few_signals),
+    EXACT_DISTANCE("exact_distance", R.string.preference_exact_distance),
+}
+
+private val CONFLICTING_PREFERENCES = mapOf(
+    RoutePreference.FLAT to RoutePreference.HILLS,
+    RoutePreference.HILLS to RoutePreference.FLAT,
+)
+
+const val MAX_PREFERENCE_TEXT_LENGTH = 200
 enum class ElevationLoadState {
     Loading,
     Success,
@@ -56,6 +71,10 @@ class RouteViewModel(
     val endField = PlaceField()
     var distanceInput by mutableStateOf("")
     var pickTarget by mutableStateOf(PickTarget.START)
+    var preferences by mutableStateOf<Set<RoutePreference>>(emptySet())
+        private set
+    var preferenceText by mutableStateOf("")
+        private set
 
     var error by mutableStateOf<UiText?>(null)
         private set
@@ -117,6 +136,8 @@ class RouteViewModel(
         }
         distanceInput = ""
         pickTarget = PickTarget.START
+        preferences = emptySet()
+        preferenceText = ""
         error = null
         generated = null
         options = emptyList()
@@ -133,6 +154,18 @@ class RouteViewModel(
         pendingEnd = null
         pendingDistanceMeters = null
         isGenerating = false
+    }
+
+    fun togglePreference(preference: RoutePreference) {
+        preferences = if (preference in preferences) {
+            preferences - preference
+        } else {
+            preferences - setOfNotNull(CONFLICTING_PREFERENCES[preference]) + preference
+        }
+    }
+
+    fun onPreferenceTextChange(text: String) {
+        preferenceText = text.take(MAX_PREFERENCE_TEXT_LENGTH)
     }
 
     fun onLanguageChange(language: String) {
@@ -287,6 +320,8 @@ class RouteViewModel(
                     endPoint = namedEnd,
                     distanceMeters = distanceMeters,
                     language = pendingLanguage,
+                    preferences = RoutePreference.entries.filter { it in preferences }.map { it.apiValue },
+                    preferenceText = preferenceText.trim(),
                 )
                 options = generatedData.options
                     .map { GeneratedRouteData(it.temporaryRouteId, it.route) }
