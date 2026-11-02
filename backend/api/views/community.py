@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.models import Route, RouteReview, RouteRun, SharedRoute, TemporaryRoute, UserSavedRoute
+from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, TemporaryRoute, UserSavedRoute
 
 
 MAX_TITLE_LENGTH = 60
@@ -167,13 +167,28 @@ def route_runs(request):
     else:
         try:
             route = Route.objects.filter(
-                Q(shared__isnull=False) | Q(usersavedroute__user=request.user) | Q(created_by=request.user),
+                Q(shared__isnull=False)
+                | Q(usersavedroute__user=request.user)
+                | Q(created_by=request.user)
+                | Q(groups__members__user=request.user),
                 id=route_id,
             ).distinct().get()
         except (Route.DoesNotExist, ValueError):
             return _error("Route not found.", status.HTTP_404_NOT_FOUND)
 
-    run = RouteRun.objects.create(user=request.user, route=route, distance_m=distance_m, duration_s=duration_s)
+    group = None
+    group_id = request.data.get("group_id")
+    if group_id is not None:
+        try:
+            group = RunningGroup.objects.get(id=group_id, members__user=request.user)
+        except (RunningGroup.DoesNotExist, ValueError, TypeError):
+            return _error("Group not found.", status.HTTP_404_NOT_FOUND)
+        if group.route_id != route.id:
+            return _error("This run is not on the group's route.", status.HTTP_400_BAD_REQUEST)
+
+    run = RouteRun.objects.create(
+        user=request.user, route=route, group=group, distance_m=distance_m, duration_s=duration_s
+    )
     shared_route = SharedRoute.objects.filter(route=route).first()
 
     return Response(

@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +21,8 @@ import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.common.sharedElement
+import com.example.runtime.ui.group.GroupsTab
+import com.example.runtime.ui.group.GroupsViewModel
 import com.example.runtime.ui.mypage.DistanceBadge
 import com.example.runtime.ui.theme.Spacing
 
@@ -29,8 +30,16 @@ private const val TAB_ROUTES = 0
 private const val TAB_CREWS = 1
 
 @Composable
-fun CommunityScreen(communityViewModel: CommunityViewModel, onRouteClick: (Int) -> Unit) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(TAB_ROUTES) }
+fun CommunityScreen(
+    communityViewModel: CommunityViewModel,
+    groupsViewModel: GroupsViewModel,
+    isLoggedIn: Boolean,
+    onRouteClick: (Int) -> Unit,
+    onGroupClick: (Int) -> Unit,
+    onCreateGroup: () -> Unit,
+    onLogInRequired: () -> Unit,
+) {
+    val selectedTab = communityViewModel.selectedTab
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -41,22 +50,23 @@ fun CommunityScreen(communityViewModel: CommunityViewModel, onRouteClick: (Int) 
         PrimaryTabRow(selectedTabIndex = selectedTab, containerColor = MaterialTheme.colorScheme.background) {
             Tab(
                 selected = selectedTab == TAB_ROUTES,
-                onClick = { selectedTab = TAB_ROUTES },
+                onClick = { communityViewModel.selectedTab = TAB_ROUTES },
                 text = { Text(stringResource(R.string.community_tab_routes), style = MaterialTheme.typography.titleSmall) }
             )
             Tab(
                 selected = selectedTab == TAB_CREWS,
-                onClick = { selectedTab = TAB_CREWS },
+                onClick = { communityViewModel.selectedTab = TAB_CREWS },
                 text = { Text(stringResource(R.string.community_tab_crews), style = MaterialTheme.typography.titleSmall) }
             )
         }
         when (selectedTab) {
             TAB_ROUTES -> SharedRoutesTab(communityViewModel, onRouteClick)
-            else -> EmptyState(
-                icon = R.drawable.ic_groups,
-                title = stringResource(R.string.crews_coming_soon_title),
-                message = stringResource(R.string.crews_coming_soon_message),
-                modifier = Modifier.fillMaxSize()
+            else -> GroupsTab(
+                groupsViewModel = groupsViewModel,
+                isLoggedIn = isLoggedIn,
+                onGroupClick = onGroupClick,
+                onCreateGroup = onCreateGroup,
+                onLogInRequired = onLogInRequired
             )
         }
     }

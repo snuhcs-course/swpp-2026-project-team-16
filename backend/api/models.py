@@ -91,6 +91,7 @@ class RouteRun(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="runs")
     distance_m = models.PositiveIntegerField()
     duration_s = models.PositiveIntegerField()
+    group = models.ForeignKey("RunningGroup", on_delete=models.SET_NULL, null=True, blank=True, related_name="runs")
     finished_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -119,3 +120,46 @@ class RouteReview(models.Model):
             models.UniqueConstraint(fields=["shared_route", "user"], name="unique_review_per_user"),
             models.CheckConstraint(condition=models.Q(rating__gte=1, rating__lte=5), name="rating_between_1_and_5"),
         ]
+
+
+class RunningGroup(models.Model):
+    host = models.ForeignKey(User, on_delete=models.CASCADE, related_name="hosted_groups")
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="groups")
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=300, blank=True, default="")
+    capacity = models.PositiveSmallIntegerField()
+    meet_at = models.DateTimeField()
+    join_deadline = models.DateTimeField()
+    start_name = models.CharField(max_length=100, blank=True, default="")
+    start_latitude = models.FloatField()
+    start_longitude = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["meet_at", "id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(capacity__gte=2, capacity__lte=20), name="group_capacity_between_2_and_20"),
+            models.CheckConstraint(condition=models.Q(join_deadline__lte=models.F("meet_at")), name="group_deadline_before_meet"),
+        ]
+
+
+class GroupMember(models.Model):
+    group = models.ForeignKey(RunningGroup, on_delete=models.CASCADE, related_name="members")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="group_memberships")
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["joined_at", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["group", "user"], name="unique_group_member"),
+        ]
+
+
+class GroupMessage(models.Model):
+    group = models.ForeignKey(RunningGroup, on_delete=models.CASCADE, related_name="messages")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="group_messages")
+    text = models.CharField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]

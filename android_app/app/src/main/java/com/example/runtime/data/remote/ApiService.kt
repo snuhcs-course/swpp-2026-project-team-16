@@ -86,4 +86,33 @@ interface ApiService {
 
     @DELETE("api/v1/community/reviews/{reviewId}/")
     suspend fun deleteReview(@Path("reviewId") reviewId: Int): ApiResponse<Unit>
+
+    @GET("api/v1/groups/")
+    suspend fun groups(
+        @Query("filter") filter: String,
+        @Query("lat") latitude: Double? = null,
+        @Query("lon") longitude: Double? = null,
+        @Query("radius_km") radiusKm: Double? = null,
+    ): ApiResponse<List<RunningGroup>>
+
+    @GET("api/v1/groups/{groupId}/")
+    suspend fun group(@Path("groupId") groupId: Int): ApiResponse<RunningGroup>
+
+    @POST("api/v1/groups/")
+    suspend fun createGroup(@Body body: CreateGroupRequest): ApiResponse<RunningGroup>
+
+    @DELETE("api/v1/groups/{groupId}/")
+    suspend fun deleteGroup(@Path("groupId") groupId: Int): ApiResponse<Unit>
+
+    @POST("api/v1/groups/{groupId}/membership/")
+    suspend fun joinGroup(@Path("groupId") groupId: Int): ApiResponse<RunningGroup>
+
+    @DELETE("api/v1/groups/{groupId}/membership/")
+    suspend fun leaveGroup(@Path("groupId") groupId: Int): ApiResponse<RunningGroup>
+
+    @GET("api/v1/groups/{groupId}/messages/")
+    suspend fun groupMessages(@Path("groupId") groupId: Int, @Query("after") after: Int? = null): ApiResponse<List<GroupMessage>>
+
+    @POST("api/v1/groups/{groupId}/messages/")
+    suspend fun sendGroupMessage(@Path("groupId") groupId: Int, @Body body: SendMessageRequest): ApiResponse<GroupMessage>
 }

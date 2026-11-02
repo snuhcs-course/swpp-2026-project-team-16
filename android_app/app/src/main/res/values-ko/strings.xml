@@ -186,9 +186,7 @@
 
     <string name="nav_community">커뮤니티</string>
     <string name="community_tab_routes">루트 공유</string>
-    <string name="community_tab_crews">러닝 크루</string>
-    <string name="crews_coming_soon_title">러닝 크루는 준비 중이에요</string>
-    <string name="crews_coming_soon_message">곧 크루를 만들고 함께 달릴 수 있어요.</string>
+    <string name="community_tab_crews">러닝 모임</string>
     <string name="no_shared_routes">아직 공유된 루트가 없어요</string>
     <string name="no_shared_routes_message">달리기를 마친 뒤 요약 화면에서 루트를 공유해 보세요.</string>
     <string name="shared_by">%1$s · %2$s</string>
@@ -215,6 +213,76 @@
     <string name="error_run_before_share">이 루트를 달린 뒤에 공유할 수 있어요.</string>
     <string name="error_already_shared">이미 공유된 루트예요.</string>
 
+    <string name="group_filter_all">전체</string>
+    <string name="group_filter_closing_soon">마감 임박</string>
+    <string name="group_filter_nearby">내 근처</string>
+    <string name="group_filter_mine">참여 중</string>
+    <string name="group_radius_label">반경</string>
+    <string name="group_radius_km">%1$skm</string>
+    <string name="group_status_open">모집 중</string>
+    <string name="group_status_closing_soon">마감 임박</string>
+    <string name="group_status_full">인원 마감</string>
+    <string name="group_status_closed">모집 마감</string>
+    <string name="group_deadline_passed">마감됨</string>
+    <string name="group_join_until">참여 마감 · %1$s</string>
+    <string name="group_member_count">%1$d/%2$d명</string>
+    <string name="group_distance_from_me">%1$s 거리</string>
+    <string name="no_groups">아직 러닝 모임이 없어요.</string>
+    <string name="no_closing_soon_groups">마감 임박한 모임이 없어요.</string>
+    <string name="no_nearby_groups">근처에 열린 모임이 없어요.</string>
+    <string name="no_my_groups">아직 참여한 모임이 없어요.</string>
+    <string name="no_groups_message">저장한 경로나 공유된 경로로 모임을 만들어 함께 달려 보세요.</string>
+    <string name="action_create_group">모임 만들기</string>
+    <string name="action_create_group_with_route">이 경로로 러닝 모임 만들기</string>
+    <string name="create_group_title">새 러닝 모임</string>
+    <string name="label_group_route">경로</string>
+    <string name="group_pick_route">저장한 경로 선택</string>
+    <string name="group_no_saved_routes">저장한 경로가 없어요. 경로를 저장하거나, 커뮤니티의 공유 경로에서 모임을 만들 수 있어요.</string>
+    <string name="label_group_title">모임 이름</string>
+    <string name="label_group_description">소개 (선택)</string>
+    <string name="label_group_capacity">모집 인원</string>
+    <string name="group_capacity_value">%1$d명</string>
+    <string name="group_capacity_increase">인원 늘리기</string>
+    <string name="group_capacity_hint">나를 포함한 인원이에요. 정원이 차면 모집이 마감돼요.</string>
+    <string name="label_group_meet_at">달리는 시간</string>
+    <string name="label_group_deadline">참여 마감</string>
+    <string name="error_group_deadline_after_run">참여 마감은 달리는 시간보다 앞서야 해요.</string>
+    <string name="error_group_deadline_past">참여 마감은 지금 이후여야 해요.</string>
+    <string name="error_group_not_found">삭제된 모임이에요.</string>
+    <string name="error_group_full">인원이 마감된 모임이에요.</string>
+    <string name="error_group_closed">모집이 끝난 모임이에요.</string>
+    <string name="error_group_already_joined">이미 참여한 모임이에요.</string>
+    <string name="error_group_leave_started">달리기가 시작된 뒤에는 참여를 취소할 수 없어요.</string>
+    <string name="error_group_chat_members">모임에 참여해야 채팅을 볼 수 있어요.</string>
+    <string name="creating">만드는 중…</string>
+    <string name="joining">참여하는 중…</string>
+    <string name="action_next">다음</string>
+    <string name="group_created_message">모임을 열었어요</string>
+    <string name="group_hosted_by">%1$s 님의 모임</string>
+    <string name="group_meet_at">달리는 시간 %1$s</string>
+    <string name="group_join_deadline_at">참여 마감 %1$s</string>
+    <string name="group_members_title">참여 인원</string>
+    <string name="group_ranking_title">랭킹</string>
+    <string name="group_ranking_rule">멤버별 가장 빠른 평균 페이스 순이에요. 경로의 80% 미만으로 달린 기록은 제외돼요.</string>
+    <string name="group_ranking_empty">아직 기록이 없어요. GPS를 켜고 이 경로를 완주하면 랭킹에 올라가요.</string>
+    <string name="group_ranking_me">(나)</string>
+    <string name="action_join_group">참여하기</string>
+    <string name="action_leave_group">참여 취소</string>
+    <string name="action_delete_group">모임 삭제</string>
+    <string name="action_group_chat">채팅</string>
+    <string name="action_run_now">실제로 뛰기</string>
+    <string name="group_joined_message">모임에 참여했어요</string>
+    <string name="group_left_message">참여를 취소했어요</string>
+    <string name="group_deleted_message">모임을 삭제했어요</string>
+    <string name="leave_group_title">참여를 취소할까요?</string>
+    <string name="leave_group_message">내 자리는 다른 사람이 참여할 수 있게 열려요.</string>
+    <string name="delete_group_title">모임을 삭제할까요?</string>
+    <string name="delete_group_message">참여 인원, 채팅, 랭킹이 모두 삭제돼요.</string>
+    <string name="group_chat_empty_title">아직 메시지가 없어요</string>
+    <string name="group_chat_empty_message">인사하고 만날 장소를 정해 보세요.</string>
+    <string name="group_chat_placeholder">메시지 입력</string>
+    <string name="action_send">보내기</string>
+    <string name="login_prompt_group">러닝 모임을 만들거나 참여하려면 로그인하세요.</string>
     <plurals name="run_count">
         <item quantity="other">%d회</item>
     </plurals>
@@ -245,5 +313,14 @@
 
     <plurals name="review_count">
         <item quantity="other">리뷰 %d개</item>
+    </plurals>
+    <plurals name="group_days_left">
+        <item quantity="other">%d일 남음</item>
+    </plurals>
+    <plurals name="group_hours_left">
+        <item quantity="other">%d시간 남음</item>
+    </plurals>
+    <plurals name="group_minutes_left">
+        <item quantity="other">%d분 남음</item>
     </plurals>
 </resources>
