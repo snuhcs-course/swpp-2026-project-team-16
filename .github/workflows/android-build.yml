@@ -34,6 +34,7 @@ jobs:
           NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
+          test -n "$GOOGLE_WEB_CLIENT_ID" || { echo "GOOGLE_WEB_CLIENT_ID secret is missing"; exit 1; }
           mkdir -p ~/.gradle
           printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" >> ~/.gradle/gradle.properties
           printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID" >> ~/.gradle/gradle.properties

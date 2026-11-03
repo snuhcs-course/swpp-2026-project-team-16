@@ -47,7 +47,11 @@ suspend fun requestGoogleCredential(context: Context): GoogleCredentialResult {
         GoogleCredentialResult.Failure(UiText.Resource(R.string.error_google_no_account))
     } catch (e: GetCredentialException) {
         Log.e("GoogleCredential", "Google sign-in failed", e)
-        GoogleCredentialResult.Failure(UiText.Resource(R.string.error_google_sign_in_failed))
+        val detail = e.errorMessage?.toString()?.takeIf { it.isNotBlank() }
+        GoogleCredentialResult.Failure(
+            detail?.let { UiText.Resource(R.string.error_google_sign_in_failed_detail, listOf(it)) }
+                ?: UiText.Resource(R.string.error_google_sign_in_failed)
+        )
     } catch (e: GoogleIdTokenParsingException) {
         Log.e("GoogleCredential", "Invalid Google ID token response", e)
         GoogleCredentialResult.Failure(UiText.Resource(R.string.error_google_sign_in_failed))

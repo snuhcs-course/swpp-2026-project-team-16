@@ -26,8 +26,18 @@ android {
         manifestPlaceholders["naverMapClientId"] = providers.gradleProperty("NAVER_MAP_CLIENT_ID").getOrElse("")
     }
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("debug")
             enableUnitTestCoverage = true
         }
         release {

@@ -21,6 +21,7 @@
     <string name="error_google_not_configured">Google sign-in is not set up for this build.</string>
     <string name="error_google_no_account">No Google account found on this device.</string>
     <string name="error_google_sign_in_failed">Google sign-in failed. Please try again.</string>
+    <string name="error_google_sign_in_failed_detail">Google sign-in failed: %1$s</string>
     <string name="error_google_invalid">Google sign-in could not be verified.</string>
     <string name="error_google_unavailable">Google sign-in is temporarily unavailable.</string>
     <string name="error_google_email_unverified">Your Google email must be verified.</string>
