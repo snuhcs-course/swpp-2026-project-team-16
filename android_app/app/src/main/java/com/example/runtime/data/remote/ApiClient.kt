@@ -73,7 +73,9 @@ object ApiClient {
         explicitNulls = false
     }
 
-    private const val READ_TIMEOUT_SECONDS = 45L
+    private const val CONNECT_TIMEOUT_SECONDS = 30L
+    private const val WRITE_TIMEOUT_SECONDS = 30L
+    private const val READ_TIMEOUT_SECONDS = 120L
 
     val api: ApiService by lazy { create(BuildConfig.BASE_URL) }
 
@@ -83,6 +85,8 @@ object ApiClient {
         onUnauthorized: () -> Unit = SessionEvents::notifyExpired,
     ): ApiService {
         val client = OkHttpClient.Builder()
+            .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
             .apply {
