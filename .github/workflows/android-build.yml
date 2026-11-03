@@ -32,9 +32,11 @@ jobs:
       - name: Configure Gradle properties
         env:
           NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           mkdir -p ~/.gradle
           printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" >> ~/.gradle/gradle.properties
+          printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID" >> ~/.gradle/gradle.properties
 
       - name: Run Android unit tests
         run: ./gradlew testDebugUnitTest
