@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 import com.example.runtime.data.remote.Place
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.theme.Spacing
 
 private const val MAX_VISIBLE_SUGGESTIONS = 5
@@ -30,6 +32,8 @@ fun PlaceSearchField(
             onValueChange = onInputChange,
             label = { Text(label) },
             singleLine = true,
+            keyboardOptions = doneKeyboardOptions(),
+            keyboardActions = hideKeyboardActions(),
             shape = MaterialTheme.shapes.medium,
             supportingText = field.selected?.let { place -> { Text(place.address, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
             trailingIcon = when {

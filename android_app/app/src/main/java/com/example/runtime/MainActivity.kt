@@ -204,7 +204,8 @@ fun RunTimeApp() {
         }
     ) { innerPadding ->
         CompositionLocalProvider(LocalAppMessages provides appMessages) {
-            SharedTransitionLayout(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+            val bottomPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
+            SharedTransitionLayout(modifier = Modifier.padding(bottomPadding).consumeWindowInsets(bottomPadding)) {
                 CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                     AnimatedContent(
                         targetState = currentScreen,

@@ -20,7 +20,9 @@ import com.example.runtime.R
 import com.example.runtime.ui.common.AccentButton
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDateTime
+import com.example.runtime.ui.common.doneKeyboardOptions
 import com.example.runtime.ui.common.formatDistance
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.theme.Spacing
 import java.time.Duration
 import java.time.Instant
@@ -58,7 +60,7 @@ fun CreateGroupScreen(
     }
     BackHandler(onBack = onBack)
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().imePadding()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s),
             verticalAlignment = Alignment.CenterVertically
@@ -72,7 +74,6 @@ fun CreateGroupScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .imePadding()
                 .padding(horizontal = Spacing.m)
         ) {
             FieldLabel(stringResource(R.string.label_group_route))
@@ -90,6 +91,8 @@ fun CreateGroupScreen(
                 onValueChange = { title = it.take(MAX_GROUP_TITLE_LENGTH) },
                 label = { Text(stringResource(R.string.label_group_title)) },
                 singleLine = true,
+                keyboardOptions = doneKeyboardOptions(),
+                keyboardActions = hideKeyboardActions(),
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -99,6 +102,8 @@ fun CreateGroupScreen(
                 onValueChange = { description = it.take(MAX_GROUP_DESCRIPTION_LENGTH) },
                 label = { Text(stringResource(R.string.label_group_description)) },
                 minLines = 3,
+                keyboardOptions = doneKeyboardOptions(),
+                keyboardActions = hideKeyboardActions(),
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             )

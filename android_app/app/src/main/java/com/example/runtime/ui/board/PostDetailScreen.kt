@@ -20,6 +20,8 @@ import com.example.runtime.data.remote.BoardComment
 import com.example.runtime.data.remote.BoardPost
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.theme.Spacing
 
@@ -172,6 +174,8 @@ fun PostDetailScreen(
                     onValueChange = { draft = it.take(MAX_COMMENT_LENGTH) },
                     placeholder = { Text(stringResource(R.string.board_comment_placeholder)) },
                     maxLines = 4,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.weight(1f)
                 )

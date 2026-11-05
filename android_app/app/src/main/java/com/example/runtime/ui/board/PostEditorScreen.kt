@@ -15,6 +15,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.example.runtime.R
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.theme.Spacing
 
 @Composable
@@ -71,6 +73,8 @@ fun PostEditorScreen(
                 onValueChange = { title = it.take(MAX_POST_TITLE_LENGTH).replace("\n", " ") },
                 placeholder = { Text(stringResource(R.string.label_post_title)) },
                 singleLine = true,
+                keyboardOptions = doneKeyboardOptions(),
+                keyboardActions = hideKeyboardActions(),
                 textStyle = MaterialTheme.typography.titleMedium,
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()

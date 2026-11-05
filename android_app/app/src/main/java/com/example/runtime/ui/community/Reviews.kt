@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 import com.example.runtime.data.remote.RouteReview
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.theme.Spacing
 import com.example.runtime.ui.theme.StarYellow
 import java.util.Locale
@@ -228,6 +230,8 @@ fun ReviewDialog(
                     onValueChange = { comment = it.take(MAX_COMMENT_LENGTH) },
                     label = { Text(stringResource(R.string.label_review_comment)) },
                     minLines = 3,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     enabled = !isSubmitting,
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
