@@ -59,12 +59,19 @@ class ClimbProfileTests(SimpleTestCase):
         elevations, distances = [], []
         for height in [10, 30, 20, 40]:
             base = len(elevations)
-            elevations += [0, 0, height / 2, height, height, 0, 0]
-            distances += [(base + i) * 50 for i in range(7)]
+            bump = [0, 0, height / 4, height / 2, 3 * height / 4, height, height, 3 * height / 4, height / 2, height / 4, 0, 0]
+            elevations += bump
+            distances += [(base + i) * 50 for i in range(len(bump))]
 
         segments = climb_profile(distances, elevations).uphill_segments
 
-        self.assertEqual([s.start_km for s in segments], [0.3, 0.7, 1.1])
+        starts = [s.start_km for s in segments]
+        gains = [s.elevation_gain_m for s in segments]
+        self.assertEqual(len(segments), 3)
+        self.assertEqual(starts, sorted(starts))
+        self.assertGreater(starts[0], 0.5)
+        self.assertLess(gains[1], gains[0])
+        self.assertLess(gains[0], gains[2])
 
 
 class FetchElevationsTests(TestCase):

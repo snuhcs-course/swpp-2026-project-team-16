@@ -25,6 +25,9 @@ SMOOTHING_WINDOW = 3
 MIN_UPHILL_GAIN_M = 5
 MIN_UPHILL_GRADE = 0.03
 MAX_UPHILLS = 3
+UPHILL_FIRST_MARGIN_M = 3
+MAX_SPIKE_SAMPLES = 3
+SPIKE_THRESHOLD_M = 10
 
 M_PER_DEG = 111_000
 
@@ -37,6 +40,9 @@ class ElevationError(Exception):
 class ClimbProfile:
     total_gain_m: int
     uphill_segments: list[UphillSegment]
+    total_loss_m: int = 0
+    sustained_gain_m: int = 0
+    reversed: bool = False
 
 
 def _fetch_batch(points):
@@ -172,7 +178,24 @@ def sample_route(coordinates: list[tuple[float, float]]) -> tuple[list[tuple[flo
     return samples, targets
 
 
+def _remove_spikes(values):
+    values = list(values)
+    for width in range(1, MAX_SPIKE_SAMPLES + 1):
+        for i in range(1, len(values) - width):
+            left, right = values[i - 1], values[i + width]
+            if abs(left - right) > SPIKE_THRESHOLD_M:
+                continue
+            segment = values[i:i + width]
+            above = all(value - max(left, right) > SPIKE_THRESHOLD_M for value in segment)
+            below = all(min(left, right) - value > SPIKE_THRESHOLD_M for value in segment)
+            if above or below:
+                for k in range(width):
+                    values[i + k] = left + (right - left) * (k + 1) / (width + 1)
+    return values
+
+
 def _smooth(values):
+    values = _remove_spikes(values)
     half = SMOOTHING_WINDOW // 2
     return [
         sum(values[max(0, i - half):i + half + 1]) / len(values[max(0, i - half):i + half + 1])
@@ -180,12 +203,27 @@ def _smooth(values):
     ]
 
 
-def climb_profile(distances: list[float], elevations: list[float]) -> ClimbProfile:
+def _gain(values):
+    return sum(max(b - a, 0.0) for a, b in zip(values, values[1:]))
+
+
+def climbs_late(elevations: list[float]) -> bool:
+    if len(elevations) < 3:
+        return False
+    smoothed = _smooth(elevations)
+    middle = len(smoothed) // 2
+    late_gain = _gain(smoothed[middle:])
+    late_gain_if_reversed = _gain(smoothed[:middle + 1][::-1])
+    return late_gain > late_gain_if_reversed + UPHILL_FIRST_MARGIN_M
+
+
+def climb_profile(distances: list[float], elevations: list[float], reversed: bool = False) -> ClimbProfile:
     if len(elevations) < 2:
-        return ClimbProfile(total_gain_m=0, uphill_segments=[])
+        return ClimbProfile(total_gain_m=0, uphill_segments=[], reversed=reversed)
 
     smoothed = _smooth(elevations)
-    total_gain = sum(max(b - a, 0.0) for a, b in zip(smoothed, smoothed[1:]))
+    total_gain = _gain(smoothed)
+    total_loss = _gain(smoothed[::-1])
 
     uphills, start = [], None
     for i in range(1, len(smoothed) + 1):
@@ -208,10 +246,16 @@ def climb_profile(distances: list[float], elevations: list[float]) -> ClimbProfi
     return ClimbProfile(
         total_gain_m=round(total_gain),
         uphill_segments=sorted(biggest, key=lambda s: s.start_km),
+        total_loss_m=round(total_loss),
+        sustained_gain_m=sum(segment.elevation_gain_m for segment in uphills),
+        reversed=reversed,
     )
 
 
-def climb_profiles(routes: list[list[tuple[float, float]]]) -> list[ClimbProfile] | None:
+def climb_profiles(
+    routes: list[list[tuple[float, float]]],
+    reversible: bool = False,
+) -> list[ClimbProfile] | None:
     sampled = [sample_route(coordinates) for coordinates in routes]
     points = [p for samples, _ in sampled for p in samples]
     try:
@@ -221,6 +265,10 @@ def climb_profiles(routes: list[list[tuple[float, float]]]) -> list[ClimbProfile
 
     profiles, offset = [], 0
     for samples, distances in sampled:
-        profiles.append(climb_profile(distances, elevations[offset:offset + len(samples)]))
+        route_elevations = elevations[offset:offset + len(samples)]
+        if reversible and climbs_late(route_elevations):
+            profiles.append(climb_profile(distances, route_elevations[::-1], reversed=True))
+        else:
+            profiles.append(climb_profile(distances, route_elevations))
         offset += len(samples)
     return profiles
