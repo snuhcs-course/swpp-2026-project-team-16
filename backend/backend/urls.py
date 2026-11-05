@@ -48,4 +48,5 @@ urlpatterns = [
 
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
     path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),
+    path("api/v1/places/translate/", places.translate_place_api, name="translate_place"),
 ]

@@ -65,3 +65,12 @@ def translate_places(places: list[Place], llm=None) -> list[Place]:
             replace(place, name=_cache[key][0], address=_cache[key][1])
             for place, key in zip(places, keys)
         ]
+
+
+def translate_names(names: list[str], llm=None) -> list[str]:
+    targets = [name for name in dict.fromkeys(names) if name]
+    if not targets:
+        return list(names)
+    places = [Place(name=name, address="", longitude=0.0, latitude=0.0) for name in targets]
+    translated = {source.name: place.name for source, place in zip(places, translate_places(places, llm=llm))}
+    return [translated.get(name, name) for name in names]

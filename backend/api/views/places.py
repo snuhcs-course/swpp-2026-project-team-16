@@ -4,10 +4,15 @@ from rest_framework.response import Response
 
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.services.place_translation import translate_places
-from api.services.tmap import PlaceSearchError, reverse_geocode, search_places
+from api.services.tmap import Place, PlaceSearchError, reverse_geocode, search_places
 
 
 MAX_QUERY_LENGTH = 50
+MAX_PLACE_NAME_LENGTH = 200
+
+
+def _place_data(place, original):
+    return {**place.to_dict(), "name_ko": original.name, "address_ko": original.address}
 
 
 def _invalid_language(language):
@@ -55,11 +60,10 @@ def search_places_api(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    if language == "en" and places:
-        places = translate_places(places)
+    localized = translate_places(places) if language == "en" and places else places
 
     return Response(
-        {"status": "success", "data": [place.to_dict() for place in places]},
+        {"status": "success", "data": [_place_data(place, original) for place, original in zip(localized, places)]},
         status=status.HTTP_200_OK,
     )
 
@@ -93,7 +97,28 @@ def reverse_geocode_api(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    if language == "en":
-        place = translate_places([place])[0]
+    localized = translate_places([place])[0] if language == "en" else place
 
-    return Response({"status": "success", "data": place.to_dict()}, status=status.HTTP_200_OK)
+    return Response({"status": "success", "data": _place_data(localized, place)}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def translate_place_api(request):
+    name = (request.query_params.get("name") or "").strip()
+    address = (request.query_params.get("address") or "").strip()
+    language = request.query_params.get("language") or DEFAULT_LANGUAGE
+
+    if not name or len(name) > MAX_PLACE_NAME_LENGTH or len(address) > MAX_PLACE_NAME_LENGTH:
+        return Response(
+            {"status": "error", "message": f"name is required and must be {MAX_PLACE_NAME_LENGTH} characters or fewer"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if error := _invalid_language(language):
+        return error
+
+    if language == "en":
+        translated = translate_places([Place(name=name, address=address, longitude=0.0, latitude=0.0)])[0]
+        name, address = translated.name, translated.address
+
+    return Response({"status": "success", "data": {"name": name, "address": address}}, status=status.HTTP_200_OK)

@@ -69,6 +69,13 @@ interface ApiService {
     @GET("api/v1/places/search/")
     suspend fun searchPlaces(@Query("q") query: String, @Query("language") language: String): ApiResponse<List<Place>>
 
+    @GET("api/v1/places/translate/")
+    suspend fun translatePlace(
+        @Query("name") name: String,
+        @Query("address") address: String,
+        @Query("language") language: String,
+    ): ApiResponse<PlaceName>
+
     @GET("api/v1/places/reverse/")
     suspend fun reversePlace(
         @Query("lat") latitude: Double,

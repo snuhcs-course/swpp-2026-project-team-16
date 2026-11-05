@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from api.models import UserSavedRoute, Route, TemporaryRoute
+from api.services.language import request_language
 
 
 User = get_user_model()
@@ -47,6 +48,7 @@ def saved_routes_list(request):
     if request.method == 'GET':
         user_routes = UserSavedRoute.objects.filter(user=request.user)
         user_routes = user_routes.select_related('route', 'route__created_by')
+        language = request_language(request)
 
         routes_data = [
             {
@@ -54,8 +56,8 @@ def saved_routes_list(request):
                 "name": user_route.name,
                 "distance": user_route.route.distance,
                 "briefing": user_route.route.briefing,
-                "start_name": user_route.route.start_name,
-                "end_name": user_route.route.end_name,
+                "start_name": user_route.route.localized_names(language)[0],
+                "end_name": user_route.route.localized_names(language)[1],
                 "route": user_route.route.route,
                 "created_by": user_route.route.created_by.username if user_route.route.created_by else None,
                 "saved_at": user_route.saved_at
@@ -149,13 +151,14 @@ def saved_routes_detail(request, route_id):
     if request.method == 'GET':
 
         route = user_saved_route.route
+        start_name, end_name = route.localized_names(request_language(request))
         route_data = {
                 "id": route.id,
                 'name': user_saved_route.name,
                 "distance": route.distance,
                 "briefing": route.briefing,
-                "start_name": route.start_name,
-                "end_name": route.end_name,
+                "start_name": start_name,
+                "end_name": end_name,
                 "route": route.route,
                 "created_by": route.created_by.username if route.created_by else None,
                 "saved_at": user_saved_route.saved_at

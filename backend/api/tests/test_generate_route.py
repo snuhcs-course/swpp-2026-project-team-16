@@ -39,6 +39,12 @@ class FakeMapTestCase(APITestCase):
         patcher = mock.patch("api.route_algorithm.algorithm.count_signalized_crossings", return_value=0)
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch(
+            "api.views.generate_route.translate_names",
+            side_effect=lambda names: [f"{name} (en)" if name else "" for name in names],
+        )
+        self.translate = patcher.start()
+        self.addCleanup(patcher.stop)
 
 
 @mock.patch("api.route_algorithm.briefing.generate_text", side_effect=LLMError("offline"))

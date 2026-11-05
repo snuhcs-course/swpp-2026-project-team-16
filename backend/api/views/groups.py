@@ -10,6 +10,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from api.models import GroupMember, GroupMessage, Route, RunningGroup
+from api.route_algorithm.briefing import DEFAULT_LANGUAGE
+from api.services.language import request_language
 
 
 MAX_TITLE_LENGTH = 60
@@ -91,7 +93,7 @@ def _ranking(group, user):
     ]
 
 
-def _group_data(group, user, now, origin=None, detail=False):
+def _group_data(group, user, now, origin=None, detail=False, language=DEFAULT_LANGUAGE):
     member_count = _member_count(group)
     is_member = user.is_authenticated and group.members.filter(user=user).exists()
     data = {
@@ -101,7 +103,7 @@ def _group_data(group, user, now, origin=None, detail=False):
         "host": group.host.username,
         "route_id": group.route_id,
         "route_distance": group.route.distance,
-        "start_name": group.start_name,
+        "start_name": group.route.localized_names(language)[0] or group.start_name,
         "start_latitude": group.start_latitude,
         "start_longitude": group.start_longitude,
         "capacity": group.capacity,
@@ -217,7 +219,7 @@ def groups_list(request):
             }
             groups = sorted((g for g in groups if distances[g.id] <= radius_km * 1000), key=lambda g: distances[g.id])
 
-        data = [_group_data(group, request.user, now, origin) for group in groups]
+        data = [_group_data(group, request.user, now, origin, language=request_language(request)) for group in groups]
         return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     if not request.user.is_authenticated:
@@ -248,7 +250,7 @@ def groups_list(request):
         )
         GroupMember.objects.create(group=group, user=request.user)
     return Response(
-        {"status": "success", "data": _group_data(_groups().get(id=group.id), request.user, now, detail=True)},
+        {"status": "success", "data": _group_data(_groups().get(id=group.id), request.user, now, detail=True, language=request_language(request))},
         status=status.HTTP_201_CREATED,
     )
 
@@ -262,7 +264,7 @@ def groups_detail(request, group_id):
 
     if request.method == "GET":
         return Response(
-            {"status": "success", "data": _group_data(group, request.user, timezone.now(), detail=True)},
+            {"status": "success", "data": _group_data(group, request.user, timezone.now(), detail=True, language=request_language(request))},
             status=status.HTTP_200_OK,
         )
 
@@ -308,7 +310,7 @@ def group_membership(request, group_id):
             code = status.HTTP_200_OK
 
     group = _groups().get(id=group.id)
-    return Response({"status": "success", "data": _group_data(group, request.user, now, detail=True)}, status=code)
+    return Response({"status": "success", "data": _group_data(group, request.user, now, detail=True, language=request_language(request))}, status=code)
 
 
 def _message_data(message, user):

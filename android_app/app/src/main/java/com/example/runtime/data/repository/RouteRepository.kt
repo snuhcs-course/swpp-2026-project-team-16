@@ -8,6 +8,7 @@ import com.example.runtime.data.remote.ElevationLookupRequest
 import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.remote.PlaceName
 import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.SavedRoute
@@ -32,6 +33,8 @@ class RouteRepository(
                 endPoint = endPoint?.point,
                 startingPointName = startingPoint.name,
                 endPointName = endPoint?.name,
+                startingPointNameKo = startingPoint.nameKo,
+                endPointNameKo = endPoint?.nameKo,
                 preferences = preferences,
                 preferenceText = preferenceText,
             )
@@ -39,6 +42,9 @@ class RouteRepository(
 
     suspend fun searchPlaces(query: String, language: String): List<Place> =
         api.searchPlaces(query, language).data.orEmpty()
+
+    suspend fun translatePlace(name: String, address: String, language: String): PlaceName =
+        api.translatePlace(name, address, language).requireData()
 
     suspend fun reversePlace(latitude: Double, longitude: Double, language: String): Place? =
         api.reversePlace(latitude, longitude, language).data
