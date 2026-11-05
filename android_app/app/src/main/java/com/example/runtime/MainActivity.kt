@@ -453,6 +453,18 @@ fun RunTimeApp() {
                                             sharedDetailReturnScreen = "MyPage"
                                             currentScreen = "community_detail"
                                         },
+                                        onRunAgain = { run ->
+                                            runViewModel.start(
+                                                RunTarget(
+                                                    lines = run.route,
+                                                    distanceMeters = run.routeDistance,
+                                                    routeId = run.routeId,
+                                                    startName = run.startName
+                                                )
+                                            )
+                                            runReturnScreen = "MyPage"
+                                            currentScreen = "run_navigation"
+                                        },
                                         onCreateRoute = { currentScreen = "route_input" },
                                         onLogout = {
                                             authViewModel.logout {
@@ -470,7 +482,19 @@ fun RunTimeApp() {
                                             myPageViewModel = myPageViewModel,
                                             routeId = routeId,
                                             onBack = { currentScreen = "MyPage" },
-                                            onCreateGroup = { choice -> openCreateGroup(choice, returnTo = "saved_detail") }
+                                            onCreateGroup = { choice -> openCreateGroup(choice, returnTo = "saved_detail") },
+                                            onRun = { route ->
+                                                runViewModel.start(
+                                                    RunTarget(
+                                                        lines = route.route,
+                                                        distanceMeters = route.distance,
+                                                        routeId = route.id,
+                                                        startName = route.startName
+                                                    )
+                                                )
+                                                runReturnScreen = "saved_detail"
+                                                currentScreen = "run_navigation"
+                                            }
                                         )
                                     }
                                 }

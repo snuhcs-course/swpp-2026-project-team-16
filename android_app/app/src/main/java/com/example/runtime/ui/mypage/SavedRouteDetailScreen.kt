@@ -17,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.runtime.R
+import com.example.runtime.data.remote.SavedRoute
+import com.example.runtime.ui.common.AccentButton
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatKm
@@ -35,6 +37,7 @@ fun SavedRouteDetailScreen(
     routeId: Int,
     onBack: () -> Unit,
     onCreateGroup: (GroupRouteChoice) -> Unit,
+    onRun: (SavedRoute) -> Unit,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFullMap by remember { mutableStateOf(false) }
@@ -158,6 +161,14 @@ fun SavedRouteDetailScreen(
                 Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
             Spacer(modifier = Modifier.height(Spacing.l))
+            AccentButton(
+                text = stringResource(R.string.action_run_route),
+                icon = R.drawable.ic_directions_run,
+                onClick = { onRun(route) },
+                enabled = route.route.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(Spacing.s))
             CreateGroupButton(onClick = {
                 onCreateGroup(GroupRouteChoice(route.id, route.name.ifBlank { routeTitle(route.startName, route.endName, route.distance) }, route.distance))
             })

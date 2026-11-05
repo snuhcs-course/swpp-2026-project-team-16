@@ -126,6 +126,7 @@ def _run_data(run, saved_route_ids):
         "shared_route_id": shared_route.id if shared_route else None,
         "shared_title": shared_route.title if shared_route else "",
         "is_saved": route.id in saved_route_ids,
+        "route": route.route,
     }
 
 
@@ -170,7 +171,8 @@ def route_runs(request):
                 Q(shared__isnull=False)
                 | Q(usersavedroute__user=request.user)
                 | Q(created_by=request.user)
-                | Q(groups__members__user=request.user),
+                | Q(groups__members__user=request.user)
+                | Q(runs__user=request.user),
                 id=route_id,
             ).distinct().get()
         except (Route.DoesNotExist, ValueError):

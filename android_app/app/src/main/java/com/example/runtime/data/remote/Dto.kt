@@ -192,6 +192,7 @@ data class RunHistoryItem(
     @SerialName("shared_route_id") val sharedRouteId: Int? = null,
     @SerialName("shared_title") val sharedTitle: String = "",
     @SerialName("is_saved") val isSaved: Boolean = false,
+    val route: List<GeoJsonLineString> = emptyList(),
 )
 
 @Serializable
