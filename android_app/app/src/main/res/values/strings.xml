@@ -208,6 +208,8 @@
     <string name="run_record_retry">Save run again</string>
     <string name="action_share_to_community">Share</string>
     <string name="action_view_in_community">View in Community</string>
+    <string name="share_menu_other_apps">Share to other apps</string>
+    <string name="login_prompt_share_route">Log in to share this route to Community.</string>
     <string name="share_dialog_title">Share to Community</string>
     <string name="share_dialog_message">Other runners can see this route and run it.</string>
     <string name="label_share_title">Title</string>

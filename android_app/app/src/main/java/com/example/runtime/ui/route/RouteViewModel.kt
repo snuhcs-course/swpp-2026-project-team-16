@@ -11,6 +11,7 @@ import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
@@ -65,6 +66,7 @@ enum class ElevationLoadState {
 
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
+    private val communityRepository: CommunityRepository = CommunityRepository(),
 ) : ViewModel() {
 
     val startField = PlaceField()
@@ -93,6 +95,13 @@ class RouteViewModel(
 
     val saveState: SaveState
         get() = generated?.let { saveStates[it.temporaryRouteId] } ?: SaveState.Idle
+
+    var shareState by mutableStateOf<ShareState>(ShareState.Idle)
+        private set
+    private var sharedRouteIds by mutableStateOf<Map<Int, Int>>(emptyMap())
+
+    val sharedRouteId: Int?
+        get() = generated?.let { sharedRouteIds[it.temporaryRouteId] }
 
     // 고도 경사도 정보
     var elevations by mutableStateOf<List<Double>>(emptyList())
@@ -144,6 +153,8 @@ class RouteViewModel(
         selectedOption = 0
         saveStates = emptyMap()
         savedRouteIds = emptyMap()
+        shareState = ShareState.Idle
+        sharedRouteIds = emptyMap()
         elevationJob = null
         elevations = emptyList()
         slopes = emptyList()
@@ -330,6 +341,8 @@ class RouteViewModel(
                 generated = options.first()
                 saveStates = emptyMap()
                 savedRouteIds = emptyMap()
+                shareState = ShareState.Idle
+                sharedRouteIds = emptyMap()
 
                 onSuccess()
 
@@ -667,6 +680,36 @@ class RouteViewModel(
     }
 
     fun savedRouteId(temporaryRouteId: Int): Int? = savedRouteIds[temporaryRouteId]
+
+    fun clearShareError() {
+        if (shareState is ShareState.Failed) shareState = ShareState.Idle
+    }
+
+    fun share(title: String, description: String, onShared: (Int) -> Unit) {
+        val route = generated ?: return
+        val trimmedTitle = title.trim()
+        if (trimmedTitle.isEmpty() || shareState == ShareState.Sharing || sharedRouteId != null) return
+
+        val id = route.temporaryRouteId
+        shareState = ShareState.Sharing
+        sessionScope.launch {
+            try {
+                val savedId = savedRouteIds[id]
+                val shared = if (savedId != null) {
+                    communityRepository.shareRoute(savedId, trimmedTitle, description.trim())
+                } else {
+                    communityRepository.shareGeneratedRoute(id, trimmedTitle, description.trim())
+                }
+                sharedRouteIds = sharedRouteIds + (id to shared.id)
+                shareState = ShareState.Idle
+                onShared(shared.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                shareState = ShareState.Failed(e.toUiText())
+            }
+        }
+    }
 
     private fun normalizeLanguage(language: String): String =
         if (language in SUPPORTED_LANGUAGES) language else DEFAULT_LANGUAGE

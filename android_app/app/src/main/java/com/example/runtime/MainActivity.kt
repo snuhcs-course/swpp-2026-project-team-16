@@ -284,6 +284,19 @@ fun RunTimeApp() {
                                         },
                                         onSave = {
                                             if (authViewModel.isLoggedIn) routeViewModel.save() else loginPrompt = LOGIN_PROMPT_SAVE
+                                        },
+                                        isLoggedIn = authViewModel.isLoggedIn,
+                                        onLogInToShare = { loginPrompt = LOGIN_PROMPT_SHARE_ROUTE },
+                                        onShared = { sharedRouteId ->
+                                            appMessages.show(sharedMessage)
+                                            selectedSharedRouteId = sharedRouteId
+                                            sharedDetailReturnScreen = "route_result"
+                                            currentScreen = "community_detail"
+                                        },
+                                        onOpenShared = { sharedRouteId ->
+                                            selectedSharedRouteId = sharedRouteId
+                                            sharedDetailReturnScreen = "route_result"
+                                            currentScreen = "community_detail"
                                         }
                                     )
                                     "run_navigation" -> runViewModel.target?.let { target ->
@@ -484,6 +497,7 @@ fun RunTimeApp() {
                 LoginPromptDialog(
                     message = when (reason) {
                         LOGIN_PROMPT_SAVE -> R.string.login_prompt_save
+                        LOGIN_PROMPT_SHARE_ROUTE -> R.string.login_prompt_share_route
                         LOGIN_PROMPT_SAVE_SHARED -> R.string.login_prompt_save_shared
                         LOGIN_PROMPT_REVIEW -> R.string.login_prompt_review
                         LOGIN_PROMPT_GROUP, LOGIN_PROMPT_GROUP_DETAIL, LOGIN_PROMPT_GROUP_SHARED -> R.string.login_prompt_group
@@ -494,6 +508,7 @@ fun RunTimeApp() {
                         loginPrompt = null
                         when (reason) {
                             LOGIN_PROMPT_SAVE -> openAuth("login", returnTo = "route_result", save = true)
+                            LOGIN_PROMPT_SHARE_ROUTE -> openAuth("login", returnTo = "route_result", save = false)
                             LOGIN_PROMPT_SAVE_SHARED, LOGIN_PROMPT_REVIEW, LOGIN_PROMPT_GROUP_SHARED ->
                                 openAuth("login", returnTo = "community_detail", save = false)
                             LOGIN_PROMPT_GROUP, LOGIN_PROMPT_BOARD -> openAuth("login", returnTo = "community", save = false)
@@ -519,3 +534,4 @@ private const val LOGIN_PROMPT_GROUP_DETAIL = "group_detail"
 private const val LOGIN_PROMPT_GROUP_SHARED = "group_shared"
 private const val LOGIN_PROMPT_BOARD = "board"
 private const val LOGIN_PROMPT_POST = "post"
+private const val LOGIN_PROMPT_SHARE_ROUTE = "share_route"

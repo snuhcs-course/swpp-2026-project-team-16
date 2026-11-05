@@ -132,7 +132,7 @@ class RunViewModelTest {
                 status = "success",
                 data = SharedRoute(
                     id = 5,
-                    routeId = body.routeId,
+                    routeId = requireNotNull(body.routeId),
                     title = body.title,
                     sharedBy = "runner",
                     sharedAt = "2026-11-01",

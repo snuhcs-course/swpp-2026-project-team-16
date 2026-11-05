@@ -228,16 +228,38 @@ def shared_routes_list(request):
             status.HTTP_400_BAD_REQUEST,
         )
 
-    try:
-        route = Route.objects.get(id=request.data.get("route_id"))
-    except (Route.DoesNotExist, ValueError, TypeError):
-        return _error("Route not found.", status.HTTP_404_NOT_FOUND)
+    route_id = request.data.get("route_id")
+    temporary_route_id = request.data.get("temporary_route_id")
+    if bool(route_id) == bool(temporary_route_id):
+        return _error("Provide either route_id or temporary_route_id.", status.HTTP_400_BAD_REQUEST)
 
-    if not RouteRun.objects.filter(user=request.user, route=route).exists():
-        return _error("Run this route before sharing it.", status.HTTP_403_FORBIDDEN)
+    if temporary_route_id:
+        try:
+            temporary_route = TemporaryRoute.objects.get(
+                Q(user=request.user) | Q(user__isnull=True),
+                id=temporary_route_id,
+            )
+        except (TemporaryRoute.DoesNotExist, ValueError, TypeError):
+            return _error("Temporary route not found.", status.HTTP_404_NOT_FOUND)
+    else:
+        try:
+            route = Route.objects.get(id=route_id)
+        except (Route.DoesNotExist, ValueError, TypeError):
+            return _error("Route not found.", status.HTTP_404_NOT_FOUND)
+        if not (
+            route.created_by_id == request.user.id
+            or RouteRun.objects.filter(user=request.user, route=route).exists()
+            or UserSavedRoute.objects.filter(user=request.user, route=route).exists()
+        ):
+            return _error("Run or save this route before sharing it.", status.HTTP_403_FORBIDDEN)
 
     try:
         with transaction.atomic():
+            if temporary_route_id:
+                route = temporary_route.create_route(created_by=request.user)
+                if temporary_route.saved_route_id is None:
+                    temporary_route.saved_route = route
+                    temporary_route.save(update_fields=["saved_route"])
             shared_route = SharedRoute.objects.create(
                 route=route,
                 shared_by=request.user,

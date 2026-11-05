@@ -125,13 +125,52 @@ class SharedRouteTests(CommunityTestBase):
         super().setUp()
         self.my_route = self.route(created_by=self.runner)
 
-    def test_must_run_before_sharing(self):
-        self.log_in(self.runner)
+    def test_cannot_share_someone_elses_route_without_running_or_saving(self):
+        self.log_in(self.other)
 
         response = self.share(self.my_route)
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(SharedRoute.objects.exists())
+
+    def test_can_share_my_route_before_running(self):
+        self.log_in(self.runner)
+
+        response = self.share(self.my_route)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["data"]["run_count"], 0)
+
+    def test_can_share_a_saved_route(self):
+        UserSavedRoute.objects.create(user=self.other, route=self.my_route)
+        self.log_in(self.other)
+
+        self.assertEqual(self.share(self.my_route).status_code, 201)
+
+    def test_share_a_generated_route_reuses_one_route(self):
+        temporary = TemporaryRoute.objects.create(user=None, distance=3000, briefing="Flat", route=LINE)
+        self.log_in(self.runner)
+
+        response = self.client.post(
+            SHARED_URL, {"temporary_route_id": temporary.id, "title": "Fresh loop"}, format="json"
+        )
+        run = self.record_run(temporary_route_id=temporary.id)
+
+        self.assertEqual(response.status_code, 201)
+        route_id = response.data["data"]["route_id"]
+        self.assertEqual(run.data["data"]["route_id"], route_id)
+        self.assertEqual(run.data["data"]["shared_route_id"], response.data["data"]["id"])
+        self.assertEqual(Route.objects.filter(created_by=self.runner).count(), 2)
+
+    def test_share_requires_exactly_one_route_reference(self):
+        temporary = TemporaryRoute.objects.create(user=None, distance=3000, briefing="Flat", route=LINE)
+        self.log_in(self.runner)
+
+        for body in ({"title": "Loop"}, {"title": "Loop", "route_id": self.my_route.id, "temporary_route_id": temporary.id}):
+            with self.subTest(body=body):
+                self.assertEqual(self.client.post(SHARED_URL, body, format="json").status_code, 400)
+        missing = self.client.post(SHARED_URL, {"title": "Loop", "temporary_route_id": 9999}, format="json")
+        self.assertEqual(missing.status_code, 404)
 
     def test_share_after_running(self):
         self.log_in(self.runner)

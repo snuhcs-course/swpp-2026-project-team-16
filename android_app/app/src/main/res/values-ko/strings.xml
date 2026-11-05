@@ -204,6 +204,8 @@
     <string name="run_record_retry">기록 다시 저장</string>
     <string name="action_share_to_community">공유하기</string>
     <string name="action_view_in_community">커뮤니티에서 보기</string>
+    <string name="share_menu_other_apps">다른 앱으로 공유</string>
+    <string name="login_prompt_share_route">이 루트를 커뮤니티에 공유하려면 로그인하세요.</string>
     <string name="share_dialog_title">커뮤니티에 공유</string>
     <string name="share_dialog_message">다른 러너들이 이 루트를 보고 달릴 수 있어요.</string>
     <string name="label_share_title">제목</string>
