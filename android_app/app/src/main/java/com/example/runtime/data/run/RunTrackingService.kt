@@ -9,6 +9,10 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -21,10 +25,15 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.runtime.MainActivity
 import com.example.runtime.R
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.roundToInt
 
 data class RunMetrics(
     val isTracking: Boolean = false,
@@ -49,14 +58,33 @@ object RunTrackingState {
 class RunTrackingService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var locationManager: LocationManager
-    private var listener: LocationListener? = null
-    private var lastLocation: Location? = null
-    private var distanceMeters = 0.0
+    private lateinit var fusedClient: FusedLocationProviderClient
+    private lateinit var sensorManager: SensorManager
+    private var platformListener: LocationListener? = null
+    private var fusedCallback: LocationCallback? = null
+    private var fusion = RunFusion(stepsAvailable = false)
+    private val rotationMatrix = FloatArray(9)
     private var elapsedBeforeResumeMs = 0L
     private var resumedAtMs = 0L
-    private var smoothedSpeedMps = 0.0
     private var isPaused = false
     private var lastNotificationUpdateMs = 0L
+
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            when (event.sensor.type) {
+                Sensor.TYPE_STEP_DETECTOR -> {
+                    fusion.onStep(event.timestamp / NANOS_PER_MILLI)
+                    publishMetrics()
+                }
+                Sensor.TYPE_GAME_ROTATION_VECTOR, Sensor.TYPE_ROTATION_VECTOR -> {
+                    SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+                    yawFromRotationMatrix(rotationMatrix)?.let(fusion::onHeading)
+                }
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) = Unit
+    }
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -73,6 +101,8 @@ class RunTrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
         locationManager = getSystemService(LocationManager::class.java)
+        fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        sensorManager = getSystemService(SensorManager::class.java)
         createNotificationChannel()
     }
 
@@ -90,12 +120,10 @@ class RunTrackingService : Service() {
     private fun startRun() {
         if (RunTrackingState.metrics.value.isTracking) return
 
-        distanceMeters = 0.0
         elapsedBeforeResumeMs = 0L
         resumedAtMs = SystemClock.elapsedRealtime()
-        smoothedSpeedMps = 0.0
         isPaused = false
-        lastLocation = null
+        fusion = RunFusion(stepsAvailable = canCountSteps())
 
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -110,26 +138,77 @@ class RunTrackingService : Service() {
 
         RunTrackingState.update(RunMetrics(isTracking = true))
         startLocationUpdates()
+        startSensors()
         handler.removeCallbacks(ticker)
         handler.post(ticker)
     }
 
+    private fun canCountSteps(): Boolean {
+        val permitted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACTIVITY_RECOGNITION,
+        ) == PackageManager.PERMISSION_GRANTED
+        return permitted && sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null
+    }
+
+    private fun startSensors() {
+        if (fusion.usesSteps) {
+            sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)?.let {
+                sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_FASTEST)
+            }
+        }
+        val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        rotation?.let { sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_GAME) }
+    }
+
+    private fun stopSensors() {
+        sensorManager.unregisterListener(sensorListener)
+    }
+
+    private fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
     @Suppress("MissingPermission")
     private fun startLocationUpdates() {
-        val hasFineLocation = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-        val hasCoarseLocation = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!hasFineLocation && !hasCoarseLocation) {
+        if (!hasLocationPermission()) {
             RunTrackingState.update(RunTrackingState.metrics.value.copy(locationError = true))
             return
         }
 
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_INTERVAL_MS)
+            .setMinUpdateIntervalMillis(FASTEST_LOCATION_INTERVAL_MS)
+            .setWaitForAccurateLocation(false)
+            .build()
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.locations.forEach(::acceptLocation)
+            }
+        }
+        fusedCallback = callback
+        try {
+            fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+                .addOnFailureListener {
+                    if (fusedCallback === callback) {
+                        fusedCallback = null
+                        startPlatformLocationUpdates()
+                    }
+                }
+            fusedClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null && fusion.latitude == null &&
+                    SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos <= MAX_LAST_LOCATION_AGE_NANOS
+                ) {
+                    acceptLocation(location)
+                }
+            }
+        } catch (_: SecurityException) {
+            RunTrackingState.update(RunTrackingState.metrics.value.copy(locationError = true))
+        }
+    }
+
+    @Suppress("MissingPermission")
+    private fun startPlatformLocationUpdates() {
         val provider = when {
             locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
@@ -140,55 +219,28 @@ class RunTrackingService : Service() {
             return
         }
 
-        val newListener = object : LocationListener {
-            override fun onLocationChanged(location: Location) = acceptLocation(location)
-        }
-        listener = newListener
+        val newListener = LocationListener(::acceptLocation)
+        platformListener = newListener
         try {
-            locationManager.requestLocationUpdates(
-                provider,
-                LOCATION_INTERVAL_MS,
-                MIN_LOCATION_INTERVAL_METERS,
-                newListener,
-                Looper.getMainLooper(),
-            )
+            locationManager.requestLocationUpdates(provider, LOCATION_INTERVAL_MS, 0f, newListener, Looper.getMainLooper())
         } catch (_: SecurityException) {
             RunTrackingState.update(RunTrackingState.metrics.value.copy(locationError = true))
         }
     }
 
     private fun acceptLocation(location: Location) {
-        if (location.hasAccuracy() && location.accuracy > MAX_LOCATION_ACCURACY_METERS) return
-
-        val previous = lastLocation
-        var acceptedSpeed = 0.0
-        if (previous != null && !isPaused) {
-            val seconds = (location.elapsedRealtimeNanos - previous.elapsedRealtimeNanos) / 1_000_000_000.0
-            val deltaMeters = previous.distanceTo(location).toDouble()
-            val measuredSpeed = if (seconds > 0.0) deltaMeters / seconds else 0.0
-
-            if (deltaMeters >= MIN_DISTANCE_DELTA_METERS && measuredSpeed <= MAX_RUNNING_SPEED_MPS) {
-                distanceMeters += deltaMeters
-                acceptedSpeed = measuredSpeed
-            }
-        }
-
-        lastLocation = location
-        val sensorSpeed = if (location.hasSpeed()) location.speed.toDouble() else acceptedSpeed
-        val usableSpeed = sensorSpeed.takeIf { it in MIN_DISPLAY_SPEED_MPS..MAX_RUNNING_SPEED_MPS } ?: 0.0
-        smoothedSpeedMps = if (usableSpeed == 0.0) {
-            smoothedSpeedMps * SPEED_SMOOTHING_DECAY
-        } else if (smoothedSpeedMps == 0.0) {
-            usableSpeed
-        } else {
-            smoothedSpeedMps * SPEED_SMOOTHING_OLD_WEIGHT + usableSpeed * SPEED_SMOOTHING_NEW_WEIGHT
-        }
-
-        publishMetrics(
-            latitude = location.latitude,
-            longitude = location.longitude,
-            locationError = false,
+        if (isPaused) return
+        fusion.onGps(
+            GpsFix(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                accuracyMeters = if (location.hasAccuracy()) location.accuracy.toDouble() else UNKNOWN_ACCURACY_METERS,
+                timeMs = location.elapsedRealtimeNanos / NANOS_PER_MILLI,
+                bearingDegrees = location.bearing.toDouble().takeIf { location.hasBearing() && location.hasSpeed() },
+                speedMps = location.speed.toDouble().takeIf { location.hasSpeed() },
+            ),
         )
+        publishMetrics(locationError = false)
     }
 
     private fun pauseRun() {
@@ -196,8 +248,8 @@ class RunTrackingService : Service() {
         elapsedBeforeResumeMs += SystemClock.elapsedRealtime() - resumedAtMs
         isPaused = true
         removeLocationUpdates()
-        lastLocation = null
-        smoothedSpeedMps = 0.0
+        stopSensors()
+        fusion.pause()
         publishMetrics()
         updateNotification()
     }
@@ -206,8 +258,8 @@ class RunTrackingService : Service() {
         if (!RunTrackingState.metrics.value.isTracking || !isPaused) return
         isPaused = false
         resumedAtMs = SystemClock.elapsedRealtime()
-        lastLocation = null
         startLocationUpdates()
+        startSensors()
         publishMetrics()
         updateNotification()
     }
@@ -217,6 +269,7 @@ class RunTrackingService : Service() {
             elapsedBeforeResumeMs += SystemClock.elapsedRealtime() - resumedAtMs
         }
         removeLocationUpdates()
+        stopSensors()
         handler.removeCallbacks(ticker)
         publishMetrics(isTracking = false)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -224,8 +277,6 @@ class RunTrackingService : Service() {
     }
 
     private fun publishMetrics(
-        latitude: Double? = RunTrackingState.metrics.value.latitude,
-        longitude: Double? = RunTrackingState.metrics.value.longitude,
         locationError: Boolean = RunTrackingState.metrics.value.locationError,
         isTracking: Boolean = RunTrackingState.metrics.value.isTracking,
     ) {
@@ -235,11 +286,11 @@ class RunTrackingService : Service() {
             RunMetrics(
                 isTracking = isTracking,
                 isPaused = isPaused,
-                distanceMeters = distanceMeters,
+                distanceMeters = fusion.distanceMeters,
                 elapsedSeconds = elapsedMs / 1000L,
-                speedMetersPerSecond = smoothedSpeedMps,
-                latitude = latitude,
-                longitude = longitude,
+                speedMetersPerSecond = if (isPaused) 0.0 else fusion.speedMps(SystemClock.elapsedRealtime()),
+                latitude = fusion.latitude ?: RunTrackingState.metrics.value.latitude,
+                longitude = fusion.longitude ?: RunTrackingState.metrics.value.longitude,
                 locationError = locationError,
             ),
         )
@@ -283,12 +334,15 @@ class RunTrackingService : Service() {
     }
 
     private fun removeLocationUpdates() {
-        listener?.let { locationManager.removeUpdates(it) }
-        listener = null
+        fusedCallback?.let { fusedClient.removeLocationUpdates(it) }
+        fusedCallback = null
+        platformListener?.let { locationManager.removeUpdates(it) }
+        platformListener = null
     }
 
     override fun onDestroy() {
         removeLocationUpdates()
+        stopSensors()
         handler.removeCallbacks(ticker)
         super.onDestroy()
     }
@@ -306,13 +360,9 @@ class RunTrackingService : Service() {
         private const val TIMER_INTERVAL_MS = 1_000L
         private const val NOTIFICATION_UPDATE_INTERVAL_MS = 5_000L
         private const val LOCATION_INTERVAL_MS = 1_000L
-        private const val MIN_LOCATION_INTERVAL_METERS = 1f
-        private const val MAX_LOCATION_ACCURACY_METERS = 50f
-        private const val MIN_DISTANCE_DELTA_METERS = 1.5
-        private const val MIN_DISPLAY_SPEED_MPS = 0.5
-        private const val MAX_RUNNING_SPEED_MPS = 8.0
-        private const val SPEED_SMOOTHING_OLD_WEIGHT = 0.7
-        private const val SPEED_SMOOTHING_NEW_WEIGHT = 0.3
-        private const val SPEED_SMOOTHING_DECAY = 0.7
+        private const val FASTEST_LOCATION_INTERVAL_MS = 500L
+        private const val MAX_LAST_LOCATION_AGE_NANOS = 30_000_000_000L
+        private const val UNKNOWN_ACCURACY_METERS = 30.0
+        private const val NANOS_PER_MILLI = 1_000_000L
     }
 }
