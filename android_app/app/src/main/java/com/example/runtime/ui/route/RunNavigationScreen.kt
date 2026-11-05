@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,10 +36,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
@@ -350,31 +359,47 @@ private fun RunningRouteMap(
         currentLocation?.let { cameraState.move(CameraUpdate.scrollTo(it)) }
     }
 
-    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), tonalElevation = 2.dp) {
-        Box {
-            NaverMap(cameraPositionState = cameraState) {
-                if (points.size >= 2) {
-                    PathOverlay(
-                        coords = points.map { LatLng(it.latitude, it.longitude) },
-                        width = 7.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Marker(state = MarkerState(position = initialPosition), captionText = stringResource(R.string.marker_start))
-                    points.lastOrNull()?.let { last ->
-                        Marker(
-                            state = MarkerState(position = LatLng(last.latitude, last.longitude)),
-                            captionText = stringResource(R.string.marker_end),
-                        )
-                    }
-                }
-                currentLocation?.let { location ->
+    Box(modifier = modifier) {
+        NaverMap(cameraPositionState = cameraState, modifier = Modifier.matchParentSize()) {
+            if (points.size >= 2) {
+                PathOverlay(
+                    coords = points.map { LatLng(it.latitude, it.longitude) },
+                    width = 7.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Marker(state = MarkerState(position = initialPosition), captionText = stringResource(R.string.marker_start))
+                points.lastOrNull()?.let { last ->
                     Marker(
-                        state = MarkerState(position = location),
-                        captionText = stringResource(R.string.run_you),
+                        state = MarkerState(position = LatLng(last.latitude, last.longitude)),
+                        captionText = stringResource(R.string.marker_end),
                     )
                 }
             }
+            currentLocation?.let { location ->
+                Marker(
+                    state = MarkerState(position = location),
+                    captionText = stringResource(R.string.run_you),
+                )
+            }
         }
+        RoundedCornerMask(
+            radius = MAP_CORNER_RADIUS,
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.matchParentSize(),
+        )
+    }
+}
+
+@Composable
+private fun RoundedCornerMask(radius: Dp, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val cornerRadius = CornerRadius(radius.toPx())
+        val mask = Path().apply {
+            fillType = PathFillType.EvenOdd
+            addRect(Rect(Offset.Zero, size))
+            addRoundRect(RoundRect(Rect(Offset.Zero, size), cornerRadius))
+        }
+        drawPath(mask, color)
     }
 }
 
@@ -389,5 +414,6 @@ private fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordin
         result
     }
 
+private val MAP_CORNER_RADIUS = 18.dp
 private const val OFF_ROUTE_DISTANCE_METERS = 40.0
 private const val NEAR_FINISH_PROGRESS = 0.95f
