@@ -12,6 +12,7 @@ import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 object TokenStore {
@@ -53,6 +54,16 @@ class AuthInterceptor(
     }
 }
 
+class LanguageInterceptor(
+    private val languageProvider: () -> String = { Locale.getDefault().toLanguageTag() },
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        if (request.header("Accept-Language") != null) return chain.proceed(request)
+        return chain.proceed(request.newBuilder().header("Accept-Language", languageProvider()).build())
+    }
+}
+
 class RedactingLoggingInterceptor : Interceptor {
     private val bodyLogger = HttpLoggingInterceptor()
         .setLevel(HttpLoggingInterceptor.Level.BODY)
@@ -89,6 +100,7 @@ object ApiClient {
             .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
+            .addInterceptor(LanguageInterceptor())
             .apply {
                 if (BuildConfig.DEBUG) {
                     addInterceptor(RedactingLoggingInterceptor())

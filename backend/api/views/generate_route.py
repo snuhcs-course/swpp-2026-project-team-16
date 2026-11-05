@@ -12,10 +12,12 @@ from api.models import TemporaryRoute
 from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
+from api.services.place_translation import translate_names
 from api.route_algorithm.preferences import MAX_PREFERENCE_TEXT_LENGTH, validate_options
 
 
 ROUTE_TIMEOUT_SECONDS = 35
+TRANSLATION_WAIT_SECONDS = 10
 MAX_PLACE_NAME_LENGTH = 100
 MAP_UNAVAILABLE_MESSAGE = "Could not load map data. Please try again later."
 
@@ -148,6 +150,16 @@ def generate_route_api(request):
     if error:
         return error_response(error)
 
+    start_name_ko, error = parse_place_name(request.data.get("starting_point_name_ko"), "starting_point_name_ko")
+
+    if error:
+        return error_response(error)
+
+    end_name_ko, error = parse_place_name(request.data.get("end_point_name_ko"), "end_point_name_ko")
+
+    if error:
+        return error_response(error)
+
     language = request.data.get("language", DEFAULT_LANGUAGE)
 
     if language not in SUPPORTED_LANGUAGES:
@@ -177,6 +189,13 @@ def generate_route_api(request):
         return error_response(f"preference_text must be {MAX_PREFERENCE_TEXT_LENGTH} characters or fewer")
 
 
+    if language == "en":
+        names = (start_name_ko or start_name, end_name_ko or end_name, start_name, end_name)
+        translation = None
+    else:
+        names = (start_name, end_name)
+        translation = route_executor.submit(translate_names, [start_name, end_name])
+
     # Call route algorithm
 
     future = route_executor.submit(
@@ -198,6 +217,13 @@ def generate_route_api(request):
     except ValueError as e:
         return error_response(str(e))
 
+    if translation is not None:
+        try:
+            names = (*names, *translation.result(timeout=TRANSLATION_WAIT_SECONDS))
+        except Exception:
+            names = (*names, "", "")
+    stored_start, stored_end, start_name_en, end_name_en = names
+
     options = []
 
     for route in routes:
@@ -206,8 +232,10 @@ def generate_route_api(request):
             briefing=route.briefing,
             route=route.to_dict()['route'],
             user=user,
-            start_name=start_name,
-            end_name=end_name,
+            start_name=stored_start[:MAX_PLACE_NAME_LENGTH],
+            end_name=stored_end[:MAX_PLACE_NAME_LENGTH],
+            start_name_en=start_name_en[:MAX_PLACE_NAME_LENGTH],
+            end_name_en=end_name_en[:MAX_PLACE_NAME_LENGTH],
         )
         options.append({
             "temporary_route_id": temporary_route.id,

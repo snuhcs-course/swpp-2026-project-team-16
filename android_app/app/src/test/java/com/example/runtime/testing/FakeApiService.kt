@@ -10,6 +10,7 @@ import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GoogleLoginRequest
 import com.example.runtime.data.remote.LoginRequest
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.remote.PlaceName
 import com.example.runtime.data.remote.ProfileData
 import com.example.runtime.data.remote.ProfileUpdateRequest
 import okhttp3.MultipartBody
@@ -57,6 +58,7 @@ open class FakeApiService : ApiService {
     override suspend fun deleteSavedRoute(routeId: Int): ApiResponse<Unit> = unexpected()
     override suspend fun searchPlaces(query: String, language: String): ApiResponse<List<Place>> = unexpected()
     override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> = unexpected()
+    override suspend fun translatePlace(name: String, address: String, language: String): ApiResponse<PlaceName> = unexpected()
     override suspend fun recordRun(body: RecordRunRequest): ApiResponse<RunRecord> = unexpected()
     override suspend fun runs(): ApiResponse<List<RunHistoryItem>> = unexpected()
     override suspend fun sharedRoutes(sort: String): ApiResponse<List<SharedRoute>> = unexpected()

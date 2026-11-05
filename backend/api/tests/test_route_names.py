@@ -38,6 +38,48 @@ class RouteNameTests(FakeMapTestCase):
         detail = self.client.get(f"{SAVED_URL}{route_id}/").data["data"]
         self.assertEqual((detail["start_name"], detail["end_name"]), ("코엑스", "강남역"))
 
+    def names(self, url, language):
+        response = self.client.get(url, HTTP_ACCEPT_LANGUAGE=language)
+        data = response.data[0] if isinstance(response.data, list) else response.data["data"]
+        return data["start_name"], data["end_name"]
+
+    def test_korean_names_are_translated_for_english(self, llm):
+        route_id = self.generate_and_save(
+            end_point={"type": "Point", "coordinates": END},
+            starting_point_name="코엑스",
+            end_point_name="강남역",
+            language="ko",
+        )
+
+        self.assertEqual(self.names(SAVED_URL, "ko-KR"), ("코엑스", "강남역"))
+        self.assertEqual(self.names(SAVED_URL, "en-US,en;q=0.9"), ("코엑스 (en)", "강남역 (en)"))
+        self.assertEqual(self.names(f"{SAVED_URL}{route_id}/", "en"), ("코엑스 (en)", "강남역 (en)"))
+        self.assertEqual(self.client.get(SAVED_URL, {"language": "ko"}, HTTP_ACCEPT_LANGUAGE="en").data[0]["start_name"], "코엑스")
+
+    def test_english_request_keeps_both_names(self, llm):
+        self.generate_and_save(
+            starting_point_name="COEX",
+            starting_point_name_ko="코엑스",
+            language="en",
+        )
+
+        self.assertEqual(self.names(SAVED_URL, "ko")[0], "코엑스")
+        self.assertEqual(self.names(SAVED_URL, "en")[0], "COEX")
+        self.translate.assert_not_called()
+
+    def test_english_name_without_korean_is_used_for_both(self, llm):
+        self.generate_and_save(starting_point_name="COEX", language="en")
+
+        self.assertEqual(self.names(SAVED_URL, "ko")[0], "COEX")
+        self.assertEqual(self.names(SAVED_URL, "en")[0], "COEX")
+
+    def test_english_falls_back_to_korean_when_translation_fails(self, llm):
+        self.translate.side_effect = RuntimeError("offline")
+
+        self.generate_and_save(starting_point_name="코엑스", language="ko")
+
+        self.assertEqual(self.names(SAVED_URL, "en")[0], "코엑스")
+
     def test_names_default_to_empty(self, llm):
         self.generate_and_save()
         listed = self.client.get(SAVED_URL).data[0]

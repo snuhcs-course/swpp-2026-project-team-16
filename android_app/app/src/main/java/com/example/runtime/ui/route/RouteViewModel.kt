@@ -184,9 +184,47 @@ class RouteViewModel(
         if (normalized == searchLanguage) return
 
         searchLanguage = normalized
-        listOf(startField, endField)
-            .filter { it.selected == null && it.input.trim().length >= MIN_QUERY_LENGTH }
-            .forEach { search(it, it.input.trim()) }
+        listOf(startField, endField).forEach { field ->
+            if (field.selected != null) {
+                localize(field, normalized)
+            } else if (field.input.trim().length >= MIN_QUERY_LENGTH) {
+                search(field, field.input.trim())
+            }
+        }
+    }
+
+    private fun localize(field: PlaceField, language: String) {
+        val place = field.selected ?: return
+        val nameKo = place.nameKo ?: return
+        val addressKo = place.addressKo.orEmpty()
+        if (language == KOREAN) {
+            showLocalized(field, place, nameKo, addressKo)
+            return
+        }
+
+        field.searchJob?.cancel()
+        field.searchJob = sessionScope.launch {
+            field.isSearching = true
+            try {
+                val translated = repository.translatePlace(nameKo, addressKo, language)
+                showLocalized(field, place, translated.name, translated.address)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("RouteViewModel", "Could not translate the selected place", e)
+            } finally {
+                field.isSearching = false
+            }
+        }
+    }
+
+    private fun showLocalized(field: PlaceField, place: Place, name: String, address: String) {
+        if (field.selected != place) return
+        val localized = place.copy(name = name, address = address)
+        field.selected = localized
+        field.input = name
+        if (pendingStart == place) pendingStart = localized
+        if (pendingEnd == place) pendingEnd = localized
     }
 
     fun onPlaceInputChange(field: PlaceField, text: String) {

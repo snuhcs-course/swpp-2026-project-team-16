@@ -10,6 +10,8 @@ class TemporaryRoute(models.Model):
     route = models.JSONField(null=False, blank=False) 
     start_name = models.CharField(max_length=100, blank=True, default="")
     end_name = models.CharField(max_length=100, blank=True, default="")
+    start_name_en = models.CharField(max_length=100, blank=True, default="")
+    end_name_en = models.CharField(max_length=100, blank=True, default="")
     saved_route = models.ForeignKey("Route", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
 
     def _validate_route(self):
@@ -39,6 +41,8 @@ class TemporaryRoute(models.Model):
             route=self.route,
             start_name=self.start_name,
             end_name=self.end_name,
+            start_name_en=self.start_name_en,
+            end_name_en=self.end_name_en,
         )
         return route
 
@@ -51,7 +55,14 @@ class Route(models.Model):
     route = models.JSONField(null=False, blank=False) 
     start_name = models.CharField(max_length=100, blank=True, default="")
     end_name = models.CharField(max_length=100, blank=True, default="")
-    
+    start_name_en = models.CharField(max_length=100, blank=True, default="")
+    end_name_en = models.CharField(max_length=100, blank=True, default="")
+
+    def localized_names(self, language):
+        if language == "en":
+            return self.start_name_en or self.start_name, self.end_name_en or self.end_name
+        return self.start_name, self.end_name
+
     def _validate_route(self):
         if not isinstance(self.route, list):
             raise TypeError(

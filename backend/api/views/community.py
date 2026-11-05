@@ -6,6 +6,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from api.route_algorithm.briefing import DEFAULT_LANGUAGE
+from api.services.language import request_language
 from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, TemporaryRoute, UserSavedRoute
 
 
@@ -34,8 +36,9 @@ def _non_negative_int(value):
     return number if number >= 0 else None
 
 
-def _shared_route_data(shared_route, user, include_route=False):
+def _shared_route_data(shared_route, user, include_route=False, language=DEFAULT_LANGUAGE):
     route = shared_route.route
+    start_name, end_name = route.localized_names(language)
     data = {
         "id": shared_route.id,
         "route_id": route.id,
@@ -44,8 +47,8 @@ def _shared_route_data(shared_route, user, include_route=False):
         "shared_by": shared_route.shared_by.username,
         "shared_at": shared_route.shared_at,
         "distance": route.distance,
-        "start_name": route.start_name,
-        "end_name": route.end_name,
+        "start_name": start_name,
+        "end_name": end_name,
         "run_count": shared_route.run_count,
         "review_count": shared_route.review_count,
         "rating_average": (
@@ -111,8 +114,9 @@ def _parse_review(data):
     return rating, comment.strip(), None
 
 
-def _run_data(run, saved_route_ids):
+def _run_data(run, saved_route_ids, language=DEFAULT_LANGUAGE):
     route = run.route
+    start_name, end_name = route.localized_names(language)
     shared_route = getattr(route, "shared", None)
     return {
         "id": run.id,
@@ -121,8 +125,8 @@ def _run_data(run, saved_route_ids):
         "duration_s": run.duration_s,
         "finished_at": run.finished_at,
         "route_distance": route.distance,
-        "start_name": route.start_name,
-        "end_name": route.end_name,
+        "start_name": start_name,
+        "end_name": end_name,
         "shared_route_id": shared_route.id if shared_route else None,
         "shared_title": shared_route.title if shared_route else "",
         "is_saved": route.id in saved_route_ids,
@@ -138,7 +142,7 @@ def route_runs(request):
     if request.method == "GET":
         runs = RouteRun.objects.filter(user=request.user).select_related("route", "route__shared").order_by("-finished_at", "-id")
         saved_route_ids = set(UserSavedRoute.objects.filter(user=request.user).values_list("route_id", flat=True))
-        data = [_run_data(run, saved_route_ids) for run in runs]
+        data = [_run_data(run, saved_route_ids, request_language(request)) for run in runs]
         return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     route_id = request.data.get("route_id")
@@ -212,7 +216,7 @@ def shared_routes_list(request):
         sort = request.query_params.get("sort") or "latest"
         if sort not in SORTS:
             return _error(f"sort must be one of: {', '.join(SORTS)}", status.HTTP_400_BAD_REQUEST)
-        data = [_shared_route_data(shared_route, request.user) for shared_route in _shared_routes(sort)]
+        data = [_shared_route_data(shared_route, request.user, language=request_language(request)) for shared_route in _shared_routes(sort)]
         return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     if not request.user.is_authenticated:
@@ -273,7 +277,7 @@ def shared_routes_list(request):
 
     shared_route = _shared_routes().get(id=shared_route.id)
     return Response(
-        {"status": "success", "data": _shared_route_data(shared_route, request.user, include_route=True)},
+        {"status": "success", "data": _shared_route_data(shared_route, request.user, include_route=True, language=request_language(request))},
         status=status.HTTP_201_CREATED,
     )
 
@@ -287,7 +291,7 @@ def shared_routes_detail(request, shared_route_id):
 
     if request.method == "GET":
         return Response(
-            {"status": "success", "data": _shared_route_data(shared_route, request.user, include_route=True)},
+            {"status": "success", "data": _shared_route_data(shared_route, request.user, include_route=True, language=request_language(request))},
             status=status.HTTP_200_OK,
         )
 

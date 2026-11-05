@@ -10,6 +10,7 @@ import com.example.runtime.data.remote.GeoJsonLineString
 import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.OpenElevationApiService
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.remote.PlaceName
 import com.example.runtime.data.remote.RouteBody
 import com.example.runtime.data.remote.RouteOption
 import com.example.runtime.data.remote.SaveRouteRequest
@@ -112,6 +113,59 @@ class RouteViewModelOptionsTest {
         assertEquals(0, viewModel.selectedOption)
         assertEquals(1, viewModel.generated?.temporaryRouteId)
         assertEquals(3000, api.requests.single().distance)
+    }
+
+    @Test
+    fun languageChange_showsSelectedPlacesInTheNewLanguage() {
+        viewModel.selectPlace(viewModel.startField, coex)
+
+        viewModel.onLanguageChange("ko")
+        assertEquals("코엑스", viewModel.startField.input)
+        assertEquals("서울 강남구 영동대로 513", viewModel.startField.selected?.address)
+        assertTrue(api.translateRequests.isEmpty())
+
+        viewModel.onLanguageChange("en")
+        assertEquals(listOf(Triple("코엑스", "서울 강남구 영동대로 513", "en")), api.translateRequests)
+        assertEquals("COEX Mall", viewModel.startField.input)
+        assertEquals("513 Yeongdong-daero, Gangnam-gu, Seoul", viewModel.startField.selected?.address)
+        assertEquals("코엑스", viewModel.startField.selected?.nameKo)
+    }
+
+    @Test
+    fun languageChange_keepsPlacesWithoutAKoreanName() {
+        viewModel.selectPoint(viewModel.startField, "Map point", 126.952, 37.46)
+        api.failReverse = true
+
+        viewModel.onLanguageChange("ko")
+
+        assertEquals("Map point", viewModel.startField.input)
+        assertTrue(api.translateRequests.isEmpty())
+    }
+
+    @Test
+    fun languageChange_keepsTheNameWhenTranslationFails() {
+        viewModel.selectPlace(viewModel.startField, coex)
+        viewModel.onLanguageChange("ko")
+        api.failTranslate = true
+
+        viewModel.onLanguageChange("en")
+
+        assertEquals("코엑스", viewModel.startField.input)
+        assertFalse(viewModel.startField.isSearching)
+    }
+
+    @Test
+    fun generate_sendsTheKoreanPlaceNames() {
+        api.response = generated(option(1, 3010))
+        viewModel.selectPlace(viewModel.startField, coex)
+        viewModel.distanceInput = "3"
+        assertTrue(viewModel.prepare("en"))
+
+        viewModel.generate(onSuccess = {}, onFailure = {})
+
+        val request = api.requests.single()
+        assertEquals("Coex", request.startingPointName)
+        assertEquals("코엑스", request.startingPointNameKo)
     }
 
     @Test
@@ -309,6 +363,14 @@ class RouteViewModelOptionsTest {
 
     private fun option(id: Int, distance: Int) = RouteOption(id, body(distance))
 
+    private val coex = Place(
+        name = "Coex",
+        address = "513 Yeongdong-daero",
+        point = GeoJsonPoint.of(127.059, 37.512),
+        nameKo = "코엑스",
+        addressKo = "서울 강남구 영동대로 513",
+    )
+
     private fun generated(vararg options: RouteOption) = GeneratedRouteData(
         temporaryRouteId = options.first().temporaryRouteId,
         route = options.first().route,
@@ -327,6 +389,14 @@ class RouteViewModelOptionsTest {
         val requests = mutableListOf<GenerateRouteRequest>()
         val savedIds = mutableListOf<Int>()
         val reverseRequests = mutableListOf<Pair<Double, Double>>()
+        val translateRequests = mutableListOf<Triple<String, String, String>>()
+        var failTranslate = false
+
+        override suspend fun translatePlace(name: String, address: String, language: String): ApiResponse<PlaceName> {
+            translateRequests += Triple(name, address, language)
+            if (failTranslate) throw IOException("offline")
+            return ApiResponse(status = "success", data = PlaceName("COEX Mall", "513 Yeongdong-daero, Gangnam-gu, Seoul"))
+        }
 
         override suspend fun generateRoute(body: GenerateRouteRequest): ApiResponse<GeneratedRouteData> {
             requests += body
