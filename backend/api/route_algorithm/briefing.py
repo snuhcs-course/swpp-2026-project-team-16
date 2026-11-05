@@ -25,6 +25,19 @@ class RouteFeatures:
     traffic_light_count: int | None  # Signalized crossing events, retained for API compatibility.
     crosswalk_count: int | None = None
     uphill_segments: list[UphillSegment] = field(default_factory=list)
+    terrain_note: str | None = None
+
+
+TERRAIN_NOTES = {
+    "ko": {
+        "sloped_start": "출발지 주변이 경사지라 완전히 평평한 코스는 만들 수 없었어요.",
+        "no_hills": "주변에 오르막이 거의 없어 평지 위주의 코스예요.",
+    },
+    "en": {
+        "sloped_start": "The start is on a slope, so a fully flat route wasn't possible.",
+        "no_hills": "There are hardly any hills nearby, so this route is mostly flat.",
+    },
+}
 
 
 SAMPLE_FEATURES = RouteFeatures(
@@ -89,6 +102,8 @@ def _user_prompt(features: RouteFeatures, language: str) -> str:
         if features.total_elevation_gain_m is not None:
             lines.append(f"- 오르막: {uphills}")
         lines += ["", "위 데이터로 브리핑을 작성해 주세요."]
+        if features.terrain_note:
+            lines.append(f"다음 안내도 한 문장으로 꼭 전해 주세요: {TERRAIN_NOTES['ko'][features.terrain_note]}")
     else:
         lines = [
             "Route data:",
@@ -102,6 +117,8 @@ def _user_prompt(features: RouteFeatures, language: str) -> str:
         if features.total_elevation_gain_m is not None:
             lines.append(f"- Uphills: {uphills}")
         lines += ["", "Write the briefing using the data above."]
+        if features.terrain_note:
+            lines.append(f"Also pass on this note in one sentence: {TERRAIN_NOTES['en'][features.terrain_note]}")
     return "\n".join(lines)
 
 
@@ -123,11 +140,15 @@ def fallback_briefing(features: RouteFeatures, language: str = DEFAULT_LANGUAGE)
         text = f"총 {distance_km}km, {climb}보행신호 횡단 {features.traffic_light_count}회가 있는 코스입니다."
         if first_uphill:
             text += f" {_trim(first_uphill.start_km)}km 지점의 오르막 전에 페이스를 조절하세요."
+        if features.terrain_note:
+            text += f" {TERRAIN_NOTES['ko'][features.terrain_note]}"
         return text
     climb = f"{features.total_elevation_gain_m}m of climbing and " if climb_known else ""
     text = f"This {distance_km}km route has {climb}{features.traffic_light_count} signalized crossings."
     if first_uphill:
         text += f" Ease your pace before the uphill at {_trim(first_uphill.start_km)}km."
+    if features.terrain_note:
+        text += f" {TERRAIN_NOTES['en'][features.terrain_note]}"
     return text
 
 

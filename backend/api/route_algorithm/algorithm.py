@@ -34,7 +34,7 @@ from api.route_algorithm.classes import (
 from api.route_algorithm.crosswalk_counter import count_signalized_crossings
 from api.route_algorithm.elevation import climb_profiles
 from api.route_algorithm.preferences import resolve_multipliers, to_weights
-from api.route_algorithm.scoring import score_route
+from api.route_algorithm.scoring import climb_amounts, score_route
 from api.route_algorithm.street_graph import street_graph
 
 ox.settings.requests_timeout = 20
@@ -92,6 +92,18 @@ def route_length(route_graph, path):
         if lengths:
             total += min(lengths)
     return total
+
+
+def count_steps(route_graph, path):
+    count = 0
+    for a, b in zip(path, path[1:]):
+        edge_data = route_graph.get_edge_data(a, b) or {}
+        for edge in edge_data.values():
+            highway = edge.get("highway") if isinstance(edge, dict) else None
+            if highway == "steps" or (isinstance(highway, list) and "steps" in highway):
+                count += 1
+                break
+    return count
 
 
 def connect(route_graph, stops):
@@ -349,7 +361,15 @@ def create_routes(
         if all(signal is not None for signal in signals)
         else [None] * len(signals)
     )
-    profiles = climb_profiles(coordinates) or [None] * len(pool)
+    profiles = climb_profiles(coordinates, reversible=mode == "loop") or [None] * len(pool)
+    for i, profile in enumerate(profiles):
+        if profile is not None and profile.reversed:
+            coordinates[i] = coordinates[i][::-1]
+    steps_counts = [count_steps(route_graph, c.path) for c in pool]
+    multipliers = multipliers_future.result()
+    weights = to_weights(multipliers)
+    log(f"  preference multipliers {multipliers}")
+    climbs, terrain_note = climb_amounts(profiles, steps_counts, [c.length for c in pool], weights.per_climb_m)
 
     features = [
         RouteFeatures(
@@ -357,15 +377,13 @@ def create_routes(
             total_elevation_gain_m=profile.total_gain_m if profile else None,
             traffic_light_count=signal_count,
             uphill_segments=profile.uphill_segments if profile else [],
+            terrain_note=terrain_note,
         )
         for c, signal_count, profile in zip(pool, signals, profiles)
     ]
-    multipliers = multipliers_future.result()
-    weights = to_weights(multipliers)
-    log(f"  preference multipliers {multipliers}")
     scores = [
-        score_route(f.total_elevation_gain_m, f.traffic_light_count, c.length, distance, weights)
-        for c, f in zip(pool, features)
+        score_route(climb, f.traffic_light_count, c.length, distance, weights)
+        for c, f, climb in zip(pool, features, climbs)
     ]
     chosen = sorted(range(len(pool)), key=lambda i: scores[i])[:MAX_ROUTE_OPTIONS]
 
