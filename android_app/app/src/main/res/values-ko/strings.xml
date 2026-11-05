@@ -194,6 +194,7 @@
     <string name="stat_runs">달린 횟수</string>
     <string name="stat_start">출발지</string>
     <string name="action_run_route">이 루트 달리기</string>
+    <string name="action_run_again">다시 달리기</string>
     <string name="action_unshare">공유 취소</string>
     <string name="unshare_dialog_title">커뮤니티 공유를 취소할까요?</string>
     <string name="unshare_dialog_message">다른 러너에게 더 이상 보이지 않아요. 저장한 루트라면 마이페이지에는 남아 있어요.</string>

@@ -43,6 +43,7 @@ fun MyPageScreen(
     myPageViewModel: MyPageViewModel,
     onRouteClick: (Int) -> Unit,
     onSharedRouteClick: (Int) -> Unit,
+    onRunAgain: (RunHistoryItem) -> Unit,
     onCreateRoute: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -126,6 +127,7 @@ fun MyPageScreen(
                         run.sharedRouteId != null -> onSharedRouteClick(run.sharedRouteId)
                     }
                 },
+                onRunAgain = onRunAgain,
                 onCreateRoute = onCreateRoute
             )
         } else when {
@@ -255,6 +257,7 @@ private fun RunHistoryTab(
     isLoading: Boolean,
     hasError: Boolean,
     onRunClick: (RunHistoryItem) -> Unit,
+    onRunAgain: (RunHistoryItem) -> Unit,
     onCreateRoute: () -> Unit,
 ) {
     when {
@@ -283,7 +286,7 @@ private fun RunHistoryTab(
         ) {
             item(key = "totals") { RunTotals(runs) }
             items(runs, key = { it.id }) { run ->
-                RunCard(run = run, onClick = { onRunClick(run) })
+                RunCard(run = run, onClick = { onRunClick(run) }, onRunAgain = { onRunAgain(run) })
             }
         }
     }
@@ -315,7 +318,7 @@ private fun RunTotal(label: String, value: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun RunCard(run: RunHistoryItem, onClick: () -> Unit) {
+private fun RunCard(run: RunHistoryItem, onClick: () -> Unit, onRunAgain: () -> Unit) {
     Card(
         onClick = onClick,
         enabled = run.isSaved || run.sharedRouteId != null,
@@ -361,6 +364,18 @@ private fun RunCard(run: RunHistoryItem, onClick: () -> Unit) {
                     formatPace(run.distanceMeters / run.durationSeconds.coerceAtLeast(1L).toDouble()),
                     Modifier.weight(1f)
                 )
+            }
+            if (run.route.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.m))
+                FilledTonalButton(
+                    onClick = onRunAgain,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(painterResource(R.drawable.ic_directions_run), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(Spacing.s))
+                    Text(stringResource(R.string.action_run_again), style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

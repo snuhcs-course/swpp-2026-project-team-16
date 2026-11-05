@@ -198,6 +198,7 @@
     <string name="stat_runs">Runs</string>
     <string name="stat_start">Start</string>
     <string name="action_run_route">Run this route</string>
+    <string name="action_run_again">Run again</string>
     <string name="action_unshare">Remove from Community</string>
     <string name="unshare_dialog_title">Remove this route from Community?</string>
     <string name="unshare_dialog_message">Other runners won\'t see it anymore. If you saved it, it stays in My Page.</string>

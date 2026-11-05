@@ -70,6 +70,18 @@ class RouteRunTests(CommunityTestBase):
 
         self.assertEqual(self.record_run(route_id=route.id).status_code, 404)
 
+    def test_can_run_a_route_again_after_it_is_unshared(self):
+        route = self.route(created_by=self.other)
+        shared = SharedRoute.objects.create(route=route, shared_by=self.other, title="Loop")
+        self.log_in(self.runner)
+        self.assertEqual(self.record_run(route_id=route.id).status_code, 201)
+        shared.delete()
+
+        response = self.record_run(route_id=route.id)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RouteRun.objects.filter(user=self.runner, route=route).count(), 2)
+
     def test_rejects_invalid_input(self):
         route = self.route(created_by=self.runner)
         self.log_in(self.runner)
@@ -113,6 +125,7 @@ class RunHistoryTests(CommunityTestBase):
         self.assertEqual(runs[1]["start_name"], "Start")
         self.assertIsNone(runs[1]["shared_route_id"])
         self.assertTrue(runs[1]["is_saved"])
+        self.assertEqual(runs[1]["route"], LINE)
 
     def test_empty_history(self):
         self.log_in(self.runner)
