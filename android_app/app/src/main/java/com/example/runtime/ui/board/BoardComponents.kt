@@ -61,18 +61,17 @@ fun PostCard(post: BoardPost, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.m, vertical = Spacing.m)
+            .padding(horizontal = Spacing.m, vertical = 10.dp)
     ) {
         Text(post.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
             post.body,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(Spacing.s))
+        Spacer(modifier = Modifier.height(Spacing.xs))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "${timeAgoText(post.createdAt)} · ${postAuthorLabel(post)}",
