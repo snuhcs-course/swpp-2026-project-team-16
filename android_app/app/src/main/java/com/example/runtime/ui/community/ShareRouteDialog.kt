@@ -81,7 +81,7 @@ fun RunShareAction(
 }
 
 @Composable
-private fun ShareRouteDialog(
+fun ShareRouteDialog(
     defaultTitle: String,
     shareState: ShareState,
     onDismiss: () -> Unit,

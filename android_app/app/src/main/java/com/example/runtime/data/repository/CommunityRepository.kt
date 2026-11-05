@@ -31,6 +31,10 @@ class CommunityRepository(private val api: ApiService = ApiClient.api) {
     suspend fun shareRoute(routeId: Int, title: String, description: String): SharedRoute =
         api.shareRoute(ShareRouteRequest(routeId, title, description)).requireData()
 
+    suspend fun shareGeneratedRoute(temporaryRouteId: Int, title: String, description: String): SharedRoute =
+        api.shareRoute(ShareRouteRequest(title = title, description = description, temporaryRouteId = temporaryRouteId))
+            .requireData()
+
     suspend fun deleteSharedRoute(sharedRouteId: Int) {
         api.deleteSharedRoute(sharedRouteId)
     }

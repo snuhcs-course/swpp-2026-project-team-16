@@ -1,5 +1,6 @@
 package com.example.runtime.ui.route
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -43,6 +45,7 @@ import com.example.runtime.ui.common.formatKm
 import com.example.runtime.ui.common.glassBorderColor
 import com.example.runtime.ui.common.glassColor
 import com.example.runtime.ui.common.placeholder
+import com.example.runtime.ui.community.ShareRouteDialog
 import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
@@ -56,8 +59,20 @@ fun RouteResultScreen(
     routeViewModel: RouteViewModel,
     onStartRun: () -> Unit,
     onSave: () -> Unit,
+    isLoggedIn: Boolean,
+    onLogInToShare: () -> Unit,
+    onShared: (Int) -> Unit,
+    onOpenShared: (Int) -> Unit,
 ) {
     val generated = routeViewModel.generated ?: return
+    val context = LocalContext.current
+    var showShareMenu by remember { mutableStateOf(false) }
+    var showShareDialog by rememberSaveable { mutableStateOf(false) }
+    val startName = routeViewModel.pendingStart?.name.orEmpty()
+    val distanceText = formatDistance(generated.route.distance)
+    val shareHeading = if (startName.isBlank()) stringResource(R.string.default_share_title_no_start, distanceText)
+        else stringResource(R.string.default_share_title, startName, distanceText)
+    val chooserTitle = stringResource(R.string.action_share)
     val saveState = routeViewModel.saveState
     val elevationLoadState = routeViewModel.elevationLoadState
     val routeSlopeSegments = routeViewModel.routeSlopeSegments
@@ -152,15 +167,54 @@ fun RouteResultScreen(
                         .padding(horizontal = Spacing.l),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FilledIconButton(
-                        onClick = { /* TODO : Share 링크 공유 기능 */ },
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = glassColor(),
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        modifier = Modifier.size(52.dp)
-                    ) {
-                        Icon(painterResource(R.drawable.ic_share), contentDescription = stringResource(R.string.action_share))
+                    Box {
+                        FilledIconButton(
+                            onClick = { showShareMenu = true },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = glassColor(),
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Icon(painterResource(R.drawable.ic_share), contentDescription = stringResource(R.string.action_share))
+                        }
+                        DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.share_menu_other_apps)) },
+                                onClick = {
+                                    showShareMenu = false
+                                    val mapsUrl = googleMapsRouteUrl(generated.route.route)
+                                    val text = listOfNotNull(
+                                        shareHeading,
+                                        generated.route.briefing.takeIf { it.isNotBlank() },
+                                        mapsUrl
+                                    ).joinToString("\n\n")
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, shareHeading)
+                                        putExtra(Intent.EXTRA_TEXT, text)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, chooserTitle))
+                                }
+                            )
+                            val sharedId = routeViewModel.sharedRouteId
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(if (sharedId == null) R.string.share_dialog_title else R.string.action_view_in_community))
+                                },
+                                onClick = {
+                                    showShareMenu = false
+                                    when {
+                                        sharedId != null -> onOpenShared(sharedId)
+                                        !isLoggedIn -> onLogInToShare()
+                                        else -> {
+                                            routeViewModel.clearShareError()
+                                            showShareDialog = true
+                                        }
+                                    }
+                                }
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(Spacing.s))
                     AccentButton(
@@ -179,6 +233,20 @@ fun RouteResultScreen(
                 }
             }
         }
+    }
+
+    if (showShareDialog) {
+        ShareRouteDialog(
+            defaultTitle = shareHeading,
+            shareState = routeViewModel.shareState,
+            onDismiss = { showShareDialog = false },
+            onShare = { title, description ->
+                routeViewModel.share(title, description) { sharedRouteId ->
+                    showShareDialog = false
+                    onShared(sharedRouteId)
+                }
+            }
+        )
     }
 }
 

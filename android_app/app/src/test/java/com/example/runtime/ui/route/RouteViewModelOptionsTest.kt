@@ -14,6 +14,9 @@ import com.example.runtime.data.remote.RouteBody
 import com.example.runtime.data.remote.RouteOption
 import com.example.runtime.data.remote.SaveRouteRequest
 import com.example.runtime.data.remote.SaveRouteResponse
+import com.example.runtime.data.remote.ShareRouteRequest
+import com.example.runtime.data.remote.SharedRoute
+import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.testing.FakeApiService
 import com.example.runtime.testing.MainDispatcherRule
@@ -32,7 +35,72 @@ class RouteViewModelOptionsTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = RouteApi()
-    private val viewModel by lazy { RouteViewModel(RouteRepository(api)) }
+    private val viewModel by lazy { RouteViewModel(RouteRepository(api), CommunityRepository(api)) }
+
+    @Test
+    fun share_sendsTheGeneratedRouteAndRemembersTheSharedId() {
+        api.response = generated(option(1, 3010), option(2, 3062))
+        generate()
+        var sharedId: Int? = null
+
+        viewModel.share("  Morning loop  ", " flat ") { sharedId = it }
+
+        val request = api.shareRequests.single()
+        assertEquals(1, request.temporaryRouteId)
+        assertNull(request.routeId)
+        assertEquals("Morning loop", request.title)
+        assertEquals("flat", request.description)
+        assertEquals(41, sharedId)
+        assertEquals(41, viewModel.sharedRouteId)
+        assertEquals(ShareState.Idle, viewModel.shareState)
+
+        viewModel.selectOption(1)
+        assertNull(viewModel.sharedRouteId)
+    }
+
+    @Test
+    fun share_usesTheSavedRouteIdWhenAlreadySaved() {
+        api.response = generated(option(1, 3010))
+        api.savedRouteId = 9
+        generate()
+        viewModel.save()
+
+        viewModel.share("Loop", "") {}
+
+        val request = api.shareRequests.single()
+        assertEquals(9, request.routeId)
+        assertNull(request.temporaryRouteId)
+    }
+
+    @Test
+    fun share_ignoresBlankTitlesAndRepeatShares() {
+        api.response = generated(option(1, 3010))
+        generate()
+
+        viewModel.share("   ", "") {}
+        assertTrue(api.shareRequests.isEmpty())
+
+        viewModel.share("Loop", "") {}
+        viewModel.share("Loop", "") {}
+        assertEquals(1, api.shareRequests.size)
+    }
+
+    @Test
+    fun share_failureCanBeRetried() {
+        api.response = generated(option(1, 3010))
+        generate()
+        api.failShare = true
+
+        viewModel.share("Loop", "") {}
+        assertEquals(ShareState.Failed(UiText.Resource(R.string.error_network)), viewModel.shareState)
+        assertNull(viewModel.sharedRouteId)
+
+        viewModel.clearShareError()
+        assertEquals(ShareState.Idle, viewModel.shareState)
+        api.failShare = false
+        viewModel.share("Loop", "") {}
+        assertEquals(42, viewModel.sharedRouteId)
+    }
 
     @Test
     fun generate_showsAllOptionsAndSelectsTheFirst() {
@@ -251,6 +319,9 @@ class RouteViewModelOptionsTest {
         var response: GeneratedRouteData? = null
         var failGenerate = false
         var failSave = false
+        var savedRouteId: Int? = null
+        var failShare = false
+        val shareRequests = mutableListOf<ShareRouteRequest>()
         var reversePlace: Place? = null
         var failReverse = false
         val requests = mutableListOf<GenerateRouteRequest>()
@@ -274,7 +345,21 @@ class RouteViewModelOptionsTest {
         override suspend fun saveRoute(body: SaveRouteRequest): SaveRouteResponse {
             if (failSave) throw IOException("offline")
             savedIds += requireNotNull(body.temporaryRouteId)
-            return SaveRouteResponse(status = "success")
+            return SaveRouteResponse(status = "success", routeId = savedRouteId)
+        }
+
+        override suspend fun shareRoute(body: ShareRouteRequest): ApiResponse<SharedRoute> {
+            shareRequests += body
+            if (failShare) throw IOException("offline")
+            val shared = SharedRoute(
+                id = 40 + shareRequests.size,
+                routeId = body.routeId ?: 77,
+                title = body.title,
+                sharedBy = "runner",
+                sharedAt = "2026-11-05T00:00:00Z",
+                distance = 3010,
+            )
+            return ApiResponse(status = "success", data = shared)
         }
     }
 

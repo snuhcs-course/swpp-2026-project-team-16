@@ -197,9 +197,10 @@ data class RunHistoryItem(
 
 @Serializable
 data class ShareRouteRequest(
-    @SerialName("route_id") val routeId: Int,
+    @SerialName("route_id") val routeId: Int? = null,
     val title: String,
     val description: String,
+    @SerialName("temporary_route_id") val temporaryRouteId: Int? = null,
 )
 
 @Serializable
