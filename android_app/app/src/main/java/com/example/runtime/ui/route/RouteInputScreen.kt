@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +23,8 @@ import com.example.runtime.ui.common.GlassSurface
 import com.example.runtime.ui.common.LOCATION_PERMISSIONS
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.common.currentLocation
 import com.example.runtime.ui.common.hasLocationPermission
 import com.example.runtime.ui.theme.Spacing
@@ -137,7 +138,8 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                         singleLine = true,
                         textStyle = MaterialTheme.typography.titleLarge,
                         suffix = { Text(stringResource(R.string.unit_km), style = MaterialTheme.typography.titleMedium) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = doneKeyboardOptions(KeyboardType.Decimal),
+                        keyboardActions = hideKeyboardActions(),
                         shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.width(140.dp)
                     )
@@ -179,6 +181,8 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                     },
                     minLines = 2,
                     maxLines = 4,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 )

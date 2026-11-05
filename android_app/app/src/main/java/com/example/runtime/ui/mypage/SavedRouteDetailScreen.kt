@@ -21,6 +21,8 @@ import com.example.runtime.data.remote.SavedRoute
 import com.example.runtime.ui.common.AccentButton
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.common.formatKm
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.common.routeTitle
@@ -257,6 +259,8 @@ private fun RenameRouteDialog(
                 label = { Text(stringResource(R.string.label_route_name)) },
                 placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 singleLine = true,
+                keyboardOptions = doneKeyboardOptions(),
+                keyboardActions = hideKeyboardActions(),
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             )

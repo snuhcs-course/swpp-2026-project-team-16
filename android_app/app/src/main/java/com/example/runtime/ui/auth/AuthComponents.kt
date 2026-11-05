@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +22,8 @@ import com.example.runtime.ui.common.PreferenceButtons
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.accentButtonColors
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -92,7 +93,8 @@ fun AuthTextField(
         label = { Text(label) },
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        keyboardOptions = doneKeyboardOptions(keyboardType),
+        keyboardActions = hideKeyboardActions(),
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -108,7 +110,8 @@ fun PasswordField(value: String, onValueChange: (String) -> Unit, label: String)
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        keyboardOptions = doneKeyboardOptions(KeyboardType.Password),
+        keyboardActions = hideKeyboardActions(),
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
                 Icon(

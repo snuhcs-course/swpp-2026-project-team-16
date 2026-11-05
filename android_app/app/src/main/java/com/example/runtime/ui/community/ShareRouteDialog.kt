@@ -21,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.route.RunRecordState
 import com.example.runtime.ui.route.RunViewModel
@@ -107,6 +109,8 @@ fun ShareRouteDialog(
                     onValueChange = { title = it.take(MAX_TITLE_LENGTH) },
                     label = { Text(stringResource(R.string.label_share_title)) },
                     singleLine = true,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -116,6 +120,8 @@ fun ShareRouteDialog(
                     onValueChange = { description = it.take(MAX_DESCRIPTION_LENGTH) },
                     label = { Text(stringResource(R.string.label_share_description)) },
                     minLines = 3,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 )

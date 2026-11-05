@@ -33,6 +33,8 @@ import com.example.runtime.R
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.doneKeyboardOptions
+import com.example.runtime.ui.common.hideKeyboardActions
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.Dispatchers
@@ -252,6 +254,8 @@ private fun EditProfileDialog(
                     label = { Text(stringResource(R.string.label_display_name)) },
                     placeholder = { Text(namePlaceholder) },
                     singleLine = true,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     enabled = !isSaving,
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
@@ -266,6 +270,8 @@ private fun EditProfileDialog(
                         Text("${status.length}/$MAX_STATUS_MESSAGE_LENGTH", textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
                     },
                     minLines = 2,
+                    keyboardOptions = doneKeyboardOptions(),
+                    keyboardActions = hideKeyboardActions(),
                     enabled = !isSaving,
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
