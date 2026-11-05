@@ -94,7 +94,7 @@ fun BoardTab(
                     verticalArrangement = Arrangement.spacedBy(Spacing.m),
                     modifier = Modifier.padding(Spacing.m)
                 ) {
-                    repeat(4) { Box(modifier = Modifier.fillMaxWidth().height(88.dp).placeholder(MaterialTheme.shapes.medium)) }
+                    repeat(5) { Box(modifier = Modifier.fillMaxWidth().height(64.dp).placeholder(MaterialTheme.shapes.medium)) }
                 }
                 boardViewModel.posts.isEmpty() && boardViewModel.error == null -> EmptyState(
                     icon = R.drawable.ic_edit_square,
