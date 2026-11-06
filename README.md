@@ -1,69 +1,99 @@
 # RunTime
 
-RunTime is an Android app that creates running routes on real walking streets.
-Pick a start point, an optional end point, and a distance, and RunTime builds a route close to that distance
-and gives a short pre-run briefing written by an LLM.
+RunTime creates running routes along real pedestrian streets and helps runners navigate and track their runs.
 
 ## Features
 
-- **Route generation**: loop routes that return to the start, or point-to-point routes to an end point,
-  built on OpenStreetMap walking streets and matched to the requested distance
-- **Place search**: search start and end points by name (TMAP POI search)
-- **LLM briefing**: a 2-3 sentence pre-run briefing for each route (Gemini)
-- **Saved routes**: save generated routes and view or delete them in My Page
-- **Korean and English**: the whole app, place search results, and briefings follow the app language
-  (changed from the globe button on the login screen or My Page)
+- **Route generation**: Generate loop and point-to-point routes on OpenStreetMap walking streets, with options close to the requested distance
+- **AI-personalized route ranking**: Adjust route ranking based on selected preferences and written requests about elevation, signalized crossings, and distance
+- **Route information**: View elevation gain and signalized pedestrian crossing counts. Signalized crossing data is available for Seoul
+- **Run navigation**: Follow a generated route while tracking location, route progress, distance, elapsed time, speed, and pace
+- **Place search**: Search for start and end points using TMAP POI search
+- **Saved routes**: Save generated routes and view or delete them in My Page
+- **Community**: Share routes, review shared routes, create posts, and organize group runs
+- **Korean and English**: Switch the app language from the language button on the login screen or My Page
+- **AI briefing**: Get a short pre-run briefing based on route information
 
 ## Project Structure
 
-- `android_app/`: Android app (Kotlin, Jetpack Compose)
-- `backend/`: Django REST API server ([API schema](backend/api_schema.md))
+- `android_app/`: Android app built with Kotlin and Jetpack Compose
+- `backend/`: Django REST API
+  - [API schema](https://github.com/snuhcs-course/swpp-2026-project-team-16/blob/iteration-3-demo/backend/api_schema.md)
 
-## Getting Started
+## Requirements
 
-### Prerequisites
-
-- Android Studio with support for Android Gradle Plugin 9.3 (the latest stable version)
+- Android Studio
 - Android 14 (API 34) or later on the device or emulator
 - Python 3.12 or later
-- API keys
-  - `TMAP_APP_KEY`: SK open API (TMAP) key for place search
-  - `GOOGLE_API_KEY`: Google AI Studio key for Gemini briefings
-  - `NAVER_MAP_CLIENT_ID`: NAVER Cloud Platform Maps client ID (Dynamic Map, package `com.example.runtime`)
 
-### Backend
+## API Keys
+
+- `TMAP_APP_KEY`: TMAP POI search key
+- `GOOGLE_API_KEY`: Google AI Studio key for Gemini
+- `GOOGLE_CLIENT_ID`: Google sign-in client ID for the backend
+- `NAVER_MAP_CLIENT_ID`: NAVER Cloud Maps client ID for the Android app package `com.example.runtime`
+
+## Backend Setup
+
+From the repository root:
 
 ```bash
 cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
+python -m venv .venv
 ```
 
-Fill in `TMAP_APP_KEY` and `GOOGLE_API_KEY` in `backend/.env`. Never commit `.env`.
+Activate the virtual environment:
 
-Run the tests with `python manage.py test api`.
+```bash
+# macOS or Linux
+source .venv/bin/activate
 
-### Android App
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
 
-1. Start the backend first.
-2. Add `NAVER_MAP_CLIENT_ID=<your client id>` to `~/.gradle/gradle.properties` (not to the project).
-3. Open `android_app/` in Android Studio and run the `app` configuration.
-4. The app connects to `http://10.0.2.2:8000/`, which is the host machine from the Android emulator.
-   On a real device, build with `-PRUNTIME_BASE_URL=http://<your-computer-ip>:8000/`.
-5. On Android 17 or later, allow the "Nearby devices" permission when asked.
-   Debug builds need it to reach the local server.
+Install dependencies:
 
+```bash
+pip install -r requirements.txt
+```
+
+Copy `.env.example` to `.env`, then set `TMAP_APP_KEY`, `GOOGLE_API_KEY`, and `GOOGLE_CLIENT_ID` in `backend/.env`.
+
+Run database migrations and start the server:
+
+```bash
+python manage.py migrate
+python manage.py runserver
+```
+
+Run backend tests with:
+
+```bash
+python manage.py test api
+```
+
+## Android Setup
+
+1. Add these properties to your user-level Gradle properties file. Do not commit this file to the repository.
+
+   ```properties
+   NAVER_MAP_CLIENT_ID=your_naver_map_client_id
+   GOOGLE_WEB_CLIENT_ID=your_google_web_client_id
+   ```
+
+   On Windows, the file is usually located at `C:\Users\<your-user>\.gradle\gradle.properties`.
+
+2. Open `android_app/` in Android Studio and run the `app` configuration.
+
+3. The default server URL is `http://10.0.2.2:8000/`, which connects an Android emulator to a server running on the host computer.
+
+4. For a physical device, build the app with the computer's reachable IP address as the backend URL:
+
+   ```bash
+   ./gradlew assembleDebug -PRUNTIME_BASE_URL=http://<computer-ip>:8000/
+   ```
 
 ## Demo Video
 
-[Click here to watch the Iteration 1 Demo Video](./iteration1_demo.mp4)
-
-The demo video showcases:
-1. Setting up route parameters (Start point, End point, and Target distance)
-2. Generating a route and processing state
-3. Viewing saved routes list in My Page
-4. Opening route details to render generated routes and LLM pre-run briefings
+[Watch the Iteration 3 Demo Video](https://github.com/snuhcs-course/swpp-2026-project-team-16/blob/iteration-3-demo/iteration3_demo.mp4)
