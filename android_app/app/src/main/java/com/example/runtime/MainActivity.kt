@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,6 +55,9 @@ import com.example.runtime.ui.mypage.SavedRouteDetailScreen
 import com.example.runtime.ui.route.GeneratingScreen
 import com.example.runtime.ui.route.RouteInputScreen
 import com.example.runtime.ui.route.RunNavigationScreen
+import com.example.runtime.ui.route.RunReportScreen
+import com.example.runtime.ui.mypage.RunningStyleScreen
+import com.example.runtime.ui.mypage.RunningStyleViewModel
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
 import com.example.runtime.ui.route.RunTarget
@@ -112,6 +116,7 @@ fun RunTimeApp() {
     val routeViewModel: RouteViewModel = viewModel()
     val myPageViewModel: MyPageViewModel = viewModel()
     val runViewModel: RunViewModel = viewModel()
+    val runningStyleViewModel: RunningStyleViewModel = viewModel()
     val communityViewModel: CommunityViewModel = viewModel()
     val groupsViewModel: GroupsViewModel = viewModel()
     val boardViewModel: BoardViewModel = viewModel()
@@ -194,7 +199,7 @@ fun RunTimeApp() {
                         label = { Text(stringResource(R.string.nav_community)) }
                     )
                     NavigationBarItem(
-                        selected = currentScreen == "MyPage" || currentScreen == "saved_detail",
+                        selected = currentScreen in setOf("MyPage", "saved_detail", "running_style"),
                         onClick = { currentScreen = "MyPage" },
                         icon = { Icon(painterResource(R.drawable.ic_account_circle), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_my_page)) }
@@ -276,7 +281,8 @@ fun RunTimeApp() {
                                                         distanceMeters = generated.route.distance,
                                                         routeId = routeViewModel.savedRouteId(generated.temporaryRouteId),
                                                         temporaryRouteId = generated.temporaryRouteId,
-                                                        startName = routeViewModel.pendingStart?.name.orEmpty()
+                                                        startName = routeViewModel.pendingStart?.name.orEmpty(),
+                                                        plan = routeViewModel.runPlan
                                                     )
                                                 )
                                                 runReturnScreen = "route_result"
@@ -301,31 +307,49 @@ fun RunTimeApp() {
                                         }
                                     )
                                     "run_navigation" -> runViewModel.target?.let { target ->
-                                        RunNavigationScreen(
-                                            lines = target.lines,
-                                            routeDistanceMeters = target.distanceMeters,
-                                            onFinish = { currentScreen = runReturnScreen },
-                                            onRunFinished = { distanceMeters, elapsedSeconds ->
-                                                if (authViewModel.isLoggedIn) runViewModel.recordRun(distanceMeters, elapsedSeconds)
-                                            },
-                                            summaryAction = {
-                                                RunShareAction(
-                                                    runViewModel = runViewModel,
-                                                    isLoggedIn = authViewModel.isLoggedIn,
-                                                    onShared = { sharedRouteId ->
-                                                        appMessages.show(sharedMessage)
-                                                        selectedSharedRouteId = sharedRouteId
-                                                        sharedDetailReturnScreen = "community"
-                                                        currentScreen = "community_detail"
-                                                    },
-                                                    onOpenShared = { sharedRouteId ->
-                                                        selectedSharedRouteId = sharedRouteId
-                                                        sharedDetailReturnScreen = "community"
-                                                        currentScreen = "community_detail"
-                                                    }
-                                                )
-                                            },
-                                        )
+                                        val result = runViewModel.result
+                                        if (result == null) {
+                                            RunNavigationScreen(
+                                                lines = target.lines,
+                                                routeDistanceMeters = target.distanceMeters,
+                                                onFinish = { currentScreen = runReturnScreen },
+                                                onRunFinished = { runResult ->
+                                                    runViewModel.finish(runResult, authViewModel.isLoggedIn)
+                                                },
+                                            )
+                                        } else {
+                                            BackHandler { currentScreen = runReturnScreen }
+                                            RunReportScreen(
+                                                result = result,
+                                                plan = target.plan,
+                                                isLoggedIn = authViewModel.isLoggedIn,
+                                                recordState = runViewModel.recordState,
+                                                reportState = runViewModel.reportState,
+                                                onRetryReport = runViewModel::loadReport,
+                                                onPlanNextRun = { plan ->
+                                                    routeViewModel.applyPlan(plan)
+                                                    currentScreen = "route_input"
+                                                },
+                                                onDone = { currentScreen = runReturnScreen },
+                                                shareAction = {
+                                                    RunShareAction(
+                                                        runViewModel = runViewModel,
+                                                        isLoggedIn = authViewModel.isLoggedIn,
+                                                        onShared = { sharedRouteId ->
+                                                            appMessages.show(sharedMessage)
+                                                            selectedSharedRouteId = sharedRouteId
+                                                            sharedDetailReturnScreen = "community"
+                                                            currentScreen = "community_detail"
+                                                        },
+                                                        onOpenShared = { sharedRouteId ->
+                                                            selectedSharedRouteId = sharedRouteId
+                                                            sharedDetailReturnScreen = "community"
+                                                            currentScreen = "community_detail"
+                                                        }
+                                                    )
+                                                },
+                                            )
+                                        }
                                     } ?: run {
                                         currentScreen = "route_input"
                                     }
@@ -480,6 +504,7 @@ fun RunTimeApp() {
                                             currentScreen = "run_navigation"
                                         },
                                         onCreateRoute = { currentScreen = "route_input" },
+                                        onOpenRunningStyle = { currentScreen = "running_style" },
                                         onLogout = {
                                             authViewModel.logout {
                                                 routeViewModel.reset()
@@ -490,6 +515,10 @@ fun RunTimeApp() {
                                                 currentScreen = "route_input"
                                             }
                                         }
+                                    )
+                                    "running_style" -> RunningStyleScreen(
+                                        viewModel = runningStyleViewModel,
+                                        onBack = { currentScreen = "MyPage" }
                                     )
                                     "saved_detail" -> selectedRouteId?.let { routeId ->
                                         SavedRouteDetailScreen(

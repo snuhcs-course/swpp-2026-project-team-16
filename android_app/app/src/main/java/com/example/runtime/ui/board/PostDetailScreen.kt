@@ -261,7 +261,7 @@ private fun PostBody(post: BoardPost, onLike: () -> Unit, onScrap: () -> Unit) {
         style = MaterialTheme.typography.titleSmall
     )
     Text(
-        timeAgoText(post.createdAt) + if (post.edited) " · " + stringResource(R.string.review_edited) else "",
+        timeAgoText(post.createdAt) + if (post.edited) " (" + stringResource(R.string.review_edited) + ")" else "",
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

@@ -45,6 +45,7 @@ fun MyPageScreen(
     onSharedRouteClick: (Int) -> Unit,
     onRunAgain: (RunHistoryItem) -> Unit,
     onCreateRoute: () -> Unit,
+    onOpenRunningStyle: () -> Unit,
     onLogout: () -> Unit,
 ) {
     var showAccountMenu by remember { mutableStateOf(false) }
@@ -95,6 +96,15 @@ fun MyPageScreen(
             }
         }
         ProfileSection(myPageViewModel = myPageViewModel, modifier = Modifier.padding(bottom = Spacing.s))
+        OutlinedButton(
+            onClick = onOpenRunningStyle,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.s)
+        ) {
+            Icon(painterResource(R.drawable.ic_directions_run), contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(Spacing.s))
+            Text(stringResource(R.string.running_style_title))
+        }
         myPageViewModel.error?.let {
             Text(
                 it.asString(),

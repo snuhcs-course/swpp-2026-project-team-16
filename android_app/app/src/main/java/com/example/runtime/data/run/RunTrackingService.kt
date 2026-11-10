@@ -59,8 +59,20 @@ object RunTrackingState {
         mutableMetrics.value = metrics
     }
 
+    private val mutableSplitTimes = MutableStateFlow<List<Long>>(emptyList())
+    val splitTimes: StateFlow<List<Long>> = mutableSplitTimes.asStateFlow()
+
     internal fun resetTrail() {
         mutableTrail.value = emptyList()
+        mutableSplitTimes.value = emptyList()
+    }
+
+    internal fun recordSplits(distanceMeters: Double, elapsedSeconds: Long) {
+        val completed = (distanceMeters / SPLIT_METERS).toInt()
+        val current = mutableSplitTimes.value
+        if (completed > current.size) {
+            mutableSplitTimes.value = current + List(completed - current.size) { elapsedSeconds }
+        }
     }
 
     internal fun appendTrail(latitude: Double, longitude: Double) {
@@ -76,6 +88,7 @@ object RunTrackingState {
     }
 
     private const val MIN_TRAIL_SPACING_METERS = 3.0
+    private const val SPLIT_METERS = 1000.0
 }
 
 class RunTrackingService : Service() {
@@ -311,6 +324,7 @@ class RunTrackingService : Service() {
         }
         val elapsedMs = elapsedBeforeResumeMs +
             if (isTracking && !isPaused) SystemClock.elapsedRealtime() - resumedAtMs else 0L
+        if (isTracking) RunTrackingState.recordSplits(fusion.distanceMeters, elapsedMs / 1000L)
         RunTrackingState.update(
             RunMetrics(
                 isTracking = isTracking,

@@ -138,7 +138,7 @@ fun GroupCard(group: RunningGroup, onClick: () -> Unit) {
                 listOfNotNull(
                     group.startName.ifBlank { null },
                     group.distanceFromMe?.let { stringResource(R.string.group_distance_from_me, formatDistance(it)) }
-                ).joinToString(" · ").ifBlank { "–" }
+                ).joinToString(", ").ifBlank { "–" }
             )
             Spacer(modifier = Modifier.height(Spacing.m))
             Row(verticalAlignment = Alignment.CenterVertically) {

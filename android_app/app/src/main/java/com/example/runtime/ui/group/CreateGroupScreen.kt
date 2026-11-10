@@ -78,7 +78,7 @@ fun CreateGroupScreen(
         ) {
             FieldLabel(stringResource(R.string.label_group_route))
             PickerField(
-                text = route?.let { "${it.title} · ${formatDistance(it.distance)}" } ?: stringResource(R.string.group_pick_route),
+                text = route?.let { "${it.title} (${formatDistance(it.distance)})" } ?: stringResource(R.string.group_pick_route),
                 icon = R.drawable.ic_route,
                 onClick = {
                     groupsViewModel.loadRouteChoices()

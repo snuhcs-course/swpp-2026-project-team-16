@@ -809,3 +809,157 @@ The endpoint:
 * verifies that the route belongs to the user
 * deletes the saved relationship
 * keeps the original route data unchanged
+
+---
+
+# Run Coach
+
+Run types are `recovery`, `easy`, `long`, `tempo` and `interval`. Paces are seconds per km.
+
+## Running Style
+
+### Endpoint
+
+```
+GET /api/v1/users/my_profile/running_style/
+PUT /api/v1/users/my_profile/running_style/
+```
+
+### Authentication
+
+Required.
+
+### Request (PUT)
+
+```json
+{
+    "purpose": "fitness",
+    "run_types": ["easy", "recovery"],
+    "comfortable_pace_s": 390,
+    "weekly_runs": 3,
+    "note": "I like short morning runs and avoid hills"
+}
+```
+
+`purpose` is `fitness`, `race`, `weight` or null. `comfortable_pace_s` is 180 to 900 or null. `weekly_runs` is 1 to 7 or null. `note` is up to 200 characters.
+
+### Response
+
+Returns the saved style in `data`.
+
+---
+
+## Plan Today's Run
+
+### Endpoint
+
+```
+POST /api/v1/runs/plan/
+```
+
+### Authentication
+
+Optional. When logged in, the runner's style is used.
+
+### Request
+
+```json
+{
+    "text": "Legs are heavy after yesterday's intervals. Just an easy 5 km",
+    "distance_m": 5000
+}
+```
+
+`text` is required, up to 200 characters. `distance_m` is used when the text names no distance.
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": {
+        "run_type": "recovery",
+        "distance_m": 5000,
+        "pace_min_s": 410,
+        "pace_max_s": 440,
+        "intensity": "Very easy, you can hold a conversation",
+        "route_preferences": ["flat"],
+        "summary": "Heavy legs after intervals, so an easy recovery run."
+    }
+}
+```
+
+### Description
+
+The LLM only reads the text into a run type, distance and route preferences. The pace range is computed by the server from the run type and the runner's comfortable pace. If the LLM fails, keywords in the text are used instead.
+
+---
+
+## Record Run
+
+### Endpoint
+
+```
+POST /api/v1/runs/
+```
+
+### Request
+
+Existing fields plus these optional ones:
+
+```json
+{
+    "plan": { "run_type": "recovery", "distance_m": 5000, "pace_min_s": 375, "pace_max_s": 405 },
+    "splits": [392, 381, 366, 358, 371],
+    "off_route_count": 1,
+    "off_route_seconds": 40
+}
+```
+
+`splits` holds the seconds for each full kilometer.
+
+---
+
+## Run Report
+
+### Endpoint
+
+```
+GET /api/v1/runs/<run_id>/report/
+```
+
+### Authentication
+
+Required. Only the runner can read the report.
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": {
+        "distance_m": 5000,
+        "duration_s": 1868,
+        "average_pace_s": 374,
+        "splits": [
+            { "km": 1, "distance_m": 1000, "pace_s": 392, "status": "in_range", "diff_s": 0 },
+            { "km": 3, "distance_m": 1000, "pace_s": 366, "status": "fast", "diff_s": 9 }
+        ],
+        "in_range_count": 2,
+        "off_route_count": 1,
+        "off_route_seconds": 40,
+        "plan": { "run_type": "recovery", "distance_m": 5000, "pace_min_s": 375, "pace_max_s": 405 },
+        "comment": "You held the recovery pace for the first 2 km...",
+        "recommendation": {
+            "rest_days": 2,
+            "reason": "...",
+            "plan": { "run_type": "easy", "distance_m": 6000, "pace_min_s": 380, "pace_max_s": 410 }
+        },
+        "language": "en"
+    }
+}
+```
+
+### Description
+
+All numbers are computed by the server. The LLM writes the comment and picks the next run's type, distance and rest days, using the runner's style and runs from the last 14 days. The next run's pace is computed by the server. If the LLM fails, rule-based text and choices are used. The report is generated once per language and stored with the run.

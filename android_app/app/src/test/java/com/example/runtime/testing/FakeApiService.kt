@@ -22,6 +22,10 @@ import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
 import com.example.runtime.data.remote.RunHistoryItem
+import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.remote.RunPlanRequest
+import com.example.runtime.data.remote.RunReport
+import com.example.runtime.data.remote.RunningStyle
 import com.example.runtime.data.remote.BoardComment
 import com.example.runtime.data.remote.BoardPost
 import com.example.runtime.data.remote.CommentRequest
@@ -61,6 +65,10 @@ open class FakeApiService : ApiService {
     override suspend fun translatePlace(name: String, address: String, language: String): ApiResponse<PlaceName> = unexpected()
     override suspend fun recordRun(body: RecordRunRequest): ApiResponse<RunRecord> = unexpected()
     override suspend fun runs(): ApiResponse<List<RunHistoryItem>> = unexpected()
+    override suspend fun planRun(body: RunPlanRequest): ApiResponse<RunPlan> = unexpected()
+    override suspend fun runReport(runId: Int): ApiResponse<RunReport> = unexpected()
+    override suspend fun runningStyle(): ApiResponse<RunningStyle> = unexpected()
+    override suspend fun updateRunningStyle(body: RunningStyle): ApiResponse<RunningStyle> = unexpected()
     override suspend fun sharedRoutes(sort: String): ApiResponse<List<SharedRoute>> = unexpected()
     override suspend fun sharedRoute(sharedRouteId: Int): ApiResponse<SharedRoute> = unexpected()
     override suspend fun shareRoute(body: ShareRouteRequest): ApiResponse<SharedRoute> = unexpected()

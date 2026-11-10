@@ -180,6 +180,49 @@ data class RecordRunRequest(
     @SerialName("distance_m") val distanceMeters: Int,
     @SerialName("duration_s") val durationSeconds: Long,
     @SerialName("group_id") val groupId: Int? = null,
+    val plan: RunPlan? = null,
+    val splits: List<Long> = emptyList(),
+    @SerialName("off_route_count") val offRouteCount: Int = 0,
+    @SerialName("off_route_seconds") val offRouteSeconds: Long = 0,
+)
+
+@Serializable
+data class RunPlan(
+    @SerialName("run_type") val runType: String,
+    @SerialName("distance_m") val distanceMeters: Int,
+    @SerialName("pace_min_s") val paceMinSeconds: Int,
+    @SerialName("pace_max_s") val paceMaxSeconds: Int,
+    val intensity: String = "",
+    @SerialName("route_preferences") val routePreferences: List<String> = emptyList(),
+    val summary: String = "",
+)
+
+@Serializable
+data class RunPlanRequest(
+    val text: String,
+    @SerialName("distance_m") val distanceMeters: Int? = null,
+)
+
+@Serializable
+data class RunningStyle(
+    val purpose: String? = null,
+    @SerialName("run_types") val runTypes: List<String> = emptyList(),
+    @SerialName("comfortable_pace_s") val comfortablePaceSeconds: Int? = null,
+    @SerialName("weekly_runs") val weeklyRuns: Int? = null,
+    val note: String = "",
+)
+
+@Serializable
+data class NextRunRecommendation(
+    @SerialName("rest_days") val restDays: Int,
+    val reason: String,
+    val plan: RunPlan,
+)
+
+@Serializable
+data class RunReport(
+    val comment: String,
+    val recommendation: NextRunRecommendation? = null,
 )
 
 @Serializable
