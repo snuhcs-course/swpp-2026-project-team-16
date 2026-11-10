@@ -296,3 +296,66 @@ class GroupChatTests(GroupTestBase):
             with self.subTest(text=text):
                 response = self.client.post(self.messages_url(self.group), {"text": text}, format="json")
                 self.assertEqual(response.status_code, 400)
+
+
+class PrivateGroupTests(GroupTestBase):
+    def test_creates_a_private_group_without_exposing_the_password(self):
+        response = self.create_group(is_private=True, password="run1234")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["data"]["is_private"])
+        self.assertNotIn("password", response.data["data"])
+        group = RunningGroup.objects.get()
+        self.assertTrue(group.is_private)
+        self.assertNotEqual(group.password, "run1234")
+
+    def test_groups_are_public_by_default(self):
+        response = self.create_group()
+
+        self.assertFalse(response.data["data"]["is_private"])
+        self.assertEqual(RunningGroup.objects.get().password, "")
+
+    def test_rejects_invalid_private_settings(self):
+        for extra in [
+            {"is_private": True},
+            {"is_private": True, "password": "123"},
+            {"is_private": True, "password": "    "},
+            {"is_private": True, "password": "x" * 21},
+            {"is_private": "yes", "password": "run1234"},
+        ]:
+            self.assertEqual(self.create_group(**extra).status_code, 400, extra)
+
+    def test_joining_needs_the_right_password(self):
+        group = RunningGroup.objects.get(id=self.create_group(is_private=True, password="run1234").data["data"]["id"])
+        self.log_in(self.runner)
+
+        missing = self.client.post(self.membership_url(group), {}, format="json")
+        wrong = self.client.post(self.membership_url(group), {"password": "nope"}, format="json")
+        right = self.client.post(self.membership_url(group), {"password": "run1234"}, format="json")
+
+        self.assertEqual(missing.status_code, 403)
+        self.assertEqual(wrong.status_code, 403)
+        self.assertEqual(right.status_code, 201)
+        self.assertTrue(GroupMember.objects.filter(group=group, user=self.runner).exists())
+
+    def test_public_groups_ignore_the_password(self):
+        group = self.make_group()
+        self.log_in(self.runner)
+
+        response = self.client.post(self.membership_url(group), {"password": "anything"}, format="json")
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_private_group_hides_members_and_ranking_from_outsiders(self):
+        group = RunningGroup.objects.get(id=self.create_group(is_private=True, password="run1234").data["data"]["id"])
+        self.log_in(self.runner)
+
+        outsider = self.client.get(f"{GROUPS_URL}{group.id}/").data["data"]
+        listed = self.client.get(GROUPS_URL).data["data"]
+        self.client.post(self.membership_url(group), {"password": "run1234"}, format="json")
+        member = self.client.get(f"{GROUPS_URL}{group.id}/").data["data"]
+
+        self.assertEqual(outsider["members"], [])
+        self.assertEqual(outsider["member_count"], 1)
+        self.assertTrue(listed[0]["is_private"])
+        self.assertEqual(member["members"], ["host", "runner"])

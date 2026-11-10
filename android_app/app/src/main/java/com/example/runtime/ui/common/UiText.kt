@@ -47,6 +47,8 @@ private val serverMessages = mapOf(
     "The image must be a JPEG or PNG." to R.string.error_avatar_type,
     "The join deadline must be before the run starts." to R.string.error_group_deadline_after_run,
     "The join deadline must be in the future." to R.string.error_group_deadline_past,
+    "The password is incorrect." to R.string.error_group_password_wrong,
+    "The password must be 4 to 20 characters." to R.string.error_group_password,
     "This group is full." to R.string.error_group_full,
     "This group is no longer taking members." to R.string.error_group_closed,
     "This route is already shared." to R.string.error_already_shared,

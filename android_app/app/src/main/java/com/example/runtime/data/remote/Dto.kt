@@ -312,6 +312,7 @@ data class RunningGroup(
     @SerialName("closing_soon") val closingSoon: Boolean = false,
     @SerialName("is_member") val isMember: Boolean = false,
     @SerialName("is_host") val isHost: Boolean = false,
+    @SerialName("is_private") val isPrivate: Boolean = false,
     @SerialName("distance_from_me_m") val distanceFromMe: Int? = null,
     val route: List<GeoJsonLineString> = emptyList(),
     val members: List<String> = emptyList(),
@@ -336,7 +337,12 @@ data class CreateGroupRequest(
     val capacity: Int,
     @SerialName("meet_at") val meetAt: String,
     @SerialName("join_deadline") val joinDeadline: String,
+    @SerialName("is_private") val isPrivate: Boolean = false,
+    val password: String? = null,
 )
+
+@Serializable
+data class JoinGroupRequest(val password: String? = null)
 
 @Serializable
 data class GroupMessage(

@@ -233,7 +233,7 @@
     <string name="group_status_full">Full</string>
     <string name="group_status_closed">Closed</string>
     <string name="group_deadline_passed">closed</string>
-    <string name="group_join_until">Join by %1$s</string>
+    <string name="group_join_until">Sign-up: %1$s</string>
     <string name="group_member_count">%1$d/%2$d</string>
     <string name="group_distance_from_me">%1$s away</string>
     <string name="no_groups">No running groups yet.</string>
@@ -475,4 +475,16 @@
     <string name="running_style_note">Anything else?</string>
     <string name="running_style_note_placeholder">e.g. I like short morning runs and avoid hills</string>
     <string name="running_style_saved">Running style saved.</string>
+    <string name="label_group_visibility">Visibility</string>
+    <string name="group_visibility_public">Public</string>
+    <string name="group_visibility_private">Private</string>
+    <string name="group_visibility_public_hint">Anyone can join right away.</string>
+    <string name="group_visibility_private_hint">Shown in the list, but only people with the password can join.</string>
+    <string name="label_group_password">Password</string>
+    <string name="group_password_hint">Use %1$d to %2$d characters and share it with the people you invite.</string>
+    <string name="group_password_dialog_title">Private group</string>
+    <string name="group_password_dialog_message">Enter the password you got from the host.</string>
+    <string name="group_private_hidden">This group is private. Join to see its members and ranking.</string>
+    <string name="error_group_password">The password must be 4 to 20 characters.</string>
+    <string name="error_group_password_wrong">The password is incorrect.</string>
 </resources>

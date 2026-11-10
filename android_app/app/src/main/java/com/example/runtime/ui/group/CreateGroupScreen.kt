@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.runtime.R
+import com.example.runtime.ui.auth.PasswordField
 import com.example.runtime.ui.common.AccentButton
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDateTime
@@ -51,6 +52,8 @@ fun CreateGroupScreen(
     var capacity by rememberSaveable { mutableIntStateOf(4) }
     var meetAt by rememberSaveable { mutableLongStateOf(defaultMeet.toEpochMilli()) }
     var deadline by rememberSaveable { mutableLongStateOf(defaultMeet.minus(Duration.ofHours(2)).toEpochMilli()) }
+    var isPrivate by rememberSaveable { mutableStateOf(false) }
+    var password by rememberSaveable { mutableStateOf("") }
     var picking by remember { mutableStateOf<PickingTime?>(null) }
     var showRoutePicker by remember { mutableStateOf(false) }
     val isCreating = groupsViewModel.createState == GroupActionState.Working
@@ -141,6 +144,44 @@ fun CreateGroupScreen(
                     modifier = Modifier.padding(top = Spacing.xs)
                 )
             }
+            Spacer(modifier = Modifier.height(Spacing.m))
+            FieldLabel(stringResource(R.string.label_group_visibility))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                FilterChip(
+                    selected = !isPrivate,
+                    onClick = { isPrivate = false },
+                    label = { Text(stringResource(R.string.group_visibility_public)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) },
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+                FilterChip(
+                    selected = isPrivate,
+                    onClick = { isPrivate = true },
+                    label = { Text(stringResource(R.string.group_visibility_private)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) },
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+            }
+            Text(
+                stringResource(if (isPrivate) R.string.group_visibility_private_hint else R.string.group_visibility_public_hint),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.xs)
+            )
+            if (isPrivate) {
+                Spacer(modifier = Modifier.height(Spacing.s))
+                PasswordField(
+                    value = password,
+                    onValueChange = { password = it.take(MAX_GROUP_PASSWORD_LENGTH) },
+                    label = stringResource(R.string.label_group_password)
+                )
+                Text(
+                    stringResource(R.string.group_password_hint, MIN_GROUP_PASSWORD_LENGTH, MAX_GROUP_PASSWORD_LENGTH),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.xs)
+                )
+            }
             (groupsViewModel.createState as? GroupActionState.Failed)?.let {
                 Spacer(modifier = Modifier.height(Spacing.s))
                 Text(it.message.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
@@ -159,10 +200,13 @@ fun CreateGroupScreen(
                     capacity = capacity,
                     meetAt = Instant.ofEpochMilli(meetAt),
                     joinDeadline = Instant.ofEpochMilli(deadline),
+                    isPrivate = isPrivate,
+                    password = password,
                     onCreated = onCreated
                 )
             },
-            enabled = route != null && title.isNotBlank() && deadline <= meetAt && !isCreating,
+            enabled = route != null && title.isNotBlank() && deadline <= meetAt && !isCreating &&
+                (!isPrivate || isValidGroupPassword(password)),
             modifier = Modifier.fillMaxWidth().padding(Spacing.m)
         )
     }
