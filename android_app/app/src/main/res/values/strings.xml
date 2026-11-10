@@ -564,4 +564,20 @@
     <string name="notification_kind_post_comment_desc">When someone comments on your post</string>
     <string name="notification_kind_route_review">Route reviews</string>
     <string name="notification_kind_route_review_desc">When someone reviews a route you shared</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="calendar_title">Running calendar</string>
+    <string name="calendar_log_in_title">Log in to see your running calendar</string>
+    <string name="calendar_log_in_message">Days you ran and group runs you joined show up here.</string>
+    <string name="calendar_previous_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_month_title">%2$s %1$d</string>
+    <string name="calendar_month_summary">Ran on %1$d days this month, %2$s in total</string>
+    <string name="calendar_legend_title">Distance per day</string>
+    <string name="calendar_legend_up_to">up to %1$dkm</string>
+    <string name="calendar_legend_range">%1$d–%2$dkm</string>
+    <string name="calendar_legend_over">%1$dkm+</string>
+    <string name="calendar_legend_group">Group runs you joined</string>
+    <string name="calendar_day_empty">No runs or group runs on this day.</string>
+    <string name="calendar_group_time">Starts %1$s, %2$s</string>
+    <string name="calendar_run_summary">Finished %1$s, %2$s, %3$s</string>
 </resources>
