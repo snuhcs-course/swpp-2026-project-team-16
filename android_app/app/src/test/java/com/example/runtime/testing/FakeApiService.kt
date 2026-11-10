@@ -21,6 +21,7 @@ import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
+import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunPlanRequest
@@ -82,7 +83,7 @@ open class FakeApiService : ApiService {
     override suspend fun group(groupId: Int): ApiResponse<RunningGroup> = unexpected()
     override suspend fun createGroup(body: CreateGroupRequest): ApiResponse<RunningGroup> = unexpected()
     override suspend fun deleteGroup(groupId: Int): ApiResponse<Unit> = unexpected()
-    override suspend fun joinGroup(groupId: Int): ApiResponse<RunningGroup> = unexpected()
+    override suspend fun joinGroup(groupId: Int, body: JoinGroupRequest): ApiResponse<RunningGroup> = unexpected()
     override suspend fun leaveGroup(groupId: Int): ApiResponse<RunningGroup> = unexpected()
     override suspend fun groupMessages(groupId: Int, after: Int?): ApiResponse<List<GroupMessage>> = unexpected()
     override suspend fun sendGroupMessage(groupId: Int, body: SendMessageRequest): ApiResponse<GroupMessage> = unexpected()

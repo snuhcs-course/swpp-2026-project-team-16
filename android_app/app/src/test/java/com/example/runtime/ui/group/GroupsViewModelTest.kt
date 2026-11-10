@@ -4,6 +4,7 @@ import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.CreateGroupRequest
 import com.example.runtime.data.remote.GroupMessage
+import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.RunningGroup
 import com.example.runtime.data.remote.SendMessageRequest
 import com.example.runtime.data.repository.GroupRepository
@@ -81,6 +82,36 @@ class GroupsViewModelTest {
     }
 
     @Test
+    fun join_sendsThePasswordOfAPrivateGroup() {
+        viewModel.loadDetail(2)
+
+        viewModel.join("run1234")
+
+        assertEquals(JoinGroupRequest("run1234"), api.joins.single())
+    }
+
+    @Test
+    fun create_rejectsAShortPrivatePassword() {
+        val meet = Instant.parse("2026-11-05T07:00:00Z")
+
+        viewModel.create(10, "Morning", "", 4, meet, meet.minusSeconds(60), isPrivate = true, password = "123") {}
+
+        assertTrue(api.created.isEmpty())
+        assertEquals(GroupActionState.Failed(UiText.Resource(R.string.error_group_password)), viewModel.createState)
+    }
+
+    @Test
+    fun create_sendsThePasswordOnlyForPrivateGroups() {
+        val meet = Instant.parse("2026-11-05T07:00:00Z")
+
+        viewModel.create(10, "Secret", "", 4, meet, meet.minusSeconds(60), isPrivate = true, password = "run1234") {}
+        viewModel.create(10, "Open", "", 4, meet, meet.minusSeconds(60), password = "ignored") {}
+
+        assertEquals(listOf(true, false), api.created.map { it.isPrivate })
+        assertEquals(listOf("run1234", null), api.created.map { it.password })
+    }
+
+    @Test
     fun create_rejectsADeadlineAfterTheRun() {
         val meet = Instant.parse("2026-11-05T07:00:00Z")
 
@@ -139,6 +170,7 @@ class GroupsViewModelTest {
         val created = mutableListOf<CreateGroupRequest>()
         val sentMessages = mutableListOf<SendMessageRequest>()
         var failJoin = false
+        val joins = mutableListOf<JoinGroupRequest>()
 
         override suspend fun groups(filter: String, latitude: Double?, longitude: Double?, radiusKm: Double?): ApiResponse<List<RunningGroup>> {
             queries += Query(filter, latitude, longitude, radiusKm)
@@ -147,7 +179,8 @@ class GroupsViewModelTest {
 
         override suspend fun group(groupId: Int) = ApiResponse(status = "success", data = sample(groupId))
 
-        override suspend fun joinGroup(groupId: Int): ApiResponse<RunningGroup> {
+        override suspend fun joinGroup(groupId: Int, body: JoinGroupRequest): ApiResponse<RunningGroup> {
+            joins += body
             if (failJoin) throw HttpException(Response.error<Any>(400, """{"status":"error","message":"This group is full."}""".toResponseBody()))
             return ApiResponse(status = "success", data = sample(groupId).copy(memberCount = 2, isMember = true))
         }

@@ -149,6 +149,8 @@ class RunningGroup(models.Model):
     start_name = models.CharField(max_length=100, blank=True, default="")
     start_latitude = models.FloatField()
     start_longitude = models.FloatField()
+    is_private = models.BooleanField(default=False)
+    password = models.CharField(max_length=128, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

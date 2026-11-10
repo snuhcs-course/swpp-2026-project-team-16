@@ -464,4 +464,16 @@
     <string name="running_style_note">더 알려 주세요</string>
     <string name="running_style_note_placeholder">예: 아침에 짧게 뛰는 걸 좋아하고 언덕은 싫어요</string>
     <string name="running_style_saved">러닝 스타일을 저장했어요.</string>
+    <string name="label_group_visibility">공개 설정</string>
+    <string name="group_visibility_public">공개</string>
+    <string name="group_visibility_private">비공개</string>
+    <string name="group_visibility_public_hint">누구나 바로 참가할 수 있어요.</string>
+    <string name="group_visibility_private_hint">목록에는 보이지만, 비밀번호를 아는 사람만 참가할 수 있어요.</string>
+    <string name="label_group_password">비밀번호</string>
+    <string name="group_password_hint">%1$d~%2$d자로 정해 주세요. 참가할 사람에게 직접 알려 주세요.</string>
+    <string name="group_password_dialog_title">비공개 그룹</string>
+    <string name="group_password_dialog_message">호스트에게 받은 비밀번호를 입력해 주세요.</string>
+    <string name="group_private_hidden">비공개 그룹이에요. 참가하면 멤버와 랭킹을 볼 수 있어요.</string>
+    <string name="error_group_password">비밀번호는 4~20자로 정해 주세요.</string>
+    <string name="error_group_password_wrong">비밀번호가 맞지 않아요.</string>
 </resources>

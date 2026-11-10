@@ -4,6 +4,7 @@ import com.example.runtime.data.remote.ApiClient
 import com.example.runtime.data.remote.ApiService
 import com.example.runtime.data.remote.CreateGroupRequest
 import com.example.runtime.data.remote.GroupMessage
+import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.RunningGroup
 import com.example.runtime.data.remote.SendMessageRequest
 
@@ -20,7 +21,8 @@ class GroupRepository(private val api: ApiService = ApiClient.api) {
         api.deleteGroup(groupId)
     }
 
-    suspend fun join(groupId: Int): RunningGroup = api.joinGroup(groupId).requireData()
+    suspend fun join(groupId: Int, password: String? = null): RunningGroup =
+        api.joinGroup(groupId, JoinGroupRequest(password)).requireData()
 
     suspend fun leave(groupId: Int): RunningGroup = api.leaveGroup(groupId).requireData()
 

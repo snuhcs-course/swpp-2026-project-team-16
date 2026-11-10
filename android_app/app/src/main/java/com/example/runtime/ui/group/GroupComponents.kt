@@ -120,6 +120,10 @@ fun GroupCard(group: RunningGroup, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(Spacing.m)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (group.isPrivate) {
+                    PrivateGroupIcon()
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                }
                 Text(
                     group.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -169,4 +173,14 @@ fun CreateGroupButton(onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(Spacing.s))
         Text(stringResource(R.string.action_create_group_with_route), style = MaterialTheme.typography.labelLarge)
     }
+}
+
+@Composable
+fun PrivateGroupIcon(modifier: Modifier = Modifier) {
+    Icon(
+        painterResource(R.drawable.ic_lock),
+        contentDescription = stringResource(R.string.group_visibility_private),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.size(18.dp)
+    )
 }

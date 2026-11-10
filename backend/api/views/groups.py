@@ -1,6 +1,7 @@
 import math
 from datetime import timedelta
 
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -19,6 +20,8 @@ MAX_DESCRIPTION_LENGTH = 300
 MAX_MESSAGE_LENGTH = 500
 MIN_CAPACITY = 2
 MAX_CAPACITY = 20
+MIN_PASSWORD_LENGTH = 4
+MAX_PASSWORD_LENGTH = 20
 CLOSING_SOON_WINDOW = timedelta(hours=24)
 DEFAULT_RADIUS_KM = 5.0
 MAX_RADIUS_KM = 50.0
@@ -114,14 +117,16 @@ def _group_data(group, user, now, origin=None, detail=False, language=DEFAULT_LA
         "closing_soon": _is_closing_soon(group, now),
         "is_member": is_member,
         "is_host": user.is_authenticated and group.host_id == user.id,
+        "is_private": group.is_private,
         "distance_from_me_m": (
             round(_distance_m(origin[0], origin[1], group.start_latitude, group.start_longitude)) if origin else None
         ),
     }
     if detail:
         data["route"] = group.route.route
-        data["members"] = [member.user.username for member in group.members.select_related("user")]
-        data["ranking"] = _ranking(group, user)
+        hidden = group.is_private and not is_member
+        data["members"] = [] if hidden else [member.user.username for member in group.members.select_related("user")]
+        data["ranking"] = [] if hidden else _ranking(group, user)
     return data
 
 
@@ -174,7 +179,19 @@ def _parse_group(data, now):
         return None, "The join deadline must be in the future."
     if join_deadline > meet_at:
         return None, "The join deadline must be before the run starts."
+    is_private = data.get("is_private", False)
+    if not isinstance(is_private, bool):
+        return None, "is_private must be true or false."
+    password = data.get("password") or ""
+    if is_private and (
+        not isinstance(password, str)
+        or not password.strip()
+        or not MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH
+    ):
+        return None, f"The password must be {MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters."
     return {
+        "is_private": is_private,
+        "password": make_password(password) if is_private else "",
         "title": title.strip(),
         "description": description.strip(),
         "capacity": capacity,
@@ -297,6 +314,10 @@ def group_membership(request, group_id):
                 return _error("This group is no longer taking members.", status.HTTP_400_BAD_REQUEST)
             if group_status == "full":
                 return _error("This group is full.", status.HTTP_400_BAD_REQUEST)
+            if group.is_private:
+                password = request.data.get("password")
+                if not isinstance(password, str) or not check_password(password, group.password):
+                    return _error("The password is incorrect.", status.HTTP_403_FORBIDDEN)
             GroupMember.objects.create(group=group, user=request.user)
             code = status.HTTP_201_CREATED
         else:

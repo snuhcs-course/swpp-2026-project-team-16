@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 import com.example.runtime.data.remote.GroupRanking
 import com.example.runtime.data.remote.RunningGroup
+import com.example.runtime.ui.auth.PasswordField
 import com.example.runtime.ui.common.AccentButton
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.asString
@@ -46,6 +47,8 @@ fun GroupDetailScreen(
     var showFullMap by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var joinPassword by remember { mutableStateOf("") }
     val messages = LocalAppMessages.current
     val haptic = LocalHapticFeedback.current
     val joinedMessage = stringResource(R.string.group_joined_message)
@@ -76,6 +79,10 @@ fun GroupDetailScreen(
                     Box(modifier = Modifier.size(width = 180.dp, height = 22.dp).placeholder())
                 }
             } else {
+                if (group.isPrivate) {
+                    PrivateGroupIcon()
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                }
                 Text(
                     group.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -147,7 +154,15 @@ fun GroupDetailScreen(
             Text(stringResource(R.string.group_members_title), style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(Spacing.s))
             MemberProgress(group)
-            if (group.members.isNotEmpty()) {
+            val hiddenFromMe = group.isPrivate && !group.isMember
+            if (hiddenFromMe) {
+                Spacer(modifier = Modifier.height(Spacing.s))
+                Text(
+                    stringResource(R.string.group_private_hidden),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (group.members.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.s))
                 Text(
                     group.members.joinToString(", "),
@@ -156,6 +171,7 @@ fun GroupDetailScreen(
                 )
             }
 
+            if (!hiddenFromMe) {
             Spacer(modifier = Modifier.height(Spacing.l))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(R.drawable.ic_trophy), contentDescription = null, modifier = Modifier.size(22.dp))
@@ -177,6 +193,7 @@ fun GroupDetailScreen(
                 )
             } else {
                 group.ranking.forEach { RankingRow(it) }
+            }
             }
 
             if (group.isMember && !group.isHost) {
@@ -229,6 +246,9 @@ fun GroupDetailScreen(
                         onClick = {
                             if (!isLoggedIn) {
                                 onLogInToJoin()
+                            } else if (group.isPrivate) {
+                                joinPassword = ""
+                                showPasswordDialog = true
                             } else {
                                 groupsViewModel.join {
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
@@ -247,6 +267,52 @@ fun GroupDetailScreen(
     val detail = groupsViewModel.detail
     if (showFullMap && detail != null) {
         FullScreenRouteMap(lines = detail.route, onDismiss = { showFullMap = false })
+    }
+
+    if (showPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showPasswordDialog = false },
+            icon = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null) },
+            title = { Text(stringResource(R.string.group_password_dialog_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.group_password_dialog_message))
+                    Spacer(modifier = Modifier.height(Spacing.s))
+                    PasswordField(
+                        value = joinPassword,
+                        onValueChange = { joinPassword = it.take(MAX_GROUP_PASSWORD_LENGTH) },
+                        label = stringResource(R.string.label_group_password)
+                    )
+                    actionError?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = Spacing.xs)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        groupsViewModel.join(joinPassword) {
+                            showPasswordDialog = false
+                            haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                            messages?.show(joinedMessage)
+                        }
+                    },
+                    enabled = joinPassword.isNotEmpty() && !isWorking
+                ) {
+                    Text(stringResource(if (isWorking) R.string.joining else R.string.action_join_group))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     if (showLeaveDialog) {

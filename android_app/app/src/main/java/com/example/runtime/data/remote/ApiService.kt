@@ -143,7 +143,7 @@ interface ApiService {
     suspend fun deleteGroup(@Path("groupId") groupId: Int): ApiResponse<Unit>
 
     @POST("api/v1/groups/{groupId}/membership/")
-    suspend fun joinGroup(@Path("groupId") groupId: Int): ApiResponse<RunningGroup>
+    suspend fun joinGroup(@Path("groupId") groupId: Int, @Body body: JoinGroupRequest): ApiResponse<RunningGroup>
 
     @DELETE("api/v1/groups/{groupId}/membership/")
     suspend fun leaveGroup(@Path("groupId") groupId: Int): ApiResponse<RunningGroup>

@@ -156,7 +156,7 @@ class GroupsViewModel(
         groups = groups.map { if (it.id == group.id) group.copy(route = emptyList(), distanceFromMe = it.distanceFromMe) else it }
     }
 
-    fun join(onJoined: () -> Unit = {}) = act({ repository.join(it) }, onJoined)
+    fun join(password: String? = null, onJoined: () -> Unit = {}) = act({ repository.join(it, password) }, onJoined)
 
     fun leave(onLeft: () -> Unit = {}) = act({ repository.leave(it) }, onLeft)
 
@@ -221,10 +221,16 @@ class GroupsViewModel(
         capacity: Int,
         meetAt: Instant,
         joinDeadline: Instant,
+        isPrivate: Boolean = false,
+        password: String = "",
         onCreated: (Int) -> Unit,
     ) {
         val trimmedTitle = title.trim()
         if (trimmedTitle.isEmpty() || createState == GroupActionState.Working) return
+        if (isPrivate && !isValidGroupPassword(password)) {
+            createState = GroupActionState.Failed(UiText.Resource(R.string.error_group_password))
+            return
+        }
         if (joinDeadline.isAfter(meetAt)) {
             createState = GroupActionState.Failed(UiText.Resource(R.string.error_group_deadline_after_run))
             return
@@ -240,6 +246,8 @@ class GroupsViewModel(
                         capacity = capacity.coerceIn(MIN_GROUP_CAPACITY, MAX_GROUP_CAPACITY),
                         meetAt = meetAt.toString(),
                         joinDeadline = joinDeadline.toString(),
+                        isPrivate = isPrivate,
+                        password = password.takeIf { isPrivate },
                     )
                 )
                 detail = group
@@ -318,3 +326,9 @@ class GroupsViewModel(
         location = null
     }
 }
+
+const val MIN_GROUP_PASSWORD_LENGTH = 4
+const val MAX_GROUP_PASSWORD_LENGTH = 20
+
+fun isValidGroupPassword(password: String): Boolean =
+    password.isNotBlank() && password.length in MIN_GROUP_PASSWORD_LENGTH..MAX_GROUP_PASSWORD_LENGTH
