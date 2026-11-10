@@ -3,6 +3,7 @@ package com.example.runtime.ui.route
 import android.Manifest
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,6 +55,7 @@ import com.example.runtime.R
 import com.example.runtime.data.remote.GeoJsonLineString
 import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.data.run.RunTrackingState
+import com.example.runtime.data.run.TrailPoint
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.common.formatDuration
 import com.example.runtime.ui.common.formatPace
@@ -79,6 +81,7 @@ fun RunNavigationScreen(
 ) {
     val context = LocalContext.current
     val metrics by RunTrackingState.metrics.collectAsState()
+    val trail by RunTrackingState.trail.collectAsState()
     val routePoints = remember(lines) {
         lines.flatMap { line ->
             line.coordinates.mapNotNull { coordinate ->
@@ -112,7 +115,7 @@ fun RunNavigationScreen(
         val latitude = metrics.latitude
         val longitude = metrics.longitude
         if (latitude != null && longitude != null) {
-            routeProgress = progressMatcher.update(latitude, longitude)
+            routeProgress = progressMatcher.update(latitude, longitude, SystemClock.elapsedRealtime())
         }
     }
 
@@ -147,6 +150,8 @@ fun RunNavigationScreen(
         null
     }
 
+    val isOffRoute = metrics.isTracking && currentLocation != null && routeProgress.isOffRoute
+
     BackHandler {
         if (showRunSummary || !metrics.isTracking) onFinish()
         else showFinishConfirmation = true
@@ -160,7 +165,9 @@ fun RunNavigationScreen(
     ) {
         RunningRouteMap(
             points = routePoints,
+            trail = trail,
             currentLocation = currentLocation,
+            isOffRoute = isOffRoute,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
@@ -174,32 +181,51 @@ fun RunNavigationScreen(
         val remainingMeters = (routeDistanceMeters - completedMeters.roundToInt()).coerceAtLeast(0)
         val nextTurn = turnGuide.nextTurn(routeProgress.distanceAlongMeters)
 
-        Text(
-            text = when {
-                metrics.locationError -> stringResource(R.string.run_location_unavailable)
-                metrics.latitude == null -> stringResource(R.string.run_waiting_for_gps)
-                routeProgress.distanceFromRouteMeters > OFF_ROUTE_DISTANCE_METERS ->
-                    stringResource(R.string.run_off_route)
-                nextTurn != null -> stringResource(
-                    if (nextTurn.direction == RouteTurnDirection.LEFT) R.string.run_turn_left
-                    else R.string.run_turn_right,
-                    formatDistance((nextTurn.distanceAlongMeters - routeProgress.distanceAlongMeters).roundToInt()),
-                )
-                progress >= NEAR_FINISH_PROGRESS -> stringResource(R.string.run_near_finish)
-                else -> stringResource(R.string.run_follow_route)
-            },
-            color = if (
-                metrics.latitude != null &&
-                routeProgress.distanceFromRouteMeters > OFF_ROUTE_DISTANCE_METERS
+        if (isOffRoute) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.primary
-            },
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+                Column(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string.run_off_route_distance,
+                            formatDistance(routeProgress.distanceFromRouteMeters.roundToInt()),
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        stringResource(R.string.run_off_route),
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = when {
+                    metrics.locationError -> stringResource(R.string.run_location_unavailable)
+                    metrics.latitude == null -> stringResource(R.string.run_waiting_for_gps)
+                    nextTurn != null -> stringResource(
+                        if (nextTurn.direction == RouteTurnDirection.LEFT) R.string.run_turn_left
+                        else R.string.run_turn_right,
+                        formatDistance((nextTurn.distanceAlongMeters - routeProgress.distanceAlongMeters).roundToInt()),
+                    )
+                    progress >= NEAR_FINISH_PROGRESS -> stringResource(R.string.run_near_finish)
+                    else -> stringResource(R.string.run_follow_route)
+                },
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
         Text(
@@ -350,7 +376,9 @@ private fun RunMetricCard(label: String, value: String, modifier: Modifier = Mod
 @Composable
 private fun RunningRouteMap(
     points: List<RouteCoordinate>,
+    trail: List<TrailPoint>,
     currentLocation: LatLng?,
+    isOffRoute: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val initialPosition = points.firstOrNull()?.let { LatLng(it.latitude, it.longitude) }
@@ -378,10 +406,19 @@ private fun RunningRouteMap(
                     )
                 }
             }
+            if (trail.size >= 2) {
+                PathOverlay(
+                    coords = trail.map { LatLng(it.latitude, it.longitude) },
+                    width = 4.dp,
+                    color = if (isOffRoute) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
+                    outlineWidth = 0.dp,
+                )
+            }
             currentLocation?.let { location ->
                 Marker(
                     state = MarkerState(position = location),
                     captionText = stringResource(R.string.run_you),
+                    iconTintColor = if (isOffRoute) MaterialTheme.colorScheme.error else Color.Transparent,
                 )
             }
         }
@@ -418,5 +455,4 @@ private fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordin
     }
 
 private val MAP_CORNER_RADIUS = 18.dp
-private const val OFF_ROUTE_DISTANCE_METERS = 40.0
 private const val NEAR_FINISH_PROGRESS = 0.95f

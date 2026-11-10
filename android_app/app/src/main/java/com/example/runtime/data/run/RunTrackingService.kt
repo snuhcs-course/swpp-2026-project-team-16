@@ -46,13 +46,36 @@ data class RunMetrics(
     val locationError: Boolean = false,
 )
 
+data class TrailPoint(val latitude: Double, val longitude: Double)
+
 object RunTrackingState {
     private val mutableMetrics = MutableStateFlow(RunMetrics())
     val metrics: StateFlow<RunMetrics> = mutableMetrics.asStateFlow()
 
+    private val mutableTrail = MutableStateFlow<List<TrailPoint>>(emptyList())
+    val trail: StateFlow<List<TrailPoint>> = mutableTrail.asStateFlow()
+
     internal fun update(metrics: RunMetrics) {
         mutableMetrics.value = metrics
     }
+
+    internal fun resetTrail() {
+        mutableTrail.value = emptyList()
+    }
+
+    internal fun appendTrail(latitude: Double, longitude: Double) {
+        val last = mutableTrail.value.lastOrNull()
+        if (last != null && distanceMeters(last.latitude, last.longitude, latitude, longitude) < MIN_TRAIL_SPACING_METERS) return
+        mutableTrail.value = mutableTrail.value + TrailPoint(latitude, longitude)
+    }
+
+    private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val result = FloatArray(1)
+        Location.distanceBetween(lat1, lon1, lat2, lon2, result)
+        return result[0].toDouble()
+    }
+
+    private const val MIN_TRAIL_SPACING_METERS = 3.0
 }
 
 class RunTrackingService : Service() {
@@ -137,6 +160,7 @@ class RunTrackingService : Service() {
         }
 
         RunTrackingState.update(RunMetrics(isTracking = true))
+        RunTrackingState.resetTrail()
         startLocationUpdates()
         startSensors()
         handler.removeCallbacks(ticker)
@@ -280,6 +304,11 @@ class RunTrackingService : Service() {
         locationError: Boolean = RunTrackingState.metrics.value.locationError,
         isTracking: Boolean = RunTrackingState.metrics.value.isTracking,
     ) {
+        val latitude = fusion.latitude
+        val longitude = fusion.longitude
+        if (isTracking && !isPaused && latitude != null && longitude != null) {
+            RunTrackingState.appendTrail(latitude, longitude)
+        }
         val elapsedMs = elapsedBeforeResumeMs +
             if (isTracking && !isPaused) SystemClock.elapsedRealtime() - resumedAtMs else 0L
         RunTrackingState.update(
