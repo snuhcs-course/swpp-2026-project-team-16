@@ -44,6 +44,7 @@ def profile_data(user):
         "avatar_url": avatar_url,
         "follower_count": user.followers.count(),
         "following_count": user.following.count(),
+        "invite_count": user.group_invites.filter(group__meet_at__gt=timezone.now()).count(),
     }
 
 

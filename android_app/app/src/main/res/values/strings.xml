@@ -509,4 +509,27 @@
     <string name="login_prompt_follow">Log in to follow runners and see their new routes and groups in one place.</string>
     <string name="error_user_not_found">User not found.</string>
     <string name="error_follow_self">You can\'t follow yourself.</string>
+    <string name="group_invites_title">Group invites</string>
+    <string name="group_invites_empty">No invites</string>
+    <string name="group_invites_empty_message">Invites from people who follow each other with you show up here.</string>
+    <string name="group_invited_by">%1$s invited you</string>
+    <string name="action_accept_invite">Accept invite</string>
+    <string name="action_decline_invite">Decline</string>
+    <string name="action_invite_friends">Invite friends</string>
+    <string name="action_invite">Invite</string>
+    <string name="group_you_are_invited">You\'re invited. You can join without a password.</string>
+    <string name="group_friend_invited">Invite sent.</string>
+    <string name="invite_friends_title">Invite friends</string>
+    <string name="invite_friends_hint">You can invite people who follow each other with you.</string>
+    <string name="invite_friends_empty">No mutual followers yet. Follow people from their profiles.</string>
+    <string name="invite_status_member">Joined</string>
+    <string name="invite_status_invited">Invited</string>
+    <string name="error_invite_not_mutual">You can only invite people who follow each other with you.</string>
+    <string name="error_invite_already_member">They are already in this group.</string>
+    <string name="error_invite_not_member">Join this group to invite friends.</string>
+    <string name="error_invite_not_found">Invite not found.</string>
+    <plurals name="group_invite_banner">
+        <item quantity="one">%1$d group invite</item>
+        <item quantity="other">%1$d group invites</item>
+    </plurals>
 </resources>

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,7 @@ fun MyPageScreen(
     onCreateRoute: () -> Unit,
     onOpenRunningStyle: () -> Unit,
     onOpenMyProfile: (String) -> Unit,
+    onOpenInvites: () -> Unit,
     onLogout: () -> Unit,
 ) {
     var showAccountMenu by remember { mutableStateOf(false) }
@@ -106,6 +108,17 @@ fun MyPageScreen(
                     stringResource(R.string.my_follow_counts, myPageViewModel.followerCount, myPageViewModel.followingCount),
                     style = MaterialTheme.typography.labelLarge
                 )
+            }
+        }
+        if (myPageViewModel.inviteCount > 0) {
+            FilledTonalButton(
+                onClick = onOpenInvites,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.s)
+            ) {
+                Icon(painterResource(R.drawable.ic_groups), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(Spacing.s))
+                Text(pluralStringResource(R.plurals.group_invite_banner, myPageViewModel.inviteCount, myPageViewModel.inviteCount))
             }
         }
         OutlinedButton(

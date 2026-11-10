@@ -1007,3 +1007,40 @@ Authentication required for each:
 * `GET /api/v1/board/posts/?filter=following`: named posts by people you follow; anonymous posts are excluded
 
 `GET /api/v1/users/my_profile/` now also returns `follower_count` and `following_count`.
+
+---
+
+# Group Invites
+
+Members of a group can invite people who follow each other with them (mutual followers). An invited person can join the group without its password.
+
+## Invitable Friends
+
+```
+GET /api/v1/groups/<group_id>/invites/
+```
+
+Members only. Lists your mutual followers with `username`, `display_name`, `is_member` and `is_invited`.
+
+## Invite
+
+```
+POST /api/v1/groups/<group_id>/invites/
+```
+
+Members only. Body: `{"username": "friend"}`. The invitee must be a mutual follower, not already a member, and the group must still be open. Inviting the same person twice keeps one invite.
+
+## My Invites
+
+```
+GET /api/v1/invites/
+```
+
+Your invites to groups that have not started yet, each with `id`, `inviter`, `created_at` and `group`.
+
+## Accept / Decline
+
+* Accept by joining: `POST /api/v1/groups/<group_id>/membership/` with no password. The invite is removed after joining.
+* Decline: `DELETE /api/v1/invites/<invite_id>/`
+
+Group data includes `my_invite_id` when you are invited and not yet a member. `GET /api/v1/users/my_profile/` includes `invite_count`.

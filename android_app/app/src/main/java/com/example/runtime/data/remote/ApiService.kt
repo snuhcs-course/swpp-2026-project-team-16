@@ -163,6 +163,18 @@ interface ApiService {
     @DELETE("api/v1/groups/{groupId}/membership/")
     suspend fun leaveGroup(@Path("groupId") groupId: Int): ApiResponse<RunningGroup>
 
+    @GET("api/v1/groups/{groupId}/invites/")
+    suspend fun invitableFriends(@Path("groupId") groupId: Int): ApiResponse<List<InvitableFriend>>
+
+    @POST("api/v1/groups/{groupId}/invites/")
+    suspend fun inviteFriend(@Path("groupId") groupId: Int, @Body body: InviteRequest): ApiResponse<GroupInvite>
+
+    @GET("api/v1/invites/")
+    suspend fun myInvites(): ApiResponse<List<GroupInvite>>
+
+    @DELETE("api/v1/invites/{inviteId}/")
+    suspend fun declineInvite(@Path("inviteId") inviteId: Int): ApiResponse<Unit>
+
     @GET("api/v1/groups/{groupId}/messages/")
     suspend fun groupMessages(@Path("groupId") groupId: Int, @Query("after") after: Int? = null): ApiResponse<List<GroupMessage>>
 

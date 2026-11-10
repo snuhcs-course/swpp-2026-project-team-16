@@ -3,7 +3,10 @@ package com.example.runtime.data.repository
 import com.example.runtime.data.remote.ApiClient
 import com.example.runtime.data.remote.ApiService
 import com.example.runtime.data.remote.CreateGroupRequest
+import com.example.runtime.data.remote.GroupInvite
 import com.example.runtime.data.remote.GroupMessage
+import com.example.runtime.data.remote.InvitableFriend
+import com.example.runtime.data.remote.InviteRequest
 import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.RunningGroup
 import com.example.runtime.data.remote.SendMessageRequest
@@ -25,6 +28,17 @@ class GroupRepository(private val api: ApiService = ApiClient.api) {
         api.joinGroup(groupId, JoinGroupRequest(password)).requireData()
 
     suspend fun leave(groupId: Int): RunningGroup = api.leaveGroup(groupId).requireData()
+
+    suspend fun invitableFriends(groupId: Int): List<InvitableFriend> = api.invitableFriends(groupId).data.orEmpty()
+
+    suspend fun invite(groupId: Int, username: String): GroupInvite =
+        api.inviteFriend(groupId, InviteRequest(username)).requireData()
+
+    suspend fun invites(): List<GroupInvite> = api.myInvites().data.orEmpty()
+
+    suspend fun declineInvite(inviteId: Int) {
+        api.declineInvite(inviteId)
+    }
 
     suspend fun messages(groupId: Int, after: Int?): List<GroupMessage> = api.groupMessages(groupId, after).data.orEmpty()
 

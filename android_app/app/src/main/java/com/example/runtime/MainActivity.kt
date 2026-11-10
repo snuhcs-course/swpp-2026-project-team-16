@@ -58,6 +58,7 @@ import com.example.runtime.ui.route.RunNavigationScreen
 import com.example.runtime.ui.route.RunReportScreen
 import com.example.runtime.ui.mypage.RunningStyleScreen
 import com.example.runtime.ui.profile.UserProfileScreen
+import com.example.runtime.ui.group.GroupInvitesScreen
 import com.example.runtime.ui.profile.UserProfileViewModel
 import com.example.runtime.ui.mypage.RunningStyleViewModel
 import com.example.runtime.ui.route.RouteResultScreen
@@ -124,6 +125,7 @@ fun RunTimeApp() {
     var profileReturnScreen by rememberSaveable { mutableStateOf("community") }
     var groupReturnScreen by rememberSaveable { mutableStateOf("community") }
     var postReturnScreen by rememberSaveable { mutableStateOf("community") }
+    var invitesReturnScreen by rememberSaveable { mutableStateOf("community") }
     val communityViewModel: CommunityViewModel = viewModel()
     val groupsViewModel: GroupsViewModel = viewModel()
     val boardViewModel: BoardViewModel = viewModel()
@@ -215,7 +217,7 @@ fun RunTimeApp() {
                         label = { Text(stringResource(R.string.nav_route)) }
                     )
                     NavigationBarItem(
-                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor", "user_profile"),
+                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor", "user_profile", "group_invites"),
                         onClick = { currentScreen = "community" },
                         icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_community)) }
@@ -402,6 +404,10 @@ fun RunTimeApp() {
                                         },
                                         onLogInRequired = {
                                             loginPrompt = if (communityViewModel.selectedTab == 2) LOGIN_PROMPT_BOARD else LOGIN_PROMPT_GROUP
+                                        },
+                                        onOpenInvites = {
+                                            invitesReturnScreen = "community"
+                                            currentScreen = "group_invites"
                                         }
                                     )
                                     "post_detail" -> selectedPostId?.let { postId ->
@@ -534,6 +540,10 @@ fun RunTimeApp() {
                                         onCreateRoute = { currentScreen = "route_input" },
                                         onOpenRunningStyle = { currentScreen = "running_style" },
                                         onOpenMyProfile = ::openUser,
+                                        onOpenInvites = {
+                                            invitesReturnScreen = "MyPage"
+                                            currentScreen = "group_invites"
+                                        },
                                         onLogout = {
                                             authViewModel.logout {
                                                 routeViewModel.reset()
@@ -573,6 +583,15 @@ fun RunTimeApp() {
                                     } ?: run {
                                         currentScreen = profileReturnScreen
                                     }
+                                    "group_invites" -> GroupInvitesScreen(
+                                        groupsViewModel = groupsViewModel,
+                                        onBack = { currentScreen = invitesReturnScreen },
+                                        onOpenGroup = { groupId ->
+                                            selectedGroupId = groupId
+                                            groupReturnScreen = "group_invites"
+                                            currentScreen = "group_detail"
+                                        }
+                                    )
                                     "running_style" -> RunningStyleScreen(
                                         viewModel = runningStyleViewModel,
                                         onBack = { currentScreen = "MyPage" }

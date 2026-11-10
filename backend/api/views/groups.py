@@ -1,6 +1,7 @@
 import math
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
 from django.db.models import Count, Q
@@ -10,10 +11,12 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.models import GroupMember, GroupMessage, Route, RunningGroup
+from api.models import Follow, GroupInvite, GroupMember, GroupMessage, Route, RunningGroup
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
 
+
+User = get_user_model()
 
 MAX_TITLE_LENGTH = 60
 MAX_DESCRIPTION_LENGTH = 300
@@ -118,6 +121,9 @@ def _group_data(group, user, now, origin=None, detail=False, language=DEFAULT_LA
         "is_member": is_member,
         "is_host": user.is_authenticated and group.host_id == user.id,
         "is_private": group.is_private,
+        "my_invite_id": (
+            group.invites.filter(invitee=user).values_list("id", flat=True).first() if user.is_authenticated and not is_member else None
+        ),
         "distance_from_me_m": (
             round(_distance_m(origin[0], origin[1], group.start_latitude, group.start_longitude)) if origin else None
         ),
@@ -318,11 +324,13 @@ def group_membership(request, group_id):
                 return _error("This group is no longer taking members.", status.HTTP_400_BAD_REQUEST)
             if group_status == "full":
                 return _error("This group is full.", status.HTTP_400_BAD_REQUEST)
-            if group.is_private:
+            invite = group.invites.filter(invitee=request.user).first()
+            if group.is_private and invite is None:
                 password = request.data.get("password")
                 if not isinstance(password, str) or not check_password(password, group.password):
                     return _error("The password is incorrect.", status.HTTP_403_FORBIDDEN)
             GroupMember.objects.create(group=group, user=request.user)
+            group.invites.filter(invitee=request.user).delete()
             code = status.HTTP_201_CREATED
         else:
             if membership is None:
@@ -380,3 +388,82 @@ def group_messages(request, group_id):
         {"status": "success", "data": _message_data(message, request.user)},
         status=status.HTTP_201_CREATED,
     )
+
+
+def mutual_follow_ids(user):
+    following = Follow.objects.filter(follower=user).values("followee_id")
+    return set(Follow.objects.filter(followee=user, follower_id__in=following).values_list("follower_id", flat=True))
+
+
+def _invite_data(invite, user, now, language=DEFAULT_LANGUAGE):
+    return {
+        "id": invite.id,
+        "inviter": invite.inviter.username,
+        "created_at": invite.created_at,
+        "group": _group_data(_groups().get(id=invite.group_id), user, now, language=language),
+    }
+
+
+@api_view(["GET", "POST"])
+def group_invites(request, group_id):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    try:
+        group = _groups().get(id=group_id)
+    except RunningGroup.DoesNotExist:
+        return _not_found()
+    if not group.members.filter(user=request.user).exists():
+        return _error("Join this group to invite friends.", status.HTTP_403_FORBIDDEN)
+
+    mutuals = mutual_follow_ids(request.user)
+    if request.method == "GET":
+        member_ids = set(group.members.values_list("user_id", flat=True))
+        invited_ids = set(group.invites.values_list("invitee_id", flat=True))
+        users = User.objects.filter(id__in=mutuals).select_related("profile").order_by("username")
+        data = [
+            {
+                "username": friend.username,
+                "display_name": getattr(getattr(friend, "profile", None), "display_name", ""),
+                "is_member": friend.id in member_ids,
+                "is_invited": friend.id in invited_ids,
+            }
+            for friend in users
+        ]
+        return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+
+    invitee = User.objects.filter(username=request.data.get("username")).first()
+    if invitee is None:
+        return _error("User not found.", status.HTTP_404_NOT_FOUND)
+    if invitee.id not in mutuals:
+        return _error("You can only invite people who follow each other with you.", status.HTTP_403_FORBIDDEN)
+    if group.members.filter(user=invitee).exists():
+        return _error("They are already in this group.", status.HTTP_400_BAD_REQUEST)
+    now = timezone.now()
+    if _status(group, now) != "open":
+        return _error("This group is no longer taking members.", status.HTTP_400_BAD_REQUEST)
+    invite, _ = GroupInvite.objects.get_or_create(group=group, invitee=invitee, defaults={"inviter": request.user})
+    return Response(
+        {"status": "success", "data": _invite_data(invite, request.user, now, request_language(request))},
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["GET"])
+def my_invites(request):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    now = timezone.now()
+    invites = GroupInvite.objects.select_related("inviter").filter(invitee=request.user, group__meet_at__gt=now)
+    language = request_language(request)
+    data = [_invite_data(invite, request.user, now, language) for invite in invites]
+    return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+
+
+@api_view(["DELETE"])
+def invite_detail(request, invite_id):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    deleted, _ = GroupInvite.objects.filter(id=invite_id, invitee=request.user).delete()
+    if not deleted:
+        return _error("Invite not found.", status.HTTP_404_NOT_FOUND)
+    return Response({"status": "success"}, status=status.HTTP_200_OK)

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.runtime.R
@@ -34,6 +35,7 @@ fun GroupsTab(
     onGroupClick: (Int) -> Unit,
     onCreateGroup: () -> Unit,
     onLogInRequired: () -> Unit,
+    onOpenInvites: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -44,6 +46,9 @@ fun GroupsTab(
 
     LaunchedEffect(Unit) {
         groupsViewModel.refresh()
+    }
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) groupsViewModel.loadInvites()
     }
 
     fun locateAndShowNearby() {
@@ -62,6 +67,9 @@ fun GroupsTab(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.m)) {
+            if (isLoggedIn && groupsViewModel.invites.isNotEmpty()) {
+                InviteBanner(count = groupsViewModel.invites.size, onClick = onOpenInvites)
+            }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = Spacing.m)
@@ -156,5 +164,31 @@ fun GroupsTab(
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.m)
         )
+    }
+}
+
+@Composable
+private fun InviteBanner(count: Int, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.m)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s)
+        ) {
+            Icon(painterResource(R.drawable.ic_groups), contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(Spacing.s))
+            Text(
+                pluralStringResource(R.plurals.group_invite_banner, count, count),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, modifier = Modifier.size(20.dp))
+        }
     }
 }
