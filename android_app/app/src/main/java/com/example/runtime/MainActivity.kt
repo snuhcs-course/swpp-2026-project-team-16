@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -58,7 +59,16 @@ import com.example.runtime.ui.route.RunNavigationScreen
 import com.example.runtime.ui.route.RunReportScreen
 import com.example.runtime.ui.mypage.RunningStyleScreen
 import com.example.runtime.ui.profile.UserProfileScreen
+import com.example.runtime.data.push.NotificationNavigation
+import com.example.runtime.data.push.NotificationTarget
+import com.example.runtime.data.push.Push
 import com.example.runtime.ui.group.GroupInvitesScreen
+import com.example.runtime.ui.notifications.NotificationsScreen
+import com.example.runtime.ui.notifications.NotificationsViewModel
+import com.example.runtime.ui.notifications.SettingsScreen
+import kotlinx.coroutines.launch
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.ui.platform.LocalContext
 import com.example.runtime.ui.profile.UserProfileViewModel
 import com.example.runtime.ui.mypage.RunningStyleViewModel
 import com.example.runtime.ui.route.RouteResultScreen
@@ -76,10 +86,16 @@ class MainActivity : ComponentActivity() {
     private val requestLocalNetwork =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        NotificationNavigation.fromIntent(intent)?.let(NotificationNavigation::open)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         requestLocalNetworkIfNeeded()
+        NotificationNavigation.fromIntent(intent)?.let(NotificationNavigation::open)
         val themeStorage = ThemeStorage(applicationContext)
         setContent {
             val themeMode by themeStorage.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
@@ -145,8 +161,34 @@ fun RunTimeApp() {
     var loginPrompt by rememberSaveable { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val appScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val notificationsViewModel: NotificationsViewModel = viewModel()
+    var notificationsReturnScreen by rememberSaveable { mutableStateOf("MyPage") }
+    var settingsReturnScreen by rememberSaveable { mutableStateOf("MyPage") }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val pendingNotification by NotificationNavigation.target.collectAsState()
+
+    fun clearUserState() {
+        routeViewModel.reset()
+        myPageViewModel.reset()
+        groupsViewModel.reset()
+        boardViewModel.reset()
+        communityViewModel.reset()
+        notificationsViewModel.reset()
+        selectedRouteId = null
+    }
+
+    LaunchedEffect(authViewModel.isLoggedIn) {
+        if (authViewModel.isLoggedIn) {
+            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            Push.register(context)
+        }
+    }
     val appMessages = remember { AppMessages(snackbarHostState, appScope) }
     val sharedMessage = stringResource(R.string.route_shared_message)
+    val accountDeletedMessage = stringResource(R.string.account_deleted_message)
 
     fun openAuth(screen: String, returnTo: String, save: Boolean) {
         loginReturnScreen = returnTo
@@ -168,6 +210,36 @@ fun RunTimeApp() {
     fun closeUser() {
         profileStack.removeLastOrNull()
         if (profileStack.isEmpty()) currentScreen = profileReturnScreen
+    }
+
+    LaunchedEffect(pendingNotification, currentScreen, authViewModel.isLoggedIn) {
+        val target = pendingNotification ?: return@LaunchedEffect
+        if (currentScreen in setOf("splash", "login", "signup") || !authViewModel.isLoggedIn) return@LaunchedEffect
+        NotificationNavigation.consume()
+        target.notificationId?.let { notificationsViewModel.markRead(it) }
+        val from = currentScreen
+        when (target.kind) {
+            "follow" -> target.actor?.let(::openUser)
+            "group_invite" -> {
+                invitesReturnScreen = from
+                currentScreen = "group_invites"
+            }
+            "group_join", "group_message" -> target.groupId?.let { groupId ->
+                selectedGroupId = groupId
+                groupReturnScreen = from
+                currentScreen = if (target.kind == "group_message") "group_chat" else "group_detail"
+            }
+            "post_like", "post_comment" -> target.postId?.let { postId ->
+                selectedPostId = postId
+                postReturnScreen = from
+                currentScreen = "post_detail"
+            }
+            "route_review" -> target.sharedRouteId?.let { sharedRouteId ->
+                selectedSharedRouteId = sharedRouteId
+                sharedDetailReturnScreen = from
+                currentScreen = "community_detail"
+            }
+        }
     }
 
     fun openCreateGroup(route: GroupRouteChoice?, returnTo: String) {
@@ -544,15 +616,21 @@ fun RunTimeApp() {
                                             invitesReturnScreen = "MyPage"
                                             currentScreen = "group_invites"
                                         },
+                                        onOpenNotifications = {
+                                            notificationsReturnScreen = "MyPage"
+                                            currentScreen = "notifications"
+                                        },
+                                        onOpenSettings = {
+                                            settingsReturnScreen = "MyPage"
+                                            currentScreen = "settings"
+                                        },
                                         onLogout = {
-                                            authViewModel.logout {
-                                                routeViewModel.reset()
-                                                myPageViewModel.reset()
-                                                groupsViewModel.reset()
-                                                boardViewModel.reset()
-                                                communityViewModel.reset()
-                                                selectedRouteId = null
-                                                currentScreen = "route_input"
+                                            appScope.launch {
+                                                Push.unregister(context)
+                                                authViewModel.logout {
+                                                    clearUserState()
+                                                    currentScreen = "route_input"
+                                                }
                                             }
                                         }
                                     )
@@ -590,6 +668,37 @@ fun RunTimeApp() {
                                             selectedGroupId = groupId
                                             groupReturnScreen = "group_invites"
                                             currentScreen = "group_detail"
+                                        }
+                                    )
+                                    "notifications" -> NotificationsScreen(
+                                        viewModel = notificationsViewModel,
+                                        onBack = { currentScreen = notificationsReturnScreen },
+                                        onOpen = { item ->
+                                            NotificationNavigation.open(
+                                                NotificationTarget(
+                                                    kind = item.kind,
+                                                    actor = item.actor,
+                                                    groupId = item.groupId,
+                                                    postId = item.postId,
+                                                    sharedRouteId = item.sharedRouteId,
+                                                )
+                                            )
+                                        },
+                                        onOpenSettings = {
+                                            settingsReturnScreen = "notifications"
+                                            currentScreen = "settings"
+                                        }
+                                    )
+                                    "settings" -> SettingsScreen(
+                                        viewModel = notificationsViewModel,
+                                        hasPassword = myPageViewModel.hasPassword,
+                                        onBack = { currentScreen = settingsReturnScreen },
+                                        onAccountDeleted = {
+                                            authViewModel.logout {
+                                                clearUserState()
+                                                currentScreen = "route_input"
+                                            }
+                                            appMessages.show(accountDeletedMessage)
                                         }
                                     )
                                     "running_style" -> RunningStyleScreen(

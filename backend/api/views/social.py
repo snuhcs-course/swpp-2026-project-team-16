@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from api.models import Follow
 from api.services.language import request_language
+from api.services.notifications import notify
 from api.views.board import _post_data, _visible_posts
 from api.views.community import _shared_route_data, _shared_routes
 from api.views.groups import _group_data, _groups
@@ -109,9 +110,11 @@ def user_follow(request, username):
         return _error("You can't follow yourself.", status.HTTP_400_BAD_REQUEST)
     if request.method == "POST":
         try:
-            Follow.objects.get_or_create(follower=request.user, followee=target)
+            _, created = Follow.objects.get_or_create(follower=request.user, followee=target)
         except IntegrityError:
-            pass
+            created = False
+        if created:
+            notify(target, "follow", actor=request.user)
     else:
         Follow.objects.filter(follower=request.user, followee=target).delete()
     return Response({"status": "success", "data": _follow_state(target, request.user)}, status=status.HTTP_200_OK)

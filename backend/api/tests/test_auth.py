@@ -161,6 +161,8 @@ class ProfileTests(APITestCase):
                 "follower_count": 0,
                 "following_count": 0,
                 "invite_count": 0,
+                "unread_notification_count": 0,
+                "has_password": True,
             },
         )
 

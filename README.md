@@ -32,6 +32,8 @@ RunTime creates running routes along real pedestrian streets and helps runners n
 - `GOOGLE_API_KEY`: Google AI Studio key for Gemini
 - `GOOGLE_CLIENT_ID`: Google sign-in client ID for the backend
 - `NAVER_MAP_CLIENT_ID`: NAVER Cloud Maps client ID for the Android app package `com.example.runtime`
+- `FIREBASE_CREDENTIALS` (optional): path to a Firebase service account JSON file for push notifications
+- `FIREBASE_PROJECT_ID`, `FIREBASE_APP_ID`, `FIREBASE_API_KEY`, `FIREBASE_SENDER_ID` (optional): Firebase settings for the Android app
 
 ## Backend Setup
 
@@ -93,6 +95,23 @@ python manage.py test api
    ```bash
    ./gradlew assembleDebug -PRUNTIME_BASE_URL=http://<computer-ip>:8000/
    ```
+
+## Push Notifications (optional)
+
+Without these settings the app still works and keeps notifications in the in-app list, but no phone notifications are sent.
+
+1. Create a Firebase project and add an Android app with the package name `com.example.runtime`.
+2. In Project settings > Service accounts, generate a private key. Save the JSON file outside the repository and set its path as `FIREBASE_CREDENTIALS` in `backend/.env`.
+3. From Project settings > General (the Android app's `google-services.json`), add these to your user-level Gradle properties file:
+
+   ```properties
+   FIREBASE_PROJECT_ID=your_project_id
+   FIREBASE_APP_ID=1:1234567890:android:abcdef
+   FIREBASE_API_KEY=your_api_key
+   FIREBASE_SENDER_ID=1234567890
+   ```
+
+   These map to `project_id`, `mobilesdk_app_id`, `current_key` and `project_number` in `google-services.json`. The file itself is not needed in the project.
 
 ## Demo Video
 

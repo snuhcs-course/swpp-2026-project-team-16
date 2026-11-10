@@ -27,7 +27,12 @@ import com.example.runtime.data.remote.InviteRequest
 import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.FollowState
 import com.example.runtime.data.remote.FollowUser
+import com.example.runtime.data.remote.DeleteAccountRequest
+import com.example.runtime.data.remote.DeviceRequest
+import com.example.runtime.data.remote.NotificationPage
+import com.example.runtime.data.remote.ReadNotificationRequest
 import com.example.runtime.data.remote.RunHistoryItem
+import com.example.runtime.data.remote.UnreadCount
 import com.example.runtime.data.remote.UserProfile
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunPlanRequest
@@ -75,6 +80,13 @@ open class FakeApiService : ApiService {
     override suspend fun planRun(body: RunPlanRequest): ApiResponse<RunPlan> = unexpected()
     override suspend fun runReport(runId: Int): ApiResponse<RunReport> = unexpected()
     override suspend fun runningStyle(): ApiResponse<RunningStyle> = unexpected()
+    override suspend fun deleteAccount(body: DeleteAccountRequest): ApiResponse<Unit> = unexpected()
+    override suspend fun notifications(): ApiResponse<NotificationPage> = unexpected()
+    override suspend fun readNotifications(body: ReadNotificationRequest): ApiResponse<UnreadCount> = unexpected()
+    override suspend fun notificationSettings(): ApiResponse<Map<String, Boolean>> = unexpected()
+    override suspend fun updateNotificationSettings(body: Map<String, Boolean>): ApiResponse<Map<String, Boolean>> = unexpected()
+    override suspend fun registerDevice(body: DeviceRequest): ApiResponse<Unit> = unexpected()
+    override suspend fun unregisterDevice(body: DeviceRequest): ApiResponse<Unit> = unexpected()
     override suspend fun updateRunningStyle(body: RunningStyle): ApiResponse<RunningStyle> = unexpected()
     override suspend fun sharedRoutes(sort: String, filter: String?): ApiResponse<List<SharedRoute>> = unexpected()
     override suspend fun userProfile(username: String): ApiResponse<UserProfile> = unexpected()

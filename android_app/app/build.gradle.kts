@@ -23,6 +23,9 @@ android {
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
         val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").getOrElse("")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        listOf("FIREBASE_PROJECT_ID", "FIREBASE_APP_ID", "FIREBASE_API_KEY", "FIREBASE_SENDER_ID").forEach { name ->
+            buildConfigField("String", name, "\"${providers.gradleProperty(name).getOrElse("")}\"")
+        }
         manifestPlaceholders["naverMapClientId"] = providers.gradleProperty("NAVER_MAP_CLIENT_ID").getOrElse("")
     }
 
@@ -81,6 +84,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.play.services.location)
+    implementation(libs.firebase.messaging)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)

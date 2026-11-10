@@ -16,6 +16,7 @@ from api.models import (
     PostReport,
     PostScrap,
 )
+from api.services.notifications import notify
 
 
 MAX_TITLE_LENGTH = 100
@@ -219,6 +220,8 @@ def _toggle(request, post_id, model, own_error=None):
         try:
             with transaction.atomic():
                 model.objects.create(post=post, user=request.user)
+            if model is PostLike:
+                notify(post.author, "post_like", actor=request.user, post=post)
         except IntegrityError:
             pass
         code = status.HTTP_201_CREATED
@@ -275,6 +278,8 @@ def post_comments(request, post_id):
         if not isinstance(anonymous, bool):
             return _error("anonymous must be true or false.", status.HTTP_400_BAD_REQUEST)
         Comment.objects.create(post=post, author=request.user, body=body.strip(), anonymous=anonymous)
+        if post.author_id != request.user.id:
+            notify(post.author, "post_comment", actor=None if anonymous else request.user, post=post, text=body.strip())
         code = status.HTTP_201_CREATED
     else:
         code = status.HTTP_200_OK

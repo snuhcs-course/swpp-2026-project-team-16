@@ -218,7 +218,7 @@ def logout_user(request):
 
 
 
-@api_view(["GET", "PATCH"])
+@api_view(["GET", "PATCH", "DELETE"])
 def my_profile(request):
     user = request.user
 
@@ -227,6 +227,17 @@ def my_profile(request):
             {'status': 'error', 'message': 'Authentication credentials were not provided.'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+
+    if request.method == "DELETE":
+        if user.has_usable_password():
+            password = request.data.get("password")
+            if not isinstance(password, str) or not user.check_password(password):
+                return Response(
+                    {'status': 'error', 'message': 'The password is incorrect.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        user.delete()
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)
 
     if request.method == "PATCH":
         error = update_profile(user, request.data)

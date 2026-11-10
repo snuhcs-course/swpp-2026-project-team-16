@@ -63,7 +63,41 @@ data class ProfileData(
     @SerialName("follower_count") val followerCount: Int = 0,
     @SerialName("following_count") val followingCount: Int = 0,
     @SerialName("invite_count") val inviteCount: Int = 0,
+    @SerialName("unread_notification_count") val unreadNotificationCount: Int = 0,
+    @SerialName("has_password") val hasPassword: Boolean = true,
 )
+
+@Serializable
+data class AppNotification(
+    val id: Int,
+    val kind: String,
+    val title: String,
+    val body: String,
+    val actor: String? = null,
+    @SerialName("group_id") val groupId: Int? = null,
+    @SerialName("post_id") val postId: Int? = null,
+    @SerialName("shared_route_id") val sharedRouteId: Int? = null,
+    val read: Boolean = false,
+    @SerialName("created_at") val createdAt: String,
+)
+
+@Serializable
+data class NotificationPage(
+    @SerialName("unread_count") val unreadCount: Int,
+    val items: List<AppNotification>,
+)
+
+@Serializable
+data class UnreadCount(@SerialName("unread_count") val unreadCount: Int)
+
+@Serializable
+data class ReadNotificationRequest(val id: Int? = null)
+
+@Serializable
+data class DeviceRequest(val token: String)
+
+@Serializable
+data class DeleteAccountRequest(val password: String? = null)
 
 @Serializable
 data class UserProfile(

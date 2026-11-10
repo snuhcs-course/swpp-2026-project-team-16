@@ -49,6 +49,8 @@ fun MyPageScreen(
     onOpenRunningStyle: () -> Unit,
     onOpenMyProfile: (String) -> Unit,
     onOpenInvites: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
 ) {
     var showAccountMenu by remember { mutableStateOf(false) }
@@ -73,6 +75,20 @@ fun MyPageScreen(
                 modifier = Modifier.weight(1f).padding(start = Spacing.s)
             )
             PreferenceButtons()
+            IconButton(onClick = onOpenNotifications) {
+                BadgedBox(
+                    badge = {
+                        if (myPageViewModel.unreadNotificationCount > 0) {
+                            Badge { Text(myPageViewModel.unreadNotificationCount.coerceAtMost(99).toString()) }
+                        }
+                    }
+                ) {
+                    Icon(painterResource(R.drawable.ic_notifications), contentDescription = stringResource(R.string.notifications_title))
+                }
+            }
+            IconButton(onClick = onOpenSettings) {
+                Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.settings_title))
+            }
             Box {
                 IconButton(onClick = { showAccountMenu = true }) {
                     Icon(

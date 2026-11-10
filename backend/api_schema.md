@@ -1044,3 +1044,53 @@ Your invites to groups that have not started yet, each with `id`, `inviter`, `cr
 * Decline: `DELETE /api/v1/invites/<invite_id>/`
 
 Group data includes `my_invite_id` when you are invited and not yet a member. `GET /api/v1/users/my_profile/` includes `invite_count`.
+
+---
+
+# Notifications
+
+Notification types: `follow`, `group_invite`, `group_join`, `group_message`, `post_like`, `post_comment`, `route_review`. Every notification is stored for the in-app list. A phone push is sent only when that type is turned on in the user's settings and the server has `FIREBASE_CREDENTIALS`.
+
+## List
+
+```
+GET /api/v1/notifications/
+```
+
+Returns `unread_count` and the latest 50 `items`, each with `id`, `kind`, `title`, `body` (in the request language), `actor`, `group_id`, `post_id`, `shared_route_id`, `read` and `created_at`. Anonymous commenters are shown as "Someone".
+
+## Mark Read
+
+```
+POST /api/v1/notifications/read/
+```
+
+Body `{"id": 3}` marks one notification; an empty body marks all. Returns the new `unread_count`.
+
+## Settings
+
+```
+GET /api/v1/users/my_profile/notification_settings/
+PUT /api/v1/users/my_profile/notification_settings/
+```
+
+A map of type to `true`/`false`. Every type is on by default. PUT accepts a partial map.
+
+## Devices
+
+```
+POST   /api/v1/devices/
+DELETE /api/v1/devices/
+```
+
+Body `{"token": "<FCM registration token>"}`. POST registers the token for the current user and remembers the request language for push text. DELETE removes it (sent on logout).
+
+## Delete Account
+
+```
+DELETE /api/v1/users/my_profile/
+```
+
+Body `{"password": "..."}` for accounts with a password. Accounts created with Google sign-in have no password and need no body. Deletes the user and everything they own.
+
+`GET /api/v1/users/my_profile/` now also returns `unread_notification_count` and `has_password`.
