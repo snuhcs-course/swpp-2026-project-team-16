@@ -47,6 +47,12 @@ class MyPageViewModel(
     var statusMessage by mutableStateOf("")
         private set
 
+    var followerCount by mutableStateOf(0)
+        private set
+
+    var followingCount by mutableStateOf(0)
+        private set
+
     var avatar by mutableStateOf<ByteArray?>(null)
         private set
 
@@ -96,6 +102,8 @@ class MyPageViewModel(
         email = null
         displayName = ""
         statusMessage = ""
+        followerCount = 0
+        followingCount = 0
         avatar = null
         avatarUrl = null
         profileState = ProfileEditState.Idle
@@ -140,6 +148,8 @@ class MyPageViewModel(
         email = profile.email
         displayName = profile.displayName
         statusMessage = profile.statusMessage
+        followerCount = profile.followerCount
+        followingCount = profile.followingCount
         if (profile.avatarUrl == avatarUrl) return
         avatarUrl = profile.avatarUrl
         val url = profile.avatarUrl

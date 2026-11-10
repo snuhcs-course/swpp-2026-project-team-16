@@ -27,7 +27,7 @@ DEFAULT_RADIUS_KM = 5.0
 MAX_RADIUS_KM = 50.0
 MESSAGE_PAGE_SIZE = 100
 RANKING_MIN_COMPLETION = 0.8
-FILTERS = ("all", "closing_soon", "mine")
+FILTERS = ("all", "closing_soon", "mine", "following")
 EARTH_RADIUS_M = 6_371_000
 
 
@@ -224,6 +224,10 @@ def groups_list(request):
             if not request.user.is_authenticated:
                 return _auth_required()
             groups = groups.filter(members__user=request.user).order_by("-meet_at", "-id")
+        elif group_filter == "following":
+            if not request.user.is_authenticated:
+                return _auth_required()
+            groups = groups.filter(host__followers__follower=request.user, meet_at__gt=now).order_by("meet_at", "id")
         else:
             groups = groups.filter(meet_at__gt=now).order_by("meet_at", "id")
         groups = list(groups)

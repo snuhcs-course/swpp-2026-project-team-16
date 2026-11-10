@@ -137,6 +137,25 @@ class CommunityViewModelTest {
         assertNull(viewModel.detail?.myReviewId)
     }
 
+    @Test
+    fun toggleFollowingOnly_requestsOnlyFollowedRoutes() {
+        viewModel.refresh()
+
+        viewModel.toggleFollowingOnly()
+        viewModel.toggleFollowingOnly()
+
+        assertEquals(listOf(null, "following", null), api.filters)
+    }
+
+    @Test
+    fun reset_turnsTheFollowingFilterOff() {
+        viewModel.toggleFollowingOnly()
+
+        viewModel.reset()
+
+        assertEquals(false, viewModel.followingOnly)
+    }
+
     private class CommunityApi : FakeApiService() {
         var failList = false
         var failReview = false
@@ -145,8 +164,11 @@ class CommunityViewModelTest {
         val reviews = mutableListOf<RouteReview>()
         val reviewRequests = mutableListOf<Pair<String, ReviewRequest>>()
 
-        override suspend fun sharedRoutes(sort: String): ApiResponse<List<SharedRoute>> {
+        val filters = mutableListOf<String?>()
+
+        override suspend fun sharedRoutes(sort: String, filter: String?): ApiResponse<List<SharedRoute>> {
             sorts += sort
+            filters += filter
             if (failList) throw IOException("offline")
             return ApiResponse(status = "success", data = listOf(shared(1), shared(2)))
         }

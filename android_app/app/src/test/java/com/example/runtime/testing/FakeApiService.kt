@@ -22,7 +22,10 @@ import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
 import com.example.runtime.data.remote.JoinGroupRequest
+import com.example.runtime.data.remote.FollowState
+import com.example.runtime.data.remote.FollowUser
 import com.example.runtime.data.remote.RunHistoryItem
+import com.example.runtime.data.remote.UserProfile
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunPlanRequest
 import com.example.runtime.data.remote.RunReport
@@ -70,7 +73,12 @@ open class FakeApiService : ApiService {
     override suspend fun runReport(runId: Int): ApiResponse<RunReport> = unexpected()
     override suspend fun runningStyle(): ApiResponse<RunningStyle> = unexpected()
     override suspend fun updateRunningStyle(body: RunningStyle): ApiResponse<RunningStyle> = unexpected()
-    override suspend fun sharedRoutes(sort: String): ApiResponse<List<SharedRoute>> = unexpected()
+    override suspend fun sharedRoutes(sort: String, filter: String?): ApiResponse<List<SharedRoute>> = unexpected()
+    override suspend fun userProfile(username: String): ApiResponse<UserProfile> = unexpected()
+    override suspend fun follow(username: String): ApiResponse<FollowState> = unexpected()
+    override suspend fun unfollow(username: String): ApiResponse<FollowState> = unexpected()
+    override suspend fun followers(username: String): ApiResponse<List<FollowUser>> = unexpected()
+    override suspend fun following(username: String): ApiResponse<List<FollowUser>> = unexpected()
     override suspend fun sharedRoute(sharedRouteId: Int): ApiResponse<SharedRoute> = unexpected()
     override suspend fun shareRoute(body: ShareRouteRequest): ApiResponse<SharedRoute> = unexpected()
     override suspend fun deleteSharedRoute(sharedRouteId: Int): ApiResponse<Unit> = unexpected()

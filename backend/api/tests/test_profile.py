@@ -26,6 +26,8 @@ class ProfileTests(APITestCase):
             "display_name": "",
             "status_message": "",
             "avatar_url": None,
+            "follower_count": 0,
+            "following_count": 0,
         })
 
     def test_update_name_and_status(self):

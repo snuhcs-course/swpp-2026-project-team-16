@@ -2,6 +2,7 @@ package com.example.runtime.ui.group
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,7 @@ fun GroupDetailScreen(
     onRun: (RunningGroup) -> Unit,
     onOpenChat: () -> Unit,
     onLogInToJoin: () -> Unit,
+    onOpenUser: (String) -> Unit = {},
 ) {
     var showFullMap by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
@@ -129,7 +131,8 @@ fun GroupDetailScreen(
                 Text(
                     stringResource(R.string.group_hosted_by, group.host),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { onOpenUser(group.host) }.padding(vertical = 4.dp)
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.m))
@@ -192,7 +195,7 @@ fun GroupDetailScreen(
                     modifier = Modifier.padding(vertical = Spacing.s)
                 )
             } else {
-                group.ranking.forEach { RankingRow(it) }
+                group.ranking.forEach { ranking -> RankingRow(ranking, onClick = { onOpenUser(ranking.username) }) }
             }
             }
 
@@ -362,11 +365,12 @@ fun GroupDetailScreen(
 }
 
 @Composable
-private fun RankingRow(ranking: GroupRanking) {
+private fun RankingRow(ranking: GroupRanking, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .clip(MaterialTheme.shapes.medium)
             .background(if (ranking.isMe) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface)
             .padding(horizontal = Spacing.s, vertical = Spacing.s)

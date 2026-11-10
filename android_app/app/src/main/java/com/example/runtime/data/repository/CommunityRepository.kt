@@ -17,7 +17,7 @@ class CommunityRepository(private val api: ApiService = ApiClient.api) {
 
     suspend fun runs(): List<RunHistoryItem> = api.runs().data.orEmpty()
 
-    suspend fun sharedRoutes(sort: String): List<SharedRoute> = api.sharedRoutes(sort).data.orEmpty()
+    suspend fun sharedRoutes(sort: String, filter: String? = null): List<SharedRoute> = api.sharedRoutes(sort, filter).data.orEmpty()
 
     suspend fun sharedRoute(sharedRouteId: Int): SharedRoute = api.sharedRoute(sharedRouteId).requireData()
 

@@ -76,7 +76,7 @@ fun GroupsTab(
                                     context.hasLocationPermission() -> locateAndShowNearby()
                                     else -> permissionLauncher.launch(LOCATION_PERMISSIONS)
                                 }
-                                GroupFilter.MINE -> if (isLoggedIn) groupsViewModel.changeFilter(filter) else onLogInRequired()
+                                GroupFilter.MINE, GroupFilter.FOLLOWING -> if (isLoggedIn) groupsViewModel.changeFilter(filter) else onLogInRequired()
                                 else -> groupsViewModel.changeFilter(filter)
                             }
                         },
@@ -131,6 +131,7 @@ fun GroupsTab(
                             GroupFilter.MINE -> R.string.no_my_groups
                             GroupFilter.CLOSING_SOON -> R.string.no_closing_soon_groups
                             GroupFilter.NEARBY -> R.string.no_nearby_groups
+                            GroupFilter.FOLLOWING -> R.string.no_following_groups
                             else -> R.string.no_groups
                         }
                     ),

@@ -1,5 +1,7 @@
 package com.example.runtime.ui.board
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -67,7 +69,7 @@ fun BoardTab(
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-                modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s)
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Spacing.m, vertical = Spacing.s)
             ) {
                 PostFilter.entries.forEach { filter ->
                     FilterChip(
@@ -103,6 +105,7 @@ fun BoardTab(
                             boardViewModel.query.isNotEmpty() -> R.string.board_no_results
                             boardViewModel.filter == PostFilter.SCRAPS -> R.string.board_no_scraps
                             boardViewModel.filter == PostFilter.MINE -> R.string.board_no_my_posts
+                            boardViewModel.filter == PostFilter.FOLLOWING -> R.string.board_no_following_posts
                             else -> R.string.board_empty
                         }
                     ),

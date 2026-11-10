@@ -487,4 +487,26 @@
     <string name="group_private_hidden">This group is private. Join to see its members and ranking.</string>
     <string name="error_group_password">The password must be 4 to 20 characters.</string>
     <string name="error_group_password_wrong">The password is incorrect.</string>
+    <string name="filter_following">Following</string>
+    <string name="no_following_routes">No routes from people you follow</string>
+    <string name="no_following_groups">No groups hosted by people you follow</string>
+    <string name="board_no_following_posts">No named posts from people you follow</string>
+    <string name="profile_tab_routes">Routes %1$d</string>
+    <string name="profile_tab_groups">Groups %1$d</string>
+    <string name="profile_tab_posts">Posts %1$d</string>
+    <string name="profile_no_routes">No shared routes yet.</string>
+    <string name="profile_no_groups">No upcoming groups.</string>
+    <string name="profile_no_posts">No named posts yet.</string>
+    <string name="profile_followers">Followers</string>
+    <string name="profile_following">Following</string>
+    <string name="profile_no_followers">No followers yet.</string>
+    <string name="profile_no_following">Not following anyone yet.</string>
+    <string name="profile_me">You</string>
+    <string name="profile_following_badge">Following</string>
+    <string name="action_follow">Follow</string>
+    <string name="action_unfollow">Unfollow</string>
+    <string name="my_follow_counts">%1$d followers, %2$d following</string>
+    <string name="login_prompt_follow">Log in to follow runners and see their new routes and groups in one place.</string>
+    <string name="error_user_not_found">User not found.</string>
+    <string name="error_follow_self">You can\'t follow yourself.</string>
 </resources>

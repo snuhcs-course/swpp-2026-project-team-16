@@ -476,4 +476,26 @@
     <string name="group_private_hidden">비공개 그룹이에요. 참가하면 멤버와 랭킹을 볼 수 있어요.</string>
     <string name="error_group_password">비밀번호는 4~20자로 정해 주세요.</string>
     <string name="error_group_password_wrong">비밀번호가 맞지 않아요.</string>
+    <string name="filter_following">팔로잉</string>
+    <string name="no_following_routes">팔로우한 사람이 공유한 코스가 없어요</string>
+    <string name="no_following_groups">팔로우한 사람이 연 그룹이 없어요</string>
+    <string name="board_no_following_posts">팔로우한 사람이 실명으로 쓴 글이 없어요</string>
+    <string name="profile_tab_routes">코스 %1$d</string>
+    <string name="profile_tab_groups">그룹 %1$d</string>
+    <string name="profile_tab_posts">글 %1$d</string>
+    <string name="profile_no_routes">공유한 코스가 없어요.</string>
+    <string name="profile_no_groups">예정된 그룹이 없어요.</string>
+    <string name="profile_no_posts">실명으로 쓴 글이 없어요.</string>
+    <string name="profile_followers">팔로워</string>
+    <string name="profile_following">팔로잉</string>
+    <string name="profile_no_followers">아직 팔로워가 없어요.</string>
+    <string name="profile_no_following">아직 팔로우한 사람이 없어요.</string>
+    <string name="profile_me">나</string>
+    <string name="profile_following_badge">팔로잉 중</string>
+    <string name="action_follow">팔로우</string>
+    <string name="action_unfollow">팔로잉 취소</string>
+    <string name="my_follow_counts">팔로워 %1$d명, 팔로잉 %2$d명</string>
+    <string name="login_prompt_follow">로그인하면 러너를 팔로우하고 새 코스와 그룹을 모아 볼 수 있어요.</string>
+    <string name="error_user_not_found">사용자를 찾을 수 없어요.</string>
+    <string name="error_follow_self">자기 자신은 팔로우할 수 없어요.</string>
 </resources>

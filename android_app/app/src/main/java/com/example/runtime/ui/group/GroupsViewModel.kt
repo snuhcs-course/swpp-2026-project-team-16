@@ -26,6 +26,7 @@ enum class GroupFilter(val key: String, @StringRes val label: Int) {
     CLOSING_SOON("closing_soon", R.string.group_filter_closing_soon),
     NEARBY("all", R.string.group_filter_nearby),
     MINE("mine", R.string.group_filter_mine),
+    FOLLOWING("following", R.string.filter_following),
 }
 
 val NEARBY_RADII_KM = listOf(1.0, 3.0, 5.0, 10.0)

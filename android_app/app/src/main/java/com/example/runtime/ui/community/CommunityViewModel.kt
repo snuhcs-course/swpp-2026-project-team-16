@@ -42,6 +42,9 @@ class CommunityViewModel(
     var sort by mutableStateOf(RouteSort.LATEST)
         private set
 
+    var followingOnly by mutableStateOf(false)
+        private set
+
     var selectedTab by mutableIntStateOf(0)
 
     var isLoading by mutableStateOf(false)
@@ -79,20 +82,28 @@ class CommunityViewModel(
         refresh()
     }
 
+    fun toggleFollowingOnly() {
+        followingOnly = !followingOnly
+        refreshJob?.cancel()
+        isLoading = false
+        refresh()
+    }
+
     fun refresh() {
         if (isLoading) return
         isLoading = true
         error = null
         val sort = sort
+        val filter = if (followingOnly) FOLLOWING_FILTER else null
         refreshJob = viewModelScope.launch {
             try {
-                routes = repository.sharedRoutes(sort.key)
+                routes = repository.sharedRoutes(sort.key, filter)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 error = e.toUiText()
             } finally {
-                if (this@CommunityViewModel.sort == sort) isLoading = false
+                if (this@CommunityViewModel.sort == sort && (this@CommunityViewModel.followingOnly == (filter != null))) isLoading = false
             }
         }
     }
@@ -200,6 +211,9 @@ class CommunityViewModel(
 
     fun reset() {
         detailJob?.cancel()
+        refreshJob?.cancel()
+        isLoading = false
+        followingOnly = false
         routes = emptyList()
         error = null
         detail = null
@@ -209,3 +223,5 @@ class CommunityViewModel(
         reviewSubmitState = ReviewSubmitState.Idle
     }
 }
+
+const val FOLLOWING_FILTER = "following"

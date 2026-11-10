@@ -16,6 +16,7 @@ MAX_TITLE_LENGTH = 60
 MAX_DESCRIPTION_LENGTH = 300
 MAX_COMMENT_LENGTH = 500
 SORTS = ("latest", "rating", "reviews")
+ROUTE_FILTERS = ("all", "following")
 EDITED_AFTER = timedelta(seconds=1)
 
 
@@ -236,7 +237,15 @@ def shared_routes_list(request):
         sort = request.query_params.get("sort") or "latest"
         if sort not in SORTS:
             return _error(f"sort must be one of: {', '.join(SORTS)}", status.HTTP_400_BAD_REQUEST)
-        data = [_shared_route_data(shared_route, request.user, language=request_language(request)) for shared_route in _shared_routes(sort)]
+        route_filter = request.query_params.get("filter") or "all"
+        if route_filter not in ROUTE_FILTERS:
+            return _error(f"filter must be one of: {', '.join(ROUTE_FILTERS)}", status.HTTP_400_BAD_REQUEST)
+        shared_routes = _shared_routes(sort)
+        if route_filter == "following":
+            if not request.user.is_authenticated:
+                return _auth_required()
+            shared_routes = shared_routes.filter(shared_by__followers__follower=request.user)
+        data = [_shared_route_data(shared_route, request.user, language=request_language(request)) for shared_route in shared_routes]
         return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     if not request.user.is_authenticated:

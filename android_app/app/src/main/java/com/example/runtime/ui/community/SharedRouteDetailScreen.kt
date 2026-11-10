@@ -1,6 +1,7 @@
 package com.example.runtime.ui.community
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +43,7 @@ fun SharedRouteDetailScreen(
     isLoggedIn: Boolean,
     onLogInToReview: () -> Unit,
     onCreateGroup: (SharedRoute) -> Unit,
+    onOpenUser: (String) -> Unit = {},
 ) {
     var showFullMap by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -147,7 +149,8 @@ fun SharedRouteDetailScreen(
             Text(
                 stringResource(R.string.shared_by, route.sharedBy, route.sharedAt.take(10)),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clickable { onOpenUser(route.sharedBy) }.padding(vertical = 4.dp)
             )
             Spacer(modifier = Modifier.height(Spacing.m))
             Row {

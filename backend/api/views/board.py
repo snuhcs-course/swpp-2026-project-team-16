@@ -22,7 +22,7 @@ MAX_TITLE_LENGTH = 100
 MAX_BODY_LENGTH = 2000
 MAX_COMMENT_LENGTH = 500
 MAX_QUERY_LENGTH = 50
-FILTERS = ("all", "scraps", "mine")
+FILTERS = ("all", "scraps", "mine", "following")
 EDITED_AFTER = timedelta(seconds=1)
 
 
@@ -152,6 +152,8 @@ def posts_list(request):
         else:
             if post_filter == "mine":
                 posts = posts.filter(author=request.user)
+            elif post_filter == "following":
+                posts = posts.filter(author__followers__follower=request.user, anonymous=False)
             posts = posts.order_by("-created_at", "-id")
         if query:
             posts = posts.filter(Q(title__icontains=query) | Q(body__icontains=query))
