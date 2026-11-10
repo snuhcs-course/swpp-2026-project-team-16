@@ -8,6 +8,7 @@ data class RouteProgress(
     val distanceAlongMeters: Double,
     val distanceFromRouteMeters: Double,
     val routeLengthMeters: Double,
+    val isOffRoute: Boolean = false,
 )
 
 enum class RouteTurnDirection { LEFT, RIGHT }
@@ -138,17 +139,46 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
 
     val routeLengthMeters: Double = cumulativeDistances.lastOrNull() ?: 0.0
     private var progressMeters = 0.0
+    private var isOffRoute = false
+    private var farSinceMs: Long? = null
 
-    fun update(latitude: Double, longitude: Double): RouteProgress {
+    fun update(latitude: Double, longitude: Double, timeMs: Long = 0L): RouteProgress {
         if (points.size < 2 || routeLengthMeters <= 0.0) {
             return RouteProgress(0.0, Double.POSITIVE_INFINITY, routeLengthMeters)
         }
 
         val minDistance = max(0.0, progressMeters - BACKTRACK_WINDOW_METERS)
-        val maxDistance = min(routeLengthMeters, progressMeters + LOOKAHEAD_WINDOW_METERS)
-        var bestDistanceFromRoute = Double.POSITIVE_INFINITY
-        var bestProgress = progressMeters
+        val nearby = closestMatch(latitude, longitude, minDistance, min(routeLengthMeters, progressMeters + LOOKAHEAD_WINDOW_METERS))
+        val match = if (isOffRoute && nearby.distanceFromRoute > REJOIN_DISTANCE_METERS) {
+            closestMatch(latitude, longitude, minDistance, routeLengthMeters)
+        } else {
+            nearby
+        }
 
+        if (isOffRoute) {
+            if (match.distanceFromRoute <= REJOIN_DISTANCE_METERS) {
+                isOffRoute = false
+                farSinceMs = null
+                progressMeters = max(progressMeters, match.along)
+            }
+        } else if (match.distanceFromRoute > OFF_ROUTE_DISTANCE_METERS) {
+            val since = farSinceMs ?: timeMs.also { farSinceMs = it }
+            if (timeMs - since >= OFF_ROUTE_CONFIRM_MS) isOffRoute = true
+        } else {
+            farSinceMs = null
+            progressMeters = max(progressMeters, match.along)
+        }
+
+        progressMeters = progressMeters.coerceAtMost(routeLengthMeters)
+        return RouteProgress(progressMeters, match.distanceFromRoute, routeLengthMeters, isOffRoute)
+    }
+
+    private data class Match(val along: Double, val distanceFromRoute: Double)
+
+    private fun closestMatch(latitude: Double, longitude: Double, minDistance: Double, maxDistance: Double): Match {
+        var best = Match(progressMeters, Double.POSITIVE_INFINITY)
+        val latitudeScale = METERS_PER_DEGREE
+        val longitudeScale = METERS_PER_DEGREE * cos(Math.toRadians(latitude))
         for (index in 0 until points.lastIndex) {
             val segmentStart = cumulativeDistances[index]
             val segmentEnd = cumulativeDistances[index + 1]
@@ -156,8 +186,6 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
 
             val start = points[index]
             val end = points[index + 1]
-            val latitudeScale = METERS_PER_DEGREE
-            val longitudeScale = METERS_PER_DEGREE * cos(Math.toRadians(latitude))
             val startX = (start.longitude - longitude) * longitudeScale
             val startY = (start.latitude - latitude) * latitudeScale
             val endX = (end.longitude - longitude) * longitudeScale
@@ -168,19 +196,14 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
             val fraction = if (lengthSquared <= 0.0) 0.0 else {
                 (-(startX * dx + startY * dy) / lengthSquared).coerceIn(0.0, 1.0)
             }
-            val projectedX = startX + fraction * dx
-            val projectedY = startY + fraction * dy
-            val distance = kotlin.math.hypot(projectedX, projectedY)
+            val distance = kotlin.math.hypot(startX + fraction * dx, startY + fraction * dy)
             val along = segmentStart + (segmentEnd - segmentStart) * fraction
 
-            if (along in minDistance..maxDistance && distance < bestDistanceFromRoute) {
-                bestDistanceFromRoute = distance
-                bestProgress = along
+            if (along in minDistance..maxDistance && distance < best.distanceFromRoute) {
+                best = Match(along, distance)
             }
         }
-
-        progressMeters = max(progressMeters, bestProgress).coerceAtMost(routeLengthMeters)
-        return RouteProgress(progressMeters, bestDistanceFromRoute, routeLengthMeters)
+        return best
     }
 
     private fun List<RouteCoordinate>.distinctConsecutive(): List<RouteCoordinate> {
@@ -202,5 +225,8 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
         private const val LOOKAHEAD_WINDOW_METERS = 250.0
         private const val BACKTRACK_WINDOW_METERS = 25.0
         private const val METERS_PER_DEGREE = 111_000.0
+        const val OFF_ROUTE_DISTANCE_METERS = 40.0
+        const val REJOIN_DISTANCE_METERS = 25.0
+        const val OFF_ROUTE_CONFIRM_MS = 4_000L
     }
 }

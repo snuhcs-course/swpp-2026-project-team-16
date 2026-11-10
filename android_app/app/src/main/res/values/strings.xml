@@ -158,7 +158,8 @@
     <string name="run_start">Start</string>
     <string name="run_waiting_for_gps">Waiting for GPS location…</string>
     <string name="run_location_unavailable">Location is unavailable. Check location settings.</string>
-    <string name="run_off_route">You are away from the route. Return to the highlighted course.</string>
+    <string name="run_off_route">Head back to the highlighted course. Guidance resumes once you rejoin it.</string>
+    <string name="run_off_route_distance">Off route · %1$s away</string>
     <string name="run_follow_route">Follow the highlighted route</string>
     <string name="run_turn_left">Turn left in %1$s</string>
     <string name="run_turn_right">Turn right in %1$s</string>
