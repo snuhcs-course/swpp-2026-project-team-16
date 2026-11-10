@@ -255,6 +255,7 @@ class Profile(models.Model):
     avatar_type = models.CharField(max_length=20, blank=True, default="")
     avatar_updated_at = models.DateTimeField(null=True, blank=True)
     running_style = models.JSONField(default=dict, blank=True)
+    notification_settings = models.JSONField(default=dict, blank=True)
 
 
 class Follow(models.Model):
@@ -278,3 +279,26 @@ class GroupInvite(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["group", "invitee"], name="unique_group_invite")]
         ordering = ["-created_at", "-id"]
+
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    kind = models.CharField(max_length=30)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    group = models.ForeignKey(RunningGroup, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    shared_route = models.ForeignKey(SharedRoute, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    text = models.CharField(max_length=200, blank=True, default="")
+    read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class DeviceToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="device_tokens")
+    token = models.CharField(max_length=512, unique=True)
+    language = models.CharField(max_length=5, default="ko")
+    updated_at = models.DateTimeField(auto_now=True)

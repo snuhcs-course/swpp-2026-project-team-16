@@ -520,4 +520,36 @@
     <plurals name="group_invite_banner">
         <item quantity="other">받은 그룹 초대 %1$d개</item>
     </plurals>
+    <string name="notification_channel_activity">활동 알림</string>
+    <string name="notifications_title">알림</string>
+    <string name="notifications_read_all">모두 읽음</string>
+    <string name="notifications_empty">알림이 없어요</string>
+    <string name="notifications_empty_message">팔로우, 그룹 초대, 좋아요, 댓글 소식이 여기에 모여요.</string>
+    <string name="settings_title">설정</string>
+    <string name="settings_notifications">푸시 알림</string>
+    <string name="settings_notifications_hint">꺼 둔 알림도 알림 목록에는 계속 쌓여요.</string>
+    <string name="settings_phone_off">휴대폰에서 이 앱의 알림이 꺼져 있어요. 켜야 푸시 알림을 받을 수 있어요.</string>
+    <string name="settings_open_phone_settings">휴대폰 알림 설정 열기</string>
+    <string name="settings_all_notifications">모든 알림</string>
+    <string name="settings_account">계정</string>
+    <string name="settings_delete_account">계정 탈퇴</string>
+    <string name="delete_account_title">계정을 탈퇴할까요?</string>
+    <string name="delete_account_message">러닝 기록, 저장한 코스, 공유한 코스, 내가 연 그룹, 글과 댓글이 모두 지워지고 되돌릴 수 없어요.</string>
+    <string name="delete_account_password">비밀번호 확인</string>
+    <string name="action_delete_account">탈퇴</string>
+    <string name="account_deleted_message">계정을 탈퇴했어요.</string>
+    <string name="notification_kind_follow">새 팔로워</string>
+    <string name="notification_kind_follow_desc">누군가 나를 팔로우했을 때</string>
+    <string name="notification_kind_group_invite">그룹 초대</string>
+    <string name="notification_kind_group_invite_desc">친구가 러닝 그룹에 초대했을 때</string>
+    <string name="notification_kind_group_join">그룹 참가</string>
+    <string name="notification_kind_group_join_desc">내가 연 그룹에 누군가 참가했을 때</string>
+    <string name="notification_kind_group_message">그룹 채팅</string>
+    <string name="notification_kind_group_message_desc">참가한 그룹에 새 메시지가 올 때</string>
+    <string name="notification_kind_post_like">글 좋아요</string>
+    <string name="notification_kind_post_like_desc">내 글에 좋아요가 눌렸을 때</string>
+    <string name="notification_kind_post_comment">글 댓글</string>
+    <string name="notification_kind_post_comment_desc">내 글에 댓글이 달렸을 때</string>
+    <string name="notification_kind_route_review">코스 리뷰</string>
+    <string name="notification_kind_route_review_desc">내가 공유한 코스에 리뷰가 달렸을 때</string>
 </resources>

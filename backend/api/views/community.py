@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
+from api.services.notifications import notify
 from api.services.run_coach import validate_plan, validate_splits
 from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, TemporaryRoute, UserSavedRoute
 
@@ -366,6 +367,7 @@ def shared_route_reviews(request, shared_route_id):
     except IntegrityError:
         return _error("You already reviewed this route.", status.HTTP_409_CONFLICT)
 
+    notify(shared_route.shared_by, "route_review", actor=request.user, shared_route=shared_route, text=comment)
     return Response({"status": "success", "data": _review_data(review, request.user)}, status=status.HTTP_201_CREATED)
 
 

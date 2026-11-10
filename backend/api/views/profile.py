@@ -45,6 +45,8 @@ def profile_data(user):
         "follower_count": user.followers.count(),
         "following_count": user.following.count(),
         "invite_count": user.group_invites.filter(group__meet_at__gt=timezone.now()).count(),
+        "unread_notification_count": user.notifications.filter(read=False).count(),
+        "has_password": user.has_usable_password(),
     }
 
 

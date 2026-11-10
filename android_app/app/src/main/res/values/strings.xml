@@ -532,4 +532,36 @@
         <item quantity="one">%1$d group invite</item>
         <item quantity="other">%1$d group invites</item>
     </plurals>
+    <string name="notification_channel_activity">Activity</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_read_all">Mark all read</string>
+    <string name="notifications_empty">No notifications</string>
+    <string name="notifications_empty_message">Follows, group invites, likes and comments show up here.</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_notifications">Push notifications</string>
+    <string name="settings_notifications_hint">Turned-off types still appear in your notification list.</string>
+    <string name="settings_phone_off">Notifications for this app are off on your phone. Turn them on to get push notifications.</string>
+    <string name="settings_open_phone_settings">Open phone notification settings</string>
+    <string name="settings_all_notifications">All notifications</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_delete_account">Delete account</string>
+    <string name="delete_account_title">Delete your account?</string>
+    <string name="delete_account_message">Your runs, saved and shared routes, groups you host, posts and comments will be deleted. This can\'t be undone.</string>
+    <string name="delete_account_password">Confirm password</string>
+    <string name="action_delete_account">Delete</string>
+    <string name="account_deleted_message">Your account was deleted.</string>
+    <string name="notification_kind_follow">New followers</string>
+    <string name="notification_kind_follow_desc">When someone follows you</string>
+    <string name="notification_kind_group_invite">Group invites</string>
+    <string name="notification_kind_group_invite_desc">When a friend invites you to a running group</string>
+    <string name="notification_kind_group_join">Group joins</string>
+    <string name="notification_kind_group_join_desc">When someone joins a group you host</string>
+    <string name="notification_kind_group_message">Group chat</string>
+    <string name="notification_kind_group_message_desc">New messages in groups you joined</string>
+    <string name="notification_kind_post_like">Post likes</string>
+    <string name="notification_kind_post_like_desc">When someone likes your post</string>
+    <string name="notification_kind_post_comment">Post comments</string>
+    <string name="notification_kind_post_comment_desc">When someone comments on your post</string>
+    <string name="notification_kind_route_review">Route reviews</string>
+    <string name="notification_kind_route_review_desc">When someone reviews a route you shared</string>
 </resources>

@@ -5,6 +5,7 @@ import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
@@ -94,6 +95,27 @@ interface ApiService {
 
     @GET("api/v1/runs/{runId}/report/")
     suspend fun runReport(@Path("runId") runId: Int): ApiResponse<RunReport>
+
+    @HTTP(method = "DELETE", path = "api/v1/users/my_profile/", hasBody = true)
+    suspend fun deleteAccount(@Body body: DeleteAccountRequest): ApiResponse<Unit>
+
+    @GET("api/v1/notifications/")
+    suspend fun notifications(): ApiResponse<NotificationPage>
+
+    @POST("api/v1/notifications/read/")
+    suspend fun readNotifications(@Body body: ReadNotificationRequest): ApiResponse<UnreadCount>
+
+    @GET("api/v1/users/my_profile/notification_settings/")
+    suspend fun notificationSettings(): ApiResponse<Map<String, Boolean>>
+
+    @PUT("api/v1/users/my_profile/notification_settings/")
+    suspend fun updateNotificationSettings(@Body body: Map<String, Boolean>): ApiResponse<Map<String, Boolean>>
+
+    @POST("api/v1/devices/")
+    suspend fun registerDevice(@Body body: DeviceRequest): ApiResponse<Unit>
+
+    @HTTP(method = "DELETE", path = "api/v1/devices/", hasBody = true)
+    suspend fun unregisterDevice(@Body body: DeviceRequest): ApiResponse<Unit>
 
     @GET("api/v1/users/my_profile/running_style/")
     suspend fun runningStyle(): ApiResponse<RunningStyle>

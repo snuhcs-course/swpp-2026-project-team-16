@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from api.models import Follow, GroupInvite, GroupMember, GroupMessage, Route, RunningGroup
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
+from api.services.notifications import notify
 
 
 User = get_user_model()
@@ -343,6 +344,8 @@ def group_membership(request, group_id):
             code = status.HTTP_200_OK
 
     group = _groups().get(id=group.id)
+    if request.method == "POST":
+        notify(group.host, "group_join", actor=request.user, group=group)
     return Response({"status": "success", "data": _group_data(group, request.user, now, detail=True, language=request_language(request))}, status=code)
 
 
@@ -384,6 +387,8 @@ def group_messages(request, group_id):
     if not isinstance(text, str) or not text.strip() or len(text.strip()) > MAX_MESSAGE_LENGTH:
         return _error(f"Message must be 1 to {MAX_MESSAGE_LENGTH} characters.", status.HTTP_400_BAD_REQUEST)
     message = GroupMessage.objects.create(group=group, user=request.user, text=text.strip())
+    for member in group.members.exclude(user=request.user).select_related("user"):
+        notify(member.user, "group_message", actor=request.user, group=group, text=message.text)
     return Response(
         {"status": "success", "data": _message_data(message, request.user)},
         status=status.HTTP_201_CREATED,
@@ -441,7 +446,9 @@ def group_invites(request, group_id):
     now = timezone.now()
     if _status(group, now) != "open":
         return _error("This group is no longer taking members.", status.HTTP_400_BAD_REQUEST)
-    invite, _ = GroupInvite.objects.get_or_create(group=group, invitee=invitee, defaults={"inviter": request.user})
+    invite, created = GroupInvite.objects.get_or_create(group=group, invitee=invitee, defaults={"inviter": request.user})
+    if created:
+        notify(invitee, "group_invite", actor=request.user, group=group)
     return Response(
         {"status": "success", "data": _invite_data(invite, request.user, now, request_language(request))},
         status=status.HTTP_201_CREATED,
