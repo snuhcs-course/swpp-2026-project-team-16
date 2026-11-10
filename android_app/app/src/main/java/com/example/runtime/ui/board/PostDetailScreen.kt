@@ -33,6 +33,7 @@ fun PostDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onLogInRequired: () -> Unit,
+    onOpenUser: (String) -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -128,6 +129,7 @@ fun PostDetailScreen(
             }
             PostBody(
                 post = post,
+                onOpenAuthor = { post.author?.takeIf { !post.anonymous }?.let(onOpenUser) },
                 onLike = {
                     requireLogin {
                         haptic.performHapticFeedback(HapticFeedbackType.Confirm)
@@ -255,10 +257,11 @@ fun PostDetailScreen(
 }
 
 @Composable
-private fun PostBody(post: BoardPost, onLike: () -> Unit, onScrap: () -> Unit) {
+private fun PostBody(post: BoardPost, onOpenAuthor: () -> Unit, onLike: () -> Unit, onScrap: () -> Unit) {
     Text(
         postAuthorLabel(post),
-        style = MaterialTheme.typography.titleSmall
+        style = MaterialTheme.typography.titleSmall,
+        modifier = if (post.anonymous || post.author == null) Modifier else Modifier.clickable(onClick = onOpenAuthor)
     )
     Text(
         timeAgoText(post.createdAt) + if (post.edited) " (" + stringResource(R.string.review_edited) + ")" else "",

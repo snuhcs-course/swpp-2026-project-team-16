@@ -102,7 +102,22 @@ interface ApiService {
     suspend fun updateRunningStyle(@Body body: RunningStyle): ApiResponse<RunningStyle>
 
     @GET("api/v1/community/routes/")
-    suspend fun sharedRoutes(@Query("sort") sort: String): ApiResponse<List<SharedRoute>>
+    suspend fun sharedRoutes(@Query("sort") sort: String, @Query("filter") filter: String? = null): ApiResponse<List<SharedRoute>>
+
+    @GET("api/v1/users/{username}/profile/")
+    suspend fun userProfile(@Path("username") username: String): ApiResponse<UserProfile>
+
+    @POST("api/v1/users/{username}/follow/")
+    suspend fun follow(@Path("username") username: String): ApiResponse<FollowState>
+
+    @DELETE("api/v1/users/{username}/follow/")
+    suspend fun unfollow(@Path("username") username: String): ApiResponse<FollowState>
+
+    @GET("api/v1/users/{username}/followers/")
+    suspend fun followers(@Path("username") username: String): ApiResponse<List<FollowUser>>
+
+    @GET("api/v1/users/{username}/following/")
+    suspend fun following(@Path("username") username: String): ApiResponse<List<FollowUser>>
 
     @GET("api/v1/community/routes/{sharedRouteId}/")
     suspend fun sharedRoute(@Path("sharedRouteId") sharedRouteId: Int): ApiResponse<SharedRoute>

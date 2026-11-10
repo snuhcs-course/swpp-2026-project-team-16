@@ -57,6 +57,8 @@ import com.example.runtime.ui.route.RouteInputScreen
 import com.example.runtime.ui.route.RunNavigationScreen
 import com.example.runtime.ui.route.RunReportScreen
 import com.example.runtime.ui.mypage.RunningStyleScreen
+import com.example.runtime.ui.profile.UserProfileScreen
+import com.example.runtime.ui.profile.UserProfileViewModel
 import com.example.runtime.ui.mypage.RunningStyleViewModel
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
@@ -117,6 +119,11 @@ fun RunTimeApp() {
     val myPageViewModel: MyPageViewModel = viewModel()
     val runViewModel: RunViewModel = viewModel()
     val runningStyleViewModel: RunningStyleViewModel = viewModel()
+    val userProfileViewModel: UserProfileViewModel = viewModel()
+    val profileStack = remember { mutableStateListOf<String>() }
+    var profileReturnScreen by rememberSaveable { mutableStateOf("community") }
+    var groupReturnScreen by rememberSaveable { mutableStateOf("community") }
+    var postReturnScreen by rememberSaveable { mutableStateOf("community") }
     val communityViewModel: CommunityViewModel = viewModel()
     val groupsViewModel: GroupsViewModel = viewModel()
     val boardViewModel: BoardViewModel = viewModel()
@@ -147,6 +154,20 @@ fun RunTimeApp() {
         currentScreen = screen
     }
 
+    fun openUser(username: String) {
+        if (currentScreen != "user_profile") {
+            profileReturnScreen = currentScreen
+            profileStack.clear()
+        }
+        if (profileStack.lastOrNull() != username) profileStack.add(username)
+        currentScreen = "user_profile"
+    }
+
+    fun closeUser() {
+        profileStack.removeLastOrNull()
+        if (profileStack.isEmpty()) currentScreen = profileReturnScreen
+    }
+
     fun openCreateGroup(route: GroupRouteChoice?, returnTo: String) {
         groupRouteChoice = route
         groupCreateReturnScreen = returnTo
@@ -172,6 +193,7 @@ fun RunTimeApp() {
                 myPageViewModel.reset()
                 groupsViewModel.reset()
                 boardViewModel.reset()
+                communityViewModel.reset()
                 selectedRouteId = null
                 loginReturnScreen = "route_input"
                 saveAfterLogin = false
@@ -193,7 +215,7 @@ fun RunTimeApp() {
                         label = { Text(stringResource(R.string.nav_route)) }
                     )
                     NavigationBarItem(
-                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor"),
+                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor", "user_profile"),
                         onClick = { currentScreen = "community" },
                         icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_community)) }
@@ -365,11 +387,13 @@ fun RunTimeApp() {
                                         },
                                         onGroupClick = { groupId ->
                                             selectedGroupId = groupId
+                                            groupReturnScreen = "community"
                                             currentScreen = "group_detail"
                                         },
                                         onCreateGroup = { openCreateGroup(null, returnTo = "community") },
                                         onPostClick = { postId ->
                                             selectedPostId = postId
+                                            postReturnScreen = "community"
                                             currentScreen = "post_detail"
                                         },
                                         onWritePost = {
@@ -385,12 +409,13 @@ fun RunTimeApp() {
                                             boardViewModel = boardViewModel,
                                             postId = postId,
                                             isLoggedIn = authViewModel.isLoggedIn,
-                                            onBack = { currentScreen = "community" },
+                                            onBack = { currentScreen = postReturnScreen },
                                             onEdit = {
                                                 editingPostId = postId
                                                 currentScreen = "post_editor"
                                             },
-                                            onLogInRequired = { loginPrompt = LOGIN_PROMPT_POST }
+                                            onLogInRequired = { loginPrompt = LOGIN_PROMPT_POST },
+                                            onOpenUser = ::openUser
                                         )
                                     }
                                     "post_editor" -> PostEditorScreen(
@@ -407,7 +432,7 @@ fun RunTimeApp() {
                                             groupsViewModel = groupsViewModel,
                                             groupId = groupId,
                                             isLoggedIn = authViewModel.isLoggedIn,
-                                            onBack = { currentScreen = "community" },
+                                            onBack = { currentScreen = groupReturnScreen },
                                             onRun = { group ->
                                                 runViewModel.start(
                                                     RunTarget(
@@ -422,7 +447,8 @@ fun RunTimeApp() {
                                                 currentScreen = "run_navigation"
                                             },
                                             onOpenChat = { currentScreen = "group_chat" },
-                                            onLogInToJoin = { loginPrompt = LOGIN_PROMPT_GROUP_DETAIL }
+                                            onLogInToJoin = { loginPrompt = LOGIN_PROMPT_GROUP_DETAIL },
+                                            onOpenUser = ::openUser
                                         )
                                     }
                                     "group_chat" -> selectedGroupId?.let { groupId ->
@@ -439,6 +465,7 @@ fun RunTimeApp() {
                                         onCreated = { groupId ->
                                             appMessages.show(groupCreatedMessage)
                                             selectedGroupId = groupId
+                                            groupReturnScreen = "community"
                                             communityViewModel.selectedTab = 1
                                             currentScreen = "group_detail"
                                         }
@@ -474,7 +501,8 @@ fun RunTimeApp() {
                                                         returnTo = "community_detail"
                                                     )
                                                 }
-                                            }
+                                            },
+                                            onOpenUser = ::openUser
                                         )
                                     }
                                     "MyPage" -> if (!authViewModel.isLoggedIn) GuestMyPageScreen(
@@ -505,17 +533,46 @@ fun RunTimeApp() {
                                         },
                                         onCreateRoute = { currentScreen = "route_input" },
                                         onOpenRunningStyle = { currentScreen = "running_style" },
+                                        onOpenMyProfile = ::openUser,
                                         onLogout = {
                                             authViewModel.logout {
                                                 routeViewModel.reset()
                                                 myPageViewModel.reset()
                                                 groupsViewModel.reset()
                                                 boardViewModel.reset()
+                                                communityViewModel.reset()
                                                 selectedRouteId = null
                                                 currentScreen = "route_input"
                                             }
                                         }
                                     )
+                                    "user_profile" -> profileStack.lastOrNull()?.let { username ->
+                                        UserProfileScreen(
+                                            viewModel = userProfileViewModel,
+                                            username = username,
+                                            isLoggedIn = authViewModel.isLoggedIn,
+                                            onBack = ::closeUser,
+                                            onOpenUser = ::openUser,
+                                            onRouteClick = { sharedRouteId ->
+                                                selectedSharedRouteId = sharedRouteId
+                                                sharedDetailReturnScreen = "user_profile"
+                                                currentScreen = "community_detail"
+                                            },
+                                            onGroupClick = { groupId ->
+                                                selectedGroupId = groupId
+                                                groupReturnScreen = "user_profile"
+                                                currentScreen = "group_detail"
+                                            },
+                                            onPostClick = { postId ->
+                                                selectedPostId = postId
+                                                postReturnScreen = "user_profile"
+                                                currentScreen = "post_detail"
+                                            },
+                                            onLogInRequired = { loginPrompt = LOGIN_PROMPT_FOLLOW }
+                                        )
+                                    } ?: run {
+                                        currentScreen = profileReturnScreen
+                                    }
                                     "running_style" -> RunningStyleScreen(
                                         viewModel = runningStyleViewModel,
                                         onBack = { currentScreen = "MyPage" }
@@ -556,6 +613,7 @@ fun RunTimeApp() {
                         LOGIN_PROMPT_REVIEW -> R.string.login_prompt_review
                         LOGIN_PROMPT_GROUP, LOGIN_PROMPT_GROUP_DETAIL, LOGIN_PROMPT_GROUP_SHARED -> R.string.login_prompt_group
                         LOGIN_PROMPT_BOARD, LOGIN_PROMPT_POST -> R.string.login_prompt_board
+                        LOGIN_PROMPT_FOLLOW -> R.string.login_prompt_follow
                         else -> R.string.login_prompt_trial_used
                     },
                     onLogIn = {
@@ -567,6 +625,7 @@ fun RunTimeApp() {
                                 openAuth("login", returnTo = "community_detail", save = false)
                             LOGIN_PROMPT_GROUP, LOGIN_PROMPT_BOARD -> openAuth("login", returnTo = "community", save = false)
                             LOGIN_PROMPT_POST -> openAuth("login", returnTo = "post_detail", save = false)
+                            LOGIN_PROMPT_FOLLOW -> openAuth("login", returnTo = "user_profile", save = false)
                             LOGIN_PROMPT_GROUP_DETAIL -> openAuth("login", returnTo = "group_detail", save = false)
                             else -> openAuth("login", returnTo = "route_input", save = false)
                         }
@@ -589,3 +648,4 @@ private const val LOGIN_PROMPT_GROUP_SHARED = "group_shared"
 private const val LOGIN_PROMPT_BOARD = "board"
 private const val LOGIN_PROMPT_POST = "post"
 private const val LOGIN_PROMPT_SHARE_ROUTE = "share_route"
+private const val LOGIN_PROMPT_FOLLOW = "follow"

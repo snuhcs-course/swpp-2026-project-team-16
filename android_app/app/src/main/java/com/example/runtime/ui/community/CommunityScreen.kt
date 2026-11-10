@@ -1,6 +1,8 @@
 package com.example.runtime.ui.community
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -71,7 +73,7 @@ fun CommunityScreen(
             )
         }
         when (selectedTab) {
-            TAB_ROUTES -> SharedRoutesTab(communityViewModel, onRouteClick)
+            TAB_ROUTES -> SharedRoutesTab(communityViewModel, isLoggedIn, onRouteClick, onLogInRequired)
             TAB_BOARD -> BoardTab(
                 boardViewModel = boardViewModel,
                 isLoggedIn = isLoggedIn,
@@ -91,7 +93,12 @@ fun CommunityScreen(
 }
 
 @Composable
-private fun SharedRoutesTab(communityViewModel: CommunityViewModel, onRouteClick: (Int) -> Unit) {
+private fun SharedRoutesTab(
+    communityViewModel: CommunityViewModel,
+    isLoggedIn: Boolean,
+    onRouteClick: (Int) -> Unit,
+    onLogInRequired: () -> Unit,
+) {
     LaunchedEffect(Unit) {
         communityViewModel.refresh()
     }
@@ -99,8 +106,18 @@ private fun SharedRoutesTab(communityViewModel: CommunityViewModel, onRouteClick
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.m)) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-            modifier = Modifier.padding(top = Spacing.m)
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = Spacing.m)
         ) {
+            FilterChip(
+                selected = communityViewModel.followingOnly,
+                onClick = { if (isLoggedIn) communityViewModel.toggleFollowingOnly() else onLogInRequired() },
+                label = { Text(stringResource(R.string.filter_following)) },
+                leadingIcon = if (communityViewModel.followingOnly) {
+                    { Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                } else null,
+                shape = MaterialTheme.shapes.extraLarge
+            )
+            VerticalDivider(modifier = Modifier.height(32.dp).align(Alignment.CenterVertically))
             RouteSort.entries.forEach { sort ->
                 FilterChip(
                     selected = communityViewModel.sort == sort,
@@ -127,7 +144,7 @@ private fun SharedRoutesTab(communityViewModel: CommunityViewModel, onRouteClick
             }
             communityViewModel.routes.isEmpty() && communityViewModel.error == null -> EmptyState(
                 icon = R.drawable.ic_route,
-                title = stringResource(R.string.no_shared_routes),
+                title = stringResource(if (communityViewModel.followingOnly) R.string.no_following_routes else R.string.no_shared_routes),
                 message = stringResource(R.string.no_shared_routes_message),
                 modifier = Modifier.fillMaxSize()
             )
@@ -144,7 +161,7 @@ private fun SharedRoutesTab(communityViewModel: CommunityViewModel, onRouteClick
 }
 
 @Composable
-private fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit) {
+fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(

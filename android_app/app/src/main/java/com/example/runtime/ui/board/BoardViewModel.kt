@@ -20,6 +20,7 @@ enum class PostFilter(val key: String, @StringRes val label: Int) {
     ALL("all", R.string.board_filter_all),
     SCRAPS("scraps", R.string.board_filter_scraps),
     MINE("mine", R.string.board_filter_mine),
+    FOLLOWING("following", R.string.filter_following),
 }
 
 enum class ReportReason(val key: String, @StringRes val label: Int) {

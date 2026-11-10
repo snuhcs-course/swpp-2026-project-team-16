@@ -46,6 +46,7 @@ fun MyPageScreen(
     onRunAgain: (RunHistoryItem) -> Unit,
     onCreateRoute: () -> Unit,
     onOpenRunningStyle: () -> Unit,
+    onOpenMyProfile: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
     var showAccountMenu by remember { mutableStateOf(false) }
@@ -95,7 +96,18 @@ fun MyPageScreen(
                 }
             }
         }
-        ProfileSection(myPageViewModel = myPageViewModel, modifier = Modifier.padding(bottom = Spacing.s))
+        ProfileSection(myPageViewModel = myPageViewModel, modifier = Modifier.padding(bottom = Spacing.xs))
+        myPageViewModel.username?.let { username ->
+            TextButton(
+                onClick = { onOpenMyProfile(username) },
+                modifier = Modifier.padding(bottom = Spacing.xs)
+            ) {
+                Text(
+                    stringResource(R.string.my_follow_counts, myPageViewModel.followerCount, myPageViewModel.followingCount),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
         OutlinedButton(
             onClick = onOpenRunningStyle,
             shape = MaterialTheme.shapes.medium,

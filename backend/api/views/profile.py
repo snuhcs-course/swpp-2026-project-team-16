@@ -42,6 +42,8 @@ def profile_data(user):
         "display_name": profile.display_name,
         "status_message": profile.status_message,
         "avatar_url": avatar_url,
+        "follower_count": user.followers.count(),
+        "following_count": user.following.count(),
     }
 
 

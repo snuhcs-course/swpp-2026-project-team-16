@@ -963,3 +963,47 @@ Required. Only the runner can read the report.
 ### Description
 
 All numbers are computed by the server. The LLM writes the comment and picks the next run's type, distance and rest days, using the runner's style and runs from the last 14 days. The next run's pace is computed by the server. If the LLM fails, rule-based text and choices are used. The report is generated once per language and stored with the run.
+
+---
+
+# Follow
+
+## User Profile
+
+```
+GET /api/v1/users/<username>/profile/
+```
+
+Authentication optional. Returns `username`, `display_name`, `status_message`, `avatar_url`, `is_me`, `follower_count`, `following_count`, `is_following`, and up to 20 each of:
+
+* `shared_routes`: routes the user shared
+* `groups`: upcoming groups the user hosts
+* `posts`: posts the user wrote with their name shown (anonymous posts are never included)
+
+## Follow / Unfollow
+
+```
+POST   /api/v1/users/<username>/follow/
+DELETE /api/v1/users/<username>/follow/
+```
+
+Authentication required. Returns `follower_count`, `following_count` and `is_following` of the target user. Following twice is a no-op. Following yourself returns 400.
+
+## Followers / Following
+
+```
+GET /api/v1/users/<username>/followers/
+GET /api/v1/users/<username>/following/
+```
+
+Each item has `username`, `display_name`, `avatar_url`, `is_following` (whether the viewer follows them) and `is_me`.
+
+## Following Filters
+
+Authentication required for each:
+
+* `GET /api/v1/community/routes/?filter=following`: routes shared by people you follow (works with `sort`)
+* `GET /api/v1/groups/?filter=following`: upcoming groups hosted by people you follow
+* `GET /api/v1/board/posts/?filter=following`: named posts by people you follow; anonymous posts are excluded
+
+`GET /api/v1/users/my_profile/` now also returns `follower_count` and `following_count`.

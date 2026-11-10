@@ -255,3 +255,15 @@ class Profile(models.Model):
     avatar_type = models.CharField(max_length=20, blank=True, default="")
     avatar_updated_at = models.DateTimeField(null=True, blank=True)
     running_style = models.JSONField(default=dict, blank=True)
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name="following")
+    followee = models.ForeignKey(User, on_delete=models.CASCADE, related_name="followers")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["follower", "followee"], name="unique_follow"),
+            models.CheckConstraint(condition=~models.Q(follower=models.F("followee")), name="no_self_follow"),
+        ]
