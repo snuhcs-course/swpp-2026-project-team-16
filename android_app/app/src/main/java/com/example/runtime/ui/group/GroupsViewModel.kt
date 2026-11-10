@@ -8,7 +8,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
 import com.example.runtime.data.remote.CreateGroupRequest
+import com.example.runtime.data.remote.GroupInvite
 import com.example.runtime.data.remote.GroupMessage
+import com.example.runtime.data.remote.InvitableFriend
 import com.example.runtime.data.remote.RunningGroup
 import com.example.runtime.data.repository.GroupRepository
 import com.example.runtime.data.repository.RouteRepository
@@ -85,6 +87,24 @@ class GroupsViewModel(
         private set
 
     var routeChoices by mutableStateOf<List<GroupRouteChoice>?>(null)
+        private set
+
+    var invites by mutableStateOf<List<GroupInvite>>(emptyList())
+        private set
+
+    var invitesLoaded by mutableStateOf(false)
+        private set
+
+    var inviteActionId by mutableStateOf<Int?>(null)
+        private set
+
+    var friends by mutableStateOf<List<InvitableFriend>?>(null)
+        private set
+
+    var invitingUsername by mutableStateOf<String?>(null)
+        private set
+
+    var inviteError by mutableStateOf<UiText?>(null)
         private set
 
     private var location: Pair<Double, Double>? = null
@@ -317,7 +337,99 @@ class GroupsViewModel(
         }
     }
 
+    fun loadInvites() {
+        viewModelScope.launch {
+            try {
+                invites = repository.invites()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                inviteError = e.toUiText()
+            } finally {
+                invitesLoaded = true
+            }
+        }
+    }
+
+    fun acceptInvite(invite: GroupInvite, onJoined: (Int) -> Unit) {
+        if (inviteActionId != null) return
+        inviteActionId = invite.id
+        inviteError = null
+        viewModelScope.launch {
+            try {
+                showDetail(repository.join(invite.group.id))
+                invites = invites.filterNot { it.id == invite.id }
+                onJoined(invite.group.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                inviteError = e.toUiText()
+            } finally {
+                inviteActionId = null
+            }
+        }
+    }
+
+    fun declineInvite(invite: GroupInvite) {
+        if (inviteActionId != null) return
+        inviteActionId = invite.id
+        inviteError = null
+        viewModelScope.launch {
+            try {
+                repository.declineInvite(invite.id)
+                invites = invites.filterNot { it.id == invite.id }
+                if (detail?.myInviteId == invite.id) detail = detail?.copy(myInviteId = null)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                inviteError = e.toUiText()
+            } finally {
+                inviteActionId = null
+            }
+        }
+    }
+
+    fun loadFriends() {
+        val groupId = detail?.id ?: return
+        friends = null
+        inviteError = null
+        viewModelScope.launch {
+            friends = try {
+                repository.invitableFriends(groupId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                inviteError = e.toUiText()
+                emptyList()
+            }
+        }
+    }
+
+    fun inviteFriend(username: String, onInvited: () -> Unit = {}) {
+        val groupId = detail?.id ?: return
+        if (invitingUsername != null) return
+        invitingUsername = username
+        inviteError = null
+        viewModelScope.launch {
+            try {
+                repository.invite(groupId, username)
+                friends = friends?.map { if (it.username == username) it.copy(isInvited = true) else it }
+                onInvited()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                inviteError = e.toUiText()
+            } finally {
+                invitingUsername = null
+            }
+        }
+    }
+
     fun reset() {
+        invites = emptyList()
+        invitesLoaded = false
+        friends = null
+        inviteError = null
         closeChat()
         groups = emptyList()
         detail = null

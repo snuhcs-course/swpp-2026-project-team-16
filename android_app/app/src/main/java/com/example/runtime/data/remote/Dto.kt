@@ -62,6 +62,7 @@ data class ProfileData(
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("follower_count") val followerCount: Int = 0,
     @SerialName("following_count") val followingCount: Int = 0,
+    @SerialName("invite_count") val inviteCount: Int = 0,
 )
 
 @Serializable
@@ -346,6 +347,7 @@ data class RunningGroup(
     @SerialName("is_member") val isMember: Boolean = false,
     @SerialName("is_host") val isHost: Boolean = false,
     @SerialName("is_private") val isPrivate: Boolean = false,
+    @SerialName("my_invite_id") val myInviteId: Int? = null,
     @SerialName("distance_from_me_m") val distanceFromMe: Int? = null,
     val route: List<GeoJsonLineString> = emptyList(),
     val members: List<String> = emptyList(),
@@ -376,6 +378,25 @@ data class CreateGroupRequest(
 
 @Serializable
 data class JoinGroupRequest(val password: String? = null)
+
+@Serializable
+data class GroupInvite(
+    val id: Int,
+    val inviter: String,
+    @SerialName("created_at") val createdAt: String,
+    val group: RunningGroup,
+)
+
+@Serializable
+data class InvitableFriend(
+    val username: String,
+    @SerialName("display_name") val displayName: String = "",
+    @SerialName("is_member") val isMember: Boolean = false,
+    @SerialName("is_invited") val isInvited: Boolean = false,
+)
+
+@Serializable
+data class InviteRequest(val username: String)
 
 @Serializable
 data class GroupMessage(

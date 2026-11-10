@@ -50,8 +50,12 @@ fun GroupDetailScreen(
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
+    var showInviteSheet by remember { mutableStateOf(false) }
+    val invitedMessage = stringResource(R.string.group_friend_invited)
+    val inviteError = groupsViewModel.inviteError?.asString()
     var joinPassword by remember { mutableStateOf("") }
     val messages = LocalAppMessages.current
+    LaunchedEffect(inviteError) { inviteError?.let { messages?.show(it) } }
     val haptic = LocalHapticFeedback.current
     val joinedMessage = stringResource(R.string.group_joined_message)
     val leftMessage = stringResource(R.string.group_left_message)
@@ -199,6 +203,30 @@ fun GroupDetailScreen(
             }
             }
 
+            if (group.isMember && group.status == GROUP_OPEN) {
+                Spacer(modifier = Modifier.height(Spacing.m))
+                OutlinedButton(
+                    onClick = {
+                        groupsViewModel.loadFriends()
+                        showInviteSheet = true
+                    },
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(painterResource(R.drawable.ic_add), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(Spacing.s))
+                    Text(stringResource(R.string.action_invite_friends))
+                }
+            }
+            if (!group.isMember && group.myInviteId != null) {
+                Spacer(modifier = Modifier.height(Spacing.m))
+                Text(
+                    stringResource(R.string.group_you_are_invited),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             if (group.isMember && !group.isHost) {
                 Spacer(modifier = Modifier.height(Spacing.m))
                 TextButton(
@@ -240,6 +268,7 @@ fun GroupDetailScreen(
                         text = stringResource(
                             when {
                                 isWorking -> R.string.joining
+                                group.status == GROUP_OPEN && group.myInviteId != null -> R.string.action_accept_invite
                                 group.status == GROUP_OPEN -> R.string.action_join_group
                                 group.status == GROUP_FULL -> R.string.group_status_full
                                 else -> R.string.group_status_closed
@@ -249,7 +278,7 @@ fun GroupDetailScreen(
                         onClick = {
                             if (!isLoggedIn) {
                                 onLogInToJoin()
-                            } else if (group.isPrivate) {
+                            } else if (group.isPrivate && group.myInviteId == null) {
                                 joinPassword = ""
                                 showPasswordDialog = true
                             } else {
@@ -270,6 +299,15 @@ fun GroupDetailScreen(
     val detail = groupsViewModel.detail
     if (showFullMap && detail != null) {
         FullScreenRouteMap(lines = detail.route, onDismiss = { showFullMap = false })
+    }
+
+    if (showInviteSheet) {
+        InviteFriendsSheet(
+            friends = groupsViewModel.friends,
+            invitingUsername = groupsViewModel.invitingUsername,
+            onInvite = { username -> groupsViewModel.inviteFriend(username) { messages?.show(invitedMessage) } },
+            onDismiss = { showInviteSheet = false }
+        )
     }
 
     if (showPasswordDialog) {

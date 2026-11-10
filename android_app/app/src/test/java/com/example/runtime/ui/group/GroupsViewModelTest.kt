@@ -3,7 +3,10 @@ package com.example.runtime.ui.group
 import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.CreateGroupRequest
+import com.example.runtime.data.remote.GroupInvite
 import com.example.runtime.data.remote.GroupMessage
+import com.example.runtime.data.remote.InvitableFriend
+import com.example.runtime.data.remote.InviteRequest
 import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.RunningGroup
 import com.example.runtime.data.remote.SendMessageRequest
@@ -112,6 +115,41 @@ class GroupsViewModelTest {
     }
 
     @Test
+    fun acceptInvite_joinsWithoutAPasswordAndClearsTheInvite() {
+        viewModel.loadInvites()
+        var opened: Int? = null
+
+        viewModel.acceptInvite(viewModel.invites.single()) { opened = it }
+
+        assertEquals(JoinGroupRequest(null), api.joins.single())
+        assertEquals(3, opened)
+        assertTrue(viewModel.invites.isEmpty())
+    }
+
+    @Test
+    fun declineInvite_removesIt() {
+        viewModel.loadInvites()
+
+        viewModel.declineInvite(viewModel.invites.single())
+
+        assertEquals(listOf(7), api.declined)
+        assertTrue(viewModel.invites.isEmpty())
+    }
+
+    @Test
+    fun inviteFriend_marksThemInvited() {
+        viewModel.loadDetail(2)
+        viewModel.loadFriends()
+        var sent = false
+
+        viewModel.inviteFriend("friend") { sent = true }
+
+        assertTrue(sent)
+        assertEquals(listOf(2 to "friend"), api.invited)
+        assertEquals(true, viewModel.friends?.first { it.username == "friend" }?.isInvited)
+    }
+
+    @Test
     fun create_rejectsADeadlineAfterTheRun() {
         val meet = Instant.parse("2026-11-05T07:00:00Z")
 
@@ -171,6 +209,28 @@ class GroupsViewModelTest {
         val sentMessages = mutableListOf<SendMessageRequest>()
         var failJoin = false
         val joins = mutableListOf<JoinGroupRequest>()
+        val invited = mutableListOf<Pair<Int, String>>()
+        val declined = mutableListOf<Int>()
+
+        override suspend fun myInvites() = ApiResponse(
+            status = "success",
+            data = listOf(GroupInvite(id = 7, inviter = "host", createdAt = "2026-11-01T00:00:00Z", group = sample(3).copy(myInviteId = 7)))
+        )
+
+        override suspend fun declineInvite(inviteId: Int): ApiResponse<Unit> {
+            declined += inviteId
+            return ApiResponse(status = "success")
+        }
+
+        override suspend fun invitableFriends(groupId: Int) = ApiResponse(
+            status = "success",
+            data = listOf(InvitableFriend("friend"), InvitableFriend("buddy", isMember = true))
+        )
+
+        override suspend fun inviteFriend(groupId: Int, body: InviteRequest): ApiResponse<GroupInvite> {
+            invited += groupId to body.username
+            return ApiResponse(status = "success", data = GroupInvite(1, "me", "2026-11-01T00:00:00Z", sample(groupId)))
+        }
 
         override suspend fun groups(filter: String, latitude: Double?, longitude: Double?, radiusKm: Double?): ApiResponse<List<RunningGroup>> {
             queries += Query(filter, latitude, longitude, radiusKm)

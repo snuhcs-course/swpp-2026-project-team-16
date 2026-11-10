@@ -46,6 +46,7 @@ fun CommunityScreen(
     onPostClick: (Int) -> Unit,
     onWritePost: () -> Unit,
     onLogInRequired: () -> Unit,
+    onOpenInvites: () -> Unit = {},
 ) {
     val selectedTab = communityViewModel.selectedTab
 
@@ -86,7 +87,8 @@ fun CommunityScreen(
                 isLoggedIn = isLoggedIn,
                 onGroupClick = onGroupClick,
                 onCreateGroup = onCreateGroup,
-                onLogInRequired = onLogInRequired
+                onLogInRequired = onLogInRequired,
+                onOpenInvites = onOpenInvites
             )
         }
     }

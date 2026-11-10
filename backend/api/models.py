@@ -267,3 +267,14 @@ class Follow(models.Model):
             models.UniqueConstraint(fields=["follower", "followee"], name="unique_follow"),
             models.CheckConstraint(condition=~models.Q(follower=models.F("followee")), name="no_self_follow"),
         ]
+
+
+class GroupInvite(models.Model):
+    group = models.ForeignKey(RunningGroup, on_delete=models.CASCADE, related_name="invites")
+    inviter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_group_invites")
+    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name="group_invites")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["group", "invitee"], name="unique_group_invite")]
+        ordering = ["-created_at", "-id"]

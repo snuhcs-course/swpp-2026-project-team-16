@@ -160,6 +160,7 @@ class ProfileTests(APITestCase):
                 "avatar_url": None,
                 "follower_count": 0,
                 "following_count": 0,
+                "invite_count": 0,
             },
         )
 

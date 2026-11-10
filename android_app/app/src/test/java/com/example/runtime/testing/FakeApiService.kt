@@ -21,6 +21,9 @@ import com.example.runtime.data.remote.RenameRouteRequest
 import com.example.runtime.data.remote.RenamedRoute
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
+import com.example.runtime.data.remote.GroupInvite
+import com.example.runtime.data.remote.InvitableFriend
+import com.example.runtime.data.remote.InviteRequest
 import com.example.runtime.data.remote.JoinGroupRequest
 import com.example.runtime.data.remote.FollowState
 import com.example.runtime.data.remote.FollowUser
@@ -92,6 +95,10 @@ open class FakeApiService : ApiService {
     override suspend fun createGroup(body: CreateGroupRequest): ApiResponse<RunningGroup> = unexpected()
     override suspend fun deleteGroup(groupId: Int): ApiResponse<Unit> = unexpected()
     override suspend fun joinGroup(groupId: Int, body: JoinGroupRequest): ApiResponse<RunningGroup> = unexpected()
+    override suspend fun invitableFriends(groupId: Int): ApiResponse<List<InvitableFriend>> = unexpected()
+    override suspend fun inviteFriend(groupId: Int, body: InviteRequest): ApiResponse<GroupInvite> = unexpected()
+    override suspend fun myInvites(): ApiResponse<List<GroupInvite>> = unexpected()
+    override suspend fun declineInvite(inviteId: Int): ApiResponse<Unit> = unexpected()
     override suspend fun leaveGroup(groupId: Int): ApiResponse<RunningGroup> = unexpected()
     override suspend fun groupMessages(groupId: Int, after: Int?): ApiResponse<List<GroupMessage>> = unexpected()
     override suspend fun sendGroupMessage(groupId: Int, body: SendMessageRequest): ApiResponse<GroupMessage> = unexpected()
