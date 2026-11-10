@@ -76,12 +76,12 @@ fun RunNavigationScreen(
     lines: List<GeoJsonLineString>,
     routeDistanceMeters: Int,
     onFinish: () -> Unit,
-    onRunFinished: (distanceMeters: Int, elapsedSeconds: Long) -> Unit = { _, _ -> },
-    summaryAction: @Composable () -> Unit = {},
+    onRunFinished: (RunResult) -> Unit = {},
 ) {
     val context = LocalContext.current
     val metrics by RunTrackingState.metrics.collectAsState()
     val trail by RunTrackingState.trail.collectAsState()
+    val splitTimes by RunTrackingState.splitTimes.collectAsState()
     val routePoints = remember(lines) {
         lines.flatMap { line ->
             line.coordinates.mapNotNull { coordinate ->
@@ -93,7 +93,9 @@ fun RunNavigationScreen(
     val turnGuide = remember(routePoints) { RouteTurnGuide(routePoints) }
     var routeProgress by remember { mutableStateOf(RouteProgress(0.0, Double.POSITIVE_INFINITY, progressMatcher.routeLengthMeters)) }
     var showFinishConfirmation by remember { mutableStateOf(false) }
-    var showRunSummary by remember { mutableStateOf(false) }
+    var offRouteCount by remember { mutableStateOf(0) }
+    var offRouteMillis by remember { mutableStateOf(0L) }
+    var offRouteSince by remember { mutableStateOf<Long?>(null) }
     var permissionError by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -150,10 +152,21 @@ fun RunNavigationScreen(
         null
     }
 
-    val isOffRoute = metrics.isTracking && currentLocation != null && routeProgress.isOffRoute
+    val isOffRoute = metrics.isTracking && !metrics.isPaused && currentLocation != null && routeProgress.isOffRoute
+
+    LaunchedEffect(isOffRoute) {
+        val now = SystemClock.elapsedRealtime()
+        if (isOffRoute) {
+            offRouteCount += 1
+            offRouteSince = now
+        } else {
+            offRouteSince?.let { offRouteMillis += now - it }
+            offRouteSince = null
+        }
+    }
 
     BackHandler {
-        if (showRunSummary || !metrics.isTracking) onFinish()
+        if (!metrics.isTracking) onFinish()
         else showFinishConfirmation = true
     }
 
@@ -322,8 +335,16 @@ fun RunNavigationScreen(
                     onClick = {
                         showFinishConfirmation = false
                         sendServiceAction(RunTrackingService.ACTION_STOP)
-                        onRunFinished(metrics.distanceMeters.roundToInt(), metrics.elapsedSeconds)
-                        showRunSummary = true
+                        val openOffRoute = offRouteSince?.let { SystemClock.elapsedRealtime() - it } ?: 0L
+                        val result = RunResult(
+                            distanceMeters = metrics.distanceMeters.roundToInt(),
+                            elapsedSeconds = metrics.elapsedSeconds,
+                            splitTimes = splitTimes,
+                            offRouteCount = offRouteCount,
+                            offRouteSeconds = (offRouteMillis + openOffRoute) / 1000L,
+                            finishedAtMillis = System.currentTimeMillis(),
+                        )
+                        onRunFinished(result)
                     },
                 ) { Text(stringResource(R.string.run_finish)) }
             },
@@ -335,23 +356,6 @@ fun RunNavigationScreen(
         )
     }
 
-    if (showRunSummary) {
-        AlertDialog(
-            onDismissRequest = { onFinish() },
-            title = { Text(stringResource(R.string.run_summary_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.run_summary_distance, formatDistance(metrics.distanceMeters.roundToInt())))
-                    Text(stringResource(R.string.run_summary_time, formatDuration(metrics.elapsedSeconds)))
-                    Text(stringResource(R.string.run_average_pace, averagePace))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = onFinish) { Text(stringResource(R.string.action_done)) }
-            },
-            dismissButton = summaryAction,
-        )
-    }
 }
 
 @Composable

@@ -215,7 +215,7 @@ private fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit) {
                 )
                 if (route.startName.isNotBlank()) {
                     Text(
-                        " · " + route.startName,
+                        ", " + route.startName,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

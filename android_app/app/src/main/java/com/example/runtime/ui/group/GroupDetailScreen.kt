@@ -131,12 +131,12 @@ fun GroupDetailScreen(
             GroupInfoRow(
                 R.drawable.ic_groups,
                 stringResource(R.string.group_join_deadline_at, formatDateTime(group.joinDeadline)) +
-                    if (group.status == GROUP_OPEN) " · " + timeLeftText(group.joinDeadline) else ""
+                    if (group.status == GROUP_OPEN) " (" + timeLeftText(group.joinDeadline) + ")" else ""
             )
             Spacer(modifier = Modifier.height(Spacing.s))
             GroupInfoRow(
                 R.drawable.ic_distance,
-                listOf(group.startName.ifBlank { null }, formatDistance(group.routeDistance)).filterNotNull().joinToString(" · ")
+                listOf(group.startName.ifBlank { null }, formatDistance(group.routeDistance)).filterNotNull().joinToString(", ")
             )
             if (group.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(Spacing.m))
@@ -326,7 +326,7 @@ private fun RankingRow(ranking: GroupRanking) {
                 fontWeight = if (ranking.isMe) FontWeight.Bold else null
             )
             Text(
-                "${formatDistance(ranking.distanceMeters)} · ${formatDuration(ranking.durationSeconds)}",
+                "${formatDistance(ranking.distanceMeters)}, ${formatDuration(ranking.durationSeconds)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

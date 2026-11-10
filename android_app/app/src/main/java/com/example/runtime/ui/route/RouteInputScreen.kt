@@ -145,6 +145,8 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                     )
                 }
                 Spacer(modifier = Modifier.height(Spacing.m))
+                RunGoalSection(routeViewModel)
+                Spacer(modifier = Modifier.height(Spacing.m))
                 Text(stringResource(R.string.label_preferences), style = MaterialTheme.typography.titleMedium)
                 Text(
                     stringResource(R.string.preferences_hint),
@@ -257,5 +259,61 @@ private fun MapPickBar(target: PickTarget, onTargetChange: (PickTarget) -> Unit,
                 shape = MaterialTheme.shapes.extraLarge
             )
         }
+    }
+}
+
+@Composable
+private fun RunGoalSection(routeViewModel: RouteViewModel) {
+    Text(stringResource(R.string.goal_title), style = MaterialTheme.typography.titleMedium)
+    Text(
+        stringResource(R.string.goal_hint),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(Spacing.s))
+    OutlinedTextField(
+        value = routeViewModel.goalText,
+        onValueChange = routeViewModel::onGoalTextChange,
+        placeholder = { Text(stringResource(R.string.goal_placeholder)) },
+        minLines = 2,
+        maxLines = 4,
+        keyboardOptions = doneKeyboardOptions(),
+        keyboardActions = hideKeyboardActions(),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(Spacing.s))
+    val loading = routeViewModel.planState == PlanState.Loading
+    OutlinedButton(
+        onClick = routeViewModel::requestPlan,
+        enabled = routeViewModel.goalText.isNotBlank() && !loading,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            Spacer(modifier = Modifier.width(Spacing.s))
+        }
+        Text(stringResource(if (routeViewModel.runPlan == null) R.string.goal_make_plan else R.string.goal_remake_plan))
+    }
+    (routeViewModel.planState as? PlanState.Failed)?.let {
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        Text(it.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    }
+    routeViewModel.runPlan?.let { plan ->
+        Spacer(modifier = Modifier.height(Spacing.s))
+        RunPlanCard(
+            plan = plan,
+            title = stringResource(R.string.goal_plan_title),
+            footer = {
+                Text(
+                    stringResource(R.string.goal_plan_applied),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(onClick = routeViewModel::clearPlan, contentPadding = PaddingValues(0.dp)) {
+                    Text(stringResource(R.string.goal_clear_plan))
+                }
+            }
+        )
     }
 }

@@ -74,7 +74,7 @@ fun PostCard(post: BoardPost, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(Spacing.xs))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "${timeAgoText(post.createdAt)} · ${postAuthorLabel(post)}",
+                "${timeAgoText(post.createdAt)}, ${postAuthorLabel(post)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)

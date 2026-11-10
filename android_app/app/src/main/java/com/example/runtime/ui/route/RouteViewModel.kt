@@ -11,6 +11,8 @@ import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.ui.common.UiText
@@ -64,9 +66,18 @@ enum class ElevationLoadState {
     Error,
 }
 
+sealed interface PlanState {
+    data object Idle : PlanState
+    data object Loading : PlanState
+    data class Failed(val message: UiText) : PlanState
+}
+
+const val MAX_GOAL_TEXT_LENGTH = 200
+
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
     private val communityRepository: CommunityRepository = CommunityRepository(),
+    private val coachRepository: CoachRepository = CoachRepository(),
 ) : ViewModel() {
 
     val startField = PlaceField()
@@ -76,6 +87,12 @@ class RouteViewModel(
     var preferences by mutableStateOf<Set<RoutePreference>>(emptySet())
         private set
     var preferenceText by mutableStateOf("")
+        private set
+    var goalText by mutableStateOf("")
+        private set
+    var runPlan by mutableStateOf<RunPlan?>(null)
+        private set
+    var planState by mutableStateOf<PlanState>(PlanState.Idle)
         private set
 
     var error by mutableStateOf<UiText?>(null)
@@ -147,6 +164,9 @@ class RouteViewModel(
         pickTarget = PickTarget.START
         preferences = emptySet()
         preferenceText = ""
+        goalText = ""
+        runPlan = null
+        planState = PlanState.Idle
         error = null
         generated = null
         options = emptyList()
@@ -177,6 +197,49 @@ class RouteViewModel(
 
     fun onPreferenceTextChange(text: String) {
         preferenceText = text.take(MAX_PREFERENCE_TEXT_LENGTH)
+    }
+
+    fun onGoalTextChange(text: String) {
+        goalText = text.take(MAX_GOAL_TEXT_LENGTH)
+        if (planState is PlanState.Failed) planState = PlanState.Idle
+    }
+
+    fun requestPlan() {
+        val text = goalText.trim()
+        if (text.isEmpty() || planState == PlanState.Loading) return
+        val distanceMeters = distanceInput.trim().toDoubleOrNull()
+            ?.takeIf { it.isFinite() && it > 0 }
+            ?.let { (it * 1000).roundToInt() }
+        planState = PlanState.Loading
+        sessionScope.launch {
+            planState = try {
+                applyPlan(coachRepository.planRun(text, distanceMeters))
+                PlanState.Idle
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PlanState.Failed(e.toUiText())
+            }
+        }
+    }
+
+    fun applyPlan(plan: RunPlan) {
+        runPlan = plan
+        distanceInput = formatKilometers(plan.distanceMeters)
+        plan.routePreferences
+            .mapNotNull { value -> RoutePreference.entries.firstOrNull { it.apiValue == value } }
+            .filter { it !in preferences }
+            .forEach(::togglePreference)
+    }
+
+    fun clearPlan() {
+        runPlan = null
+        planState = PlanState.Idle
+    }
+
+    private fun formatKilometers(meters: Int): String {
+        val km = meters / 1000.0
+        return if (km % 1.0 == 0.0) km.toInt().toString() else String.format(Locale.US, "%.1f", km)
     }
 
     fun onLanguageChange(language: String) {

@@ -13,14 +13,7 @@ import com.example.runtime.data.remote.SharedRoute
 
 class CommunityRepository(private val api: ApiService = ApiClient.api) {
 
-    suspend fun recordRun(
-        routeId: Int?,
-        temporaryRouteId: Int?,
-        distanceMeters: Int,
-        durationSeconds: Long,
-        groupId: Int? = null,
-    ): RunRecord =
-        api.recordRun(RecordRunRequest(routeId, temporaryRouteId, distanceMeters, durationSeconds, groupId)).requireData()
+    suspend fun recordRun(request: RecordRunRequest): RunRecord = api.recordRun(request).requireData()
 
     suspend fun runs(): List<RunHistoryItem> = api.runs().data.orEmpty()
 

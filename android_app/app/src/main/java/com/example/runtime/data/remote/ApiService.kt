@@ -89,6 +89,18 @@ interface ApiService {
     @GET("api/v1/runs/")
     suspend fun runs(): ApiResponse<List<RunHistoryItem>>
 
+    @POST("api/v1/runs/plan/")
+    suspend fun planRun(@Body body: RunPlanRequest): ApiResponse<RunPlan>
+
+    @GET("api/v1/runs/{runId}/report/")
+    suspend fun runReport(@Path("runId") runId: Int): ApiResponse<RunReport>
+
+    @GET("api/v1/users/my_profile/running_style/")
+    suspend fun runningStyle(): ApiResponse<RunningStyle>
+
+    @PUT("api/v1/users/my_profile/running_style/")
+    suspend fun updateRunningStyle(@Body body: RunningStyle): ApiResponse<RunningStyle>
+
     @GET("api/v1/community/routes/")
     suspend fun sharedRoutes(@Query("sort") sort: String): ApiResponse<List<SharedRoute>>
 

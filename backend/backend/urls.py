@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import auth, board, community, elevation, generate_route, groups, places, profile, routes
+from api.views import auth, board, coach, community, elevation, generate_route, groups, places, profile, routes
 
 urlpatterns = [
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
@@ -11,6 +11,7 @@ urlpatterns = [
     # User
     path("api/v1/users/my_profile/", auth.my_profile, name="my_profile"),
     path("api/v1/users/my_profile/avatar/", profile.my_avatar, name="my_avatar"),
+    path("api/v1/users/my_profile/running_style/", coach.running_style, name="running_style"),
     path("api/v1/users/<int:user_id>/avatar/", profile.user_avatar, name="user_avatar"),
 
     # Routes
@@ -21,6 +22,8 @@ urlpatterns = [
 
     # Community
     path("api/v1/runs/", community.route_runs, name="route_runs"),
+    path("api/v1/runs/plan/", coach.run_plan, name="run_plan"),
+    path("api/v1/runs/<int:run_id>/report/", coach.run_report, name="run_report"),
     path("api/v1/community/routes/", community.shared_routes_list, name="shared_routes_list"),
     path(
         "api/v1/community/routes/<int:shared_route_id>/",

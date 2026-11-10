@@ -146,7 +146,7 @@ fun ReviewItem(review: RouteReview, onEdit: () -> Unit, onDelete: () -> Unit, mo
                     Stars(review.rating.toDouble(), size = 14.dp)
                     Spacer(modifier = Modifier.width(Spacing.s))
                     Text(
-                        review.createdAt.take(10) + if (review.edited) " · " + stringResource(R.string.review_edited) else "",
+                        review.createdAt.take(10) + if (review.edited) " (" + stringResource(R.string.review_edited) + ")" else "",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

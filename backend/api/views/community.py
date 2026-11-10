@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
+from api.services.run_coach import validate_plan, validate_splits
 from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, TemporaryRoute, UserSavedRoute
 
 
@@ -155,6 +156,17 @@ def route_runs(request):
     if distance_m is None or duration_s is None:
         return _error("distance_m and duration_s must be non-negative integers.", status.HTTP_400_BAD_REQUEST)
 
+    plan, error = validate_plan(request.data.get("plan"))
+    if error:
+        return _error(error, status.HTTP_400_BAD_REQUEST)
+    splits, error = validate_splits(request.data.get("splits"))
+    if error:
+        return _error(error, status.HTTP_400_BAD_REQUEST)
+    off_route_count = _non_negative_int(request.data.get("off_route_count", 0))
+    off_route_seconds = _non_negative_int(request.data.get("off_route_seconds", 0))
+    if off_route_count is None or off_route_seconds is None:
+        return _error("off_route_count and off_route_seconds must be non-negative integers.", status.HTTP_400_BAD_REQUEST)
+
     if temporary_route_id:
         try:
             temporary_route = TemporaryRoute.objects.get(
@@ -193,7 +205,15 @@ def route_runs(request):
             return _error("This run is not on the group's route.", status.HTTP_400_BAD_REQUEST)
 
     run = RouteRun.objects.create(
-        user=request.user, route=route, group=group, distance_m=distance_m, duration_s=duration_s
+        user=request.user,
+        route=route,
+        group=group,
+        distance_m=distance_m,
+        duration_s=duration_s,
+        plan=plan,
+        splits=splits,
+        off_route_count=off_route_count,
+        off_route_seconds=off_route_seconds,
     )
     shared_route = SharedRoute.objects.filter(route=route).first()
 

@@ -104,6 +104,11 @@ class RouteRun(models.Model):
     duration_s = models.PositiveIntegerField()
     group = models.ForeignKey("RunningGroup", on_delete=models.SET_NULL, null=True, blank=True, related_name="runs")
     finished_at = models.DateTimeField(auto_now_add=True)
+    plan = models.JSONField(null=True, blank=True)
+    splits = models.JSONField(default=list, blank=True)
+    off_route_count = models.PositiveIntegerField(default=0)
+    off_route_seconds = models.PositiveIntegerField(default=0)
+    report = models.JSONField(null=True, blank=True)
 
 
 class SharedRoute(models.Model):
@@ -247,3 +252,4 @@ class Profile(models.Model):
     avatar = models.BinaryField(null=True, blank=True)
     avatar_type = models.CharField(max_length=20, blank=True, default="")
     avatar_updated_at = models.DateTimeField(null=True, blank=True)
+    running_style = models.JSONField(default=dict, blank=True)
