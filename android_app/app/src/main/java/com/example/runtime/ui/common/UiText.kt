@@ -50,6 +50,7 @@ private val serverMessages = mapOf(
     "The password is incorrect." to R.string.error_group_password_wrong,
     "The password must be 4 to 20 characters." to R.string.error_group_password,
     "This group is full." to R.string.error_group_full,
+    "This nickname is already taken." to R.string.error_nickname_taken,
     "This group is no longer taking members." to R.string.error_group_closed,
     "This route is already shared." to R.string.error_already_shared,
     "Invite not found." to R.string.error_invite_not_found,

@@ -75,6 +75,7 @@ import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
 import com.example.runtime.ui.profile.UserProfileViewModel
+import com.example.runtime.ui.profile.FollowListType
 import com.example.runtime.ui.mypage.RunningStyleViewModel
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
@@ -143,6 +144,7 @@ fun RunTimeApp() {
     val runningStyleViewModel: RunningStyleViewModel = viewModel()
     val userProfileViewModel: UserProfileViewModel = viewModel()
     val profileStack = remember { mutableStateListOf<String>() }
+    var pendingFollowList by remember { mutableStateOf<FollowListType?>(null) }
     var profileReturnScreen by rememberSaveable { mutableStateOf("community") }
     var groupReturnScreen by rememberSaveable { mutableStateOf("community") }
     var postReturnScreen by rememberSaveable { mutableStateOf("community") }
@@ -636,7 +638,10 @@ fun RunTimeApp() {
                                         },
                                         onCreateRoute = { currentScreen = "route_input" },
                                         onOpenRunningStyle = { currentScreen = "running_style" },
-                                        onOpenMyProfile = ::openUser,
+                                        onOpenMyFollows = { username, type ->
+                                            pendingFollowList = type
+                                            openUser(username)
+                                        },
                                         onOpenInvites = {
                                             invitesReturnScreen = "MyPage"
                                             currentScreen = "group_invites"
@@ -681,7 +686,9 @@ fun RunTimeApp() {
                                                 postReturnScreen = "user_profile"
                                                 currentScreen = "post_detail"
                                             },
-                                            onLogInRequired = { loginPrompt = LOGIN_PROMPT_FOLLOW }
+                                            onLogInRequired = { loginPrompt = LOGIN_PROMPT_FOLLOW },
+                                            initialList = pendingFollowList,
+                                            onInitialListShown = { pendingFollowList = null }
                                         )
                                     } ?: run {
                                         currentScreen = profileReturnScreen

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.example.runtime.R
 import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.ui.common.AccentButton
+import com.example.runtime.ui.profile.FollowListType
 import com.example.runtime.ui.common.EmptyState
 import com.example.runtime.ui.common.StatItem
 import com.example.runtime.ui.common.PreferenceButtons
@@ -47,7 +48,7 @@ fun MyPageScreen(
     onRunAgain: (RunHistoryItem) -> Unit,
     onCreateRoute: () -> Unit,
     onOpenRunningStyle: () -> Unit,
-    onOpenMyProfile: (String) -> Unit,
+    onOpenMyFollows: (String, FollowListType) -> Unit,
     onOpenInvites: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -114,18 +115,12 @@ fun MyPageScreen(
                 }
             }
         }
-        ProfileSection(myPageViewModel = myPageViewModel, modifier = Modifier.padding(bottom = Spacing.xs))
-        myPageViewModel.username?.let { username ->
-            TextButton(
-                onClick = { onOpenMyProfile(username) },
-                modifier = Modifier.padding(bottom = Spacing.xs)
-            ) {
-                Text(
-                    stringResource(R.string.my_follow_counts, myPageViewModel.followerCount, myPageViewModel.followingCount),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-        }
+        ProfileSection(
+            myPageViewModel = myPageViewModel,
+            modifier = Modifier.padding(bottom = Spacing.s),
+            onOpenFollowers = { myPageViewModel.username?.let { onOpenMyFollows(it, FollowListType.FOLLOWERS) } },
+            onOpenFollowing = { myPageViewModel.username?.let { onOpenMyFollows(it, FollowListType.FOLLOWING) } }
+        )
         if (myPageViewModel.inviteCount > 0) {
             FilledTonalButton(
                 onClick = onOpenInvites,

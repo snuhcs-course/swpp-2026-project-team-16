@@ -20,8 +20,8 @@ class AuthRepository(
     suspend fun login(username: String, password: String): AuthData =
         api.login(LoginRequest(username, password)).requireData().also { saveToken(it.token) }
 
-    suspend fun register(username: String, email: String, password: String): AuthData =
-        api.register(RegisterRequest(username, email, password)).requireData().also { saveToken(it.token) }
+    suspend fun register(username: String, email: String, password: String, displayName: String = ""): AuthData =
+        api.register(RegisterRequest(username, email, password, displayName)).requireData().also { saveToken(it.token) }
 
     suspend fun googleLogin(idToken: String): AuthData =
         api.googleLogin(GoogleLoginRequest(idToken)).requireData().also { saveToken(it.token) }

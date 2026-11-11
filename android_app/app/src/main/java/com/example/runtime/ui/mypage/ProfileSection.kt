@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -86,7 +87,12 @@ fun ProfileAvatar(bytes: ByteArray?, initial: String, size: Dp, modifier: Modifi
 }
 
 @Composable
-fun ProfileSection(myPageViewModel: MyPageViewModel, modifier: Modifier = Modifier) {
+fun ProfileSection(
+    myPageViewModel: MyPageViewModel,
+    modifier: Modifier = Modifier,
+    onOpenFollowers: () -> Unit = {},
+    onOpenFollowing: () -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val messages = LocalAppMessages.current
@@ -124,7 +130,8 @@ fun ProfileSection(myPageViewModel: MyPageViewModel, modifier: Modifier = Modifi
         ),
         modifier = modifier.fillMaxWidth()
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.m)) {
+        Column {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.m)) {
             Box {
                 Box(
                     modifier = Modifier.clickable(enabled = username != null && !myPageViewModel.isUploadingAvatar) {
@@ -210,6 +217,31 @@ fun ProfileSection(myPageViewModel: MyPageViewModel, modifier: Modifier = Modifi
             IconButton(onClick = { showEditDialog = true }, enabled = username != null) {
                 Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.profile_edit))
             }
+        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.m)
+        )
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            FollowCountCell(
+                count = myPageViewModel.followerCount,
+                label = stringResource(R.string.profile_followers),
+                enabled = username != null,
+                onClick = onOpenFollowers,
+                modifier = Modifier.weight(1f)
+            )
+            VerticalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.fillMaxHeight().padding(vertical = Spacing.s)
+            )
+            FollowCountCell(
+                count = myPageViewModel.followingCount,
+                label = stringResource(R.string.profile_following),
+                enabled = username != null,
+                onClick = onOpenFollowing,
+                modifier = Modifier.weight(1f)
+            )
+        }
         }
     }
 
@@ -298,4 +330,17 @@ private fun EditProfileDialog(
             }
         }
     )
+}
+
+@Composable
+private fun FollowCountCell(count: Int, label: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = Spacing.s + 2.dp)
+    ) {
+        Text(count.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

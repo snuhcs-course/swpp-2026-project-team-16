@@ -50,7 +50,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         authenticate(onSuccess) { repository.login(username.trim(), password) }
     }
 
-    fun register(username: String, email: String, password: String, passwordConfirm: String, onSuccess: () -> Unit) {
+    fun register(
+        username: String,
+        email: String,
+        password: String,
+        passwordConfirm: String,
+        onSuccess: () -> Unit,
+        displayName: String = "",
+    ) {
         val error = when {
             username.isBlank() || email.isBlank() || password.isEmpty() || passwordConfirm.isEmpty() ->
                 R.string.error_all_fields_required
@@ -63,7 +70,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             uiState = AuthUiState(error = UiText.Resource(error))
             return
         }
-        authenticate(onSuccess) { repository.register(username.trim(), email.trim(), password) }
+        authenticate(onSuccess) { repository.register(username.trim(), email.trim(), password, displayName.trim()) }
     }
 
     fun googleLogin(idToken: String, email: String, onSuccess: () -> Unit, onSignUpRequired: (String) -> Unit) {

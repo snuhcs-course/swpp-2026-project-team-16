@@ -22,6 +22,7 @@ class ServerMessageTest {
             "A verified Google email is required" to R.string.error_google_email_unverified,
             "Multiple accounts use this email" to R.string.error_google_multiple_accounts,
             "Authentication credentials were not provided." to R.string.error_auth_required,
+            "This nickname is already taken." to R.string.error_nickname_taken,
         )
         for ((message, resource) in cases) {
             assertEquals(message, UiText.Resource(resource), httpError(400, message).toUiText())

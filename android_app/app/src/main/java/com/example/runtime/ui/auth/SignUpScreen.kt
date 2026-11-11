@@ -19,6 +19,7 @@ fun SignUpScreen(
     onLogInClick: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
+    var nickname by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable(initialEmail) { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
@@ -33,6 +34,18 @@ fun SignUpScreen(
 
     AuthLayout(title = stringResource(R.string.title_sign_up), error = uiState.error) {
         AuthTextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.label_name))
+        Spacer(modifier = Modifier.height(Spacing.m))
+        AuthTextField(
+            value = nickname,
+            onValueChange = { nickname = it.take(MAX_NICKNAME_LENGTH).replace("\n", "") },
+            label = stringResource(R.string.label_nickname_optional)
+        )
+        Text(
+            stringResource(R.string.nickname_hint),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)
+        )
         Spacer(modifier = Modifier.height(Spacing.m))
         AuthTextField(
             value = email,
@@ -52,7 +65,7 @@ fun SignUpScreen(
         PrimaryAuthButton(
             text = stringResource(R.string.action_sign_up),
             isLoading = uiState.isLoading,
-            onClick = { authViewModel.register(name, email, password, passwordConfirm, onSignUpSuccess) }
+            onClick = { authViewModel.register(name, email, password, passwordConfirm, onSignUpSuccess, nickname) }
         )
         OrDivider()
         GoogleSignInButton(
@@ -67,3 +80,5 @@ fun SignUpScreen(
         }
     }
 }
+
+private const val MAX_NICKNAME_LENGTH = 30
