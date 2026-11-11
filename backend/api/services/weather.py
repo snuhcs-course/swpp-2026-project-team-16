@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -155,7 +156,7 @@ def fetch_raw(latitude, longitude, opener=urllib.request.urlopen):
     cached = cache.get(key)
     if cached is not None:
         return cached
-    forecast = _fetch_json(FORECAST_URL, {
+    forecast_params = {
         "latitude": latitude,
         "longitude": longitude,
         "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m",
@@ -163,16 +164,21 @@ def fetch_raw(latitude, longitude, opener=urllib.request.urlopen):
         "forecast_hours": FORECAST_HOURS,
         "wind_speed_unit": "ms",
         "timezone": "auto",
-    }, opener)
-    try:
-        air = _fetch_json(AIR_QUALITY_URL, {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "pm10,pm2_5",
-            "timezone": "auto",
-        }, opener)
-    except WeatherError:
-        air = None
+    }
+    air_params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "pm10,pm2_5",
+        "timezone": "auto",
+    }
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        forecast_future = pool.submit(_fetch_json, FORECAST_URL, forecast_params, opener)
+        air_future = pool.submit(_fetch_json, AIR_QUALITY_URL, air_params, opener)
+        forecast = forecast_future.result()
+        try:
+            air = air_future.result()
+        except WeatherError:
+            air = None
     raw = {"forecast": forecast, "air": air}
     cache.set(key, raw, CACHE_SECONDS)
     return raw

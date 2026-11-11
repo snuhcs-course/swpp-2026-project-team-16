@@ -49,10 +49,26 @@ class CalendarViewModel(
     var weather by mutableStateOf<WeatherState>(WeatherState.Loading)
         private set
 
-    fun loadWeather(latitude: Double?, longitude: Double?) {
+    fun showCachedWeather(cached: WeatherState.Loaded) {
+        if (weather !is WeatherState.Loaded) weather = cached
+    }
+
+    private var weatherQuery: Triple<Double, Double, Boolean>? = null
+    private var weatherLoadedAt = 0L
+
+    fun loadWeather(latitude: Double?, longitude: Double?, force: Boolean = false, now: Long = System.currentTimeMillis()) {
         val isNearMe = latitude != null && longitude != null
         val lat = latitude ?: DEFAULT_LATITUDE
         val lng = longitude ?: DEFAULT_LONGITUDE
+        val previous = weatherQuery
+        if (!force && previous != null && now - weatherLoadedAt < WEATHER_FRESH_MS) {
+            if (!isNearMe && (previous.third || weather !is WeatherState.Failed)) return
+            if (isNearMe && previous.third && kotlin.math.abs(previous.first - lat) < SAME_AREA_DEGREES &&
+                kotlin.math.abs(previous.second - lng) < SAME_AREA_DEGREES
+            ) return
+        }
+        weatherQuery = Triple(lat, lng, isNearMe)
+        weatherLoadedAt = now
         if (weather !is WeatherState.Loaded) weather = WeatherState.Loading
         viewModelScope.launch {
             weather = try {
@@ -115,3 +131,5 @@ class CalendarViewModel(
 
 const val DEFAULT_LATITUDE = 37.5665
 const val DEFAULT_LONGITUDE = 126.9780
+private const val WEATHER_FRESH_MS = 10 * 60 * 1000L
+private const val SAME_AREA_DEGREES = 0.02
