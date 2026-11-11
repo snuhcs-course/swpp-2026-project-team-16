@@ -36,7 +36,7 @@ private val MAP_BOTTOM_PADDING = 340.dp
 // 4. Route Input Screen (화면 4)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
+fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onStartFree: () -> Unit = {}) {
     val language = LocalConfiguration.current.locales[0].language
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -93,7 +93,39 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(Spacing.l))
+                Spacer(modifier = Modifier.height(Spacing.m))
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    RunGuidance.entries.forEachIndexed { index, option ->
+                        SegmentedButton(
+                            selected = routeViewModel.guidance == option,
+                            onClick = { routeViewModel.changeGuidance(option) },
+                            shape = SegmentedButtonDefaults.itemShape(index, RunGuidance.entries.size),
+                            label = { Text(stringResource(option.label)) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(Spacing.s))
+                Text(
+                    stringResource(
+                        when (routeViewModel.guidance) {
+                            RunGuidance.FREE -> R.string.guidance_free_hint
+                            RunGuidance.DISTANCE -> R.string.guidance_distance_hint
+                            RunGuidance.DESTINATION -> R.string.guidance_destination_hint
+                        }
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(Spacing.m))
+                if (routeViewModel.guidance == RunGuidance.FREE) {
+                    AccentButton(
+                        text = stringResource(R.string.action_start_free_run),
+                        icon = R.drawable.ic_directions_run,
+                        onClick = onStartFree,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    return@Column
+                }
                 PlaceSearchField(
                     field = routeViewModel.startField,
                     label = stringResource(R.string.label_start_point),
@@ -115,13 +147,15 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                         }
                     }
                 )
-                Spacer(modifier = Modifier.height(Spacing.s))
-                PlaceSearchField(
-                    field = routeViewModel.endField,
-                    label = stringResource(R.string.label_end_point),
-                    onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.endField, it) },
-                    onSelect = { routeViewModel.selectPlace(routeViewModel.endField, it) }
-                )
+                if (routeViewModel.guidance == RunGuidance.DESTINATION) {
+                    Spacer(modifier = Modifier.height(Spacing.s))
+                    PlaceSearchField(
+                        field = routeViewModel.endField,
+                        label = stringResource(R.string.label_end_point),
+                        onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.endField, it) },
+                        onSelect = { routeViewModel.selectPlace(routeViewModel.endField, it) }
+                    )
+                }
                 Spacer(modifier = Modifier.height(Spacing.s))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -207,7 +241,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
         Box(modifier = Modifier.fillMaxSize()) {
             PlacePickerMap(
                 start = routeViewModel.startField.selected,
-                end = routeViewModel.endField.selected,
+                end = routeViewModel.endField.selected.takeIf { routeViewModel.guidance == RunGuidance.DESTINATION },
                 onPick = { point ->
                     val field = if (routeViewModel.pickTarget == PickTarget.START) routeViewModel.startField else routeViewModel.endField
                     routeViewModel.selectPoint(field, mapPointName, point.longitude, point.latitude)
@@ -218,8 +252,9 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
                 ),
                 modifier = Modifier.fillMaxSize()
             )
-            MapPickBar(
+            if (routeViewModel.guidance != RunGuidance.FREE) MapPickBar(
                 target = routeViewModel.pickTarget,
+                showEnd = routeViewModel.guidance == RunGuidance.DESTINATION,
                 onTargetChange = { routeViewModel.pickTarget = it },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -231,7 +266,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit) {
 }
 
 @Composable
-private fun MapPickBar(target: PickTarget, onTargetChange: (PickTarget) -> Unit, modifier: Modifier = Modifier) {
+private fun MapPickBar(target: PickTarget, showEnd: Boolean, onTargetChange: (PickTarget) -> Unit, modifier: Modifier = Modifier) {
     GlassSurface(modifier = modifier, shape = MaterialTheme.shapes.extraLarge) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -251,13 +286,15 @@ private fun MapPickBar(target: PickTarget, onTargetChange: (PickTarget) -> Unit,
                 label = { Text(stringResource(R.string.map_pick_start)) },
                 shape = MaterialTheme.shapes.extraLarge
             )
-            Spacer(modifier = Modifier.width(Spacing.xs))
-            FilterChip(
-                selected = target == PickTarget.END,
-                onClick = { onTargetChange(PickTarget.END) },
-                label = { Text(stringResource(R.string.map_pick_end)) },
-                shape = MaterialTheme.shapes.extraLarge
-            )
+            if (showEnd) {
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                FilterChip(
+                    selected = target == PickTarget.END,
+                    onClick = { onTargetChange(PickTarget.END) },
+                    label = { Text(stringResource(R.string.map_pick_end)) },
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+            }
         }
     }
 }

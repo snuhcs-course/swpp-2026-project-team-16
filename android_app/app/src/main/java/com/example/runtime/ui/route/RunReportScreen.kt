@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.common.formatDuration
 import java.text.DateFormat
@@ -77,6 +78,10 @@ fun RunReportScreen(
     onPlanNextRun: (RunPlan) -> Unit,
     onDone: () -> Unit,
     shareAction: @Composable () -> Unit,
+    isFree: Boolean = false,
+    saveRouteState: SaveRouteState = SaveRouteState.Idle,
+    onSaveRoute: () -> Unit = {},
+    onPlanSimilar: () -> Unit = {},
 ) {
     val splits = remember(result, plan) { result.splitPaces(plan) }
     val runType = RunType.from(plan?.runType)
@@ -97,8 +102,11 @@ fun RunReportScreen(
                 )
             }
             Text(
-                if (runType != null) stringResource(R.string.report_title_typed, stringResource(runType.label))
-                else stringResource(R.string.report_title),
+                when {
+                    runType != null -> stringResource(R.string.report_title_typed, stringResource(runType.label))
+                    isFree -> stringResource(R.string.report_title_free)
+                    else -> stringResource(R.string.report_title)
+                },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -170,6 +178,39 @@ fun RunReportScreen(
                 if (result.offRouteCount == 0) stringResource(R.string.report_off_route_none)
                 else stringResource(R.string.report_off_route_value, result.offRouteCount, formatDuration(result.offRouteSeconds)),
             )
+        }
+
+        if (isFree) {
+            ReportCard(title = stringResource(R.string.report_free_route)) {
+                Text(
+                    stringResource(R.string.report_free_route_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (isLoggedIn && recordState is RunRecordState.Saved) {
+                    OutlinedButton(
+                        onClick = onSaveRoute,
+                        enabled = saveRouteState == SaveRouteState.Idle || saveRouteState is SaveRouteState.Failed,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            stringResource(
+                                when (saveRouteState) {
+                                    SaveRouteState.Saved -> R.string.report_free_route_saved
+                                    SaveRouteState.Saving -> R.string.saving
+                                    else -> R.string.report_free_route_save
+                                }
+                            )
+                        )
+                    }
+                    (saveRouteState as? SaveRouteState.Failed)?.let {
+                        Text(it.message.asString(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                Button(onClick = onPlanSimilar, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.report_plan_similar, formatDistance(result.distanceMeters)))
+                }
+            }
         }
 
         (reportState as? ReportState.Loaded)?.report?.recommendation?.let { recommendation ->

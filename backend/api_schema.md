@@ -1165,3 +1165,23 @@ PATCH /api/v1/runs/<run_id>/
 ```
 
 Login required; only the runner. Body `{"rating": 1-5}`. Returns `{"id", "rating"}`. The rating is private and only used for recommendations.
+
+---
+
+# Free Runs
+
+`POST /api/v1/runs/` also accepts a free run without a route. Send exactly one of `route_id`, `temporary_route_id` or `path`.
+
+```json
+{
+    "path": [[127.0, 37.5], [127.0005, 37.5004]],
+    "distance_m": 3050,
+    "duration_s": 1100,
+    "start_name": "Han river",
+    "splits": [360, 370, 365]
+}
+```
+
+`path` is the recorded trail as `[longitude, latitude]` points (2 to 20000). The server simplifies it (5 m tolerance) and, for paths of 1 km or more, removes the first and last 200 m so the runner's home isn't exposed. It is saved as a new route owned by the runner with `source: "free"`, so it can be saved, shared, reviewed and run again like any other route. `distance_m` stays the distance the runner actually ran.
+
+Run history items include `source` (`generated` or `free`).

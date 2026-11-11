@@ -57,6 +57,7 @@ class Route(models.Model):
     end_name = models.CharField(max_length=100, blank=True, default="")
     start_name_en = models.CharField(max_length=100, blank=True, default="")
     end_name_en = models.CharField(max_length=100, blank=True, default="")
+    source = models.CharField(max_length=10, default="generated")
 
     def localized_names(self, language):
         if language == "en":

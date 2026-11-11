@@ -47,6 +47,12 @@ class PlaceField {
 
 enum class PickTarget { START, END }
 
+enum class RunGuidance(@StringRes val label: Int) {
+    FREE(R.string.guidance_free),
+    DISTANCE(R.string.guidance_distance),
+    DESTINATION(R.string.guidance_destination),
+}
+
 enum class RoutePreference(val apiValue: String, @StringRes val label: Int) {
     FLAT("flat", R.string.preference_flat),
     HILLS("hills", R.string.preference_hills),
@@ -84,6 +90,8 @@ class RouteViewModel(
     val endField = PlaceField()
     var distanceInput by mutableStateOf("")
     var pickTarget by mutableStateOf(PickTarget.START)
+    var guidance by mutableStateOf(RunGuidance.DISTANCE)
+        private set
     var preferences by mutableStateOf<Set<RoutePreference>>(emptySet())
         private set
     var preferenceText by mutableStateOf("")
@@ -162,6 +170,7 @@ class RouteViewModel(
         }
         distanceInput = ""
         pickTarget = PickTarget.START
+        guidance = RunGuidance.DISTANCE
         preferences = emptySet()
         preferenceText = ""
         goalText = ""
@@ -224,6 +233,7 @@ class RouteViewModel(
     }
 
     fun applyPlan(plan: RunPlan) {
+        if (guidance == RunGuidance.FREE) guidance = RunGuidance.DISTANCE
         runPlan = plan
         distanceInput = formatKilometers(plan.distanceMeters)
         plan.routePreferences
@@ -381,6 +391,17 @@ class RouteViewModel(
         error = message
     }
 
+    fun changeGuidance(guidance: RunGuidance) {
+        this.guidance = guidance
+        error = null
+        pickTarget = PickTarget.START
+    }
+
+    fun planNextFromDistance(distanceMeters: Int) {
+        guidance = RunGuidance.DISTANCE
+        distanceInput = String.format(Locale.US, "%.1f", (distanceMeters / 1000.0).coerceAtLeast(1.0)).removeSuffix(".0")
+    }
+
     fun prepare(language: String): Boolean {
         val start = startField.selected
         if (start == null) {
@@ -388,9 +409,11 @@ class RouteViewModel(
             return false
         }
 
-        val end = endField.selected
-        if (end == null && endField.input.isNotBlank()) {
-            error = UiText.Resource(R.string.error_end_point_not_selected)
+        val end = if (guidance == RunGuidance.DESTINATION) endField.selected else null
+        if (guidance == RunGuidance.DESTINATION && end == null) {
+            error = UiText.Resource(
+                if (endField.input.isNotBlank()) R.string.error_end_point_not_selected else R.string.error_end_point_required
+            )
             return false
         }
 

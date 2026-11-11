@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name" translatable="false">RunTime</string>
 
-    <string name="nav_route">Route</string>
+    <string name="nav_route">Run</string>
     <string name="nav_my_page">My Page</string>
     <string name="splash_tagline">Running routes made for you</string>
 
@@ -600,4 +600,26 @@
     <string name="label_nickname_optional">Nickname (optional)</string>
     <string name="nickname_hint">Must be different from everyone else\'s. If empty, your username is shown.</string>
     <string name="error_nickname_taken">That nickname is already taken.</string>
+    <string name="guidance_free">Free run</string>
+    <string name="guidance_distance">Distance</string>
+    <string name="guidance_destination">Destination</string>
+    <string name="guidance_free_hint">Start right here without a route. Your path is recorded as you run.</string>
+    <string name="guidance_distance_hint">Pick a start and a distance, and we\'ll make a loop for you.</string>
+    <string name="guidance_destination_hint">We\'ll make a route from your start to your destination.</string>
+    <string name="action_start_free_run">Start running</string>
+    <string name="error_end_point_required">Choose a destination.</string>
+    <string name="run_free_ready">Tap Start to record from where you are.</string>
+    <string name="run_free_tracking">Free run in progress.</string>
+    <string name="run_return_route">Make a route back to the start</string>
+    <string name="run_return_route_again">Make the route back again</string>
+    <string name="run_return_route_making">Making the route back…</string>
+    <string name="run_return_route_title">Route back</string>
+    <string name="run_return_route_message">How much farther do you want to run back to the start?</string>
+    <string name="run_return_route_confirm">Make route</string>
+    <string name="report_title_free">Free run report</string>
+    <string name="report_free_route">Today\'s path</string>
+    <string name="report_free_route_message">Save your path as a route to run it again or share it. The first and last 200 m are left out so your home stays private.</string>
+    <string name="report_free_route_save">Save this path as a route</string>
+    <string name="report_free_route_saved">Added to your saved routes</string>
+    <string name="report_plan_similar">Make a new %1$s route</string>
 </resources>

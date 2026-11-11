@@ -10,6 +10,7 @@ from rest_framework.response import Response
 
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
+from api.services.free_route import free_route_line, validate_path
 from api.services.notifications import notify
 from api.services.recommendation import POPULAR_DAYS, reason_text, score_routes
 from api.services.run_coach import validate_plan, validate_splits
@@ -155,6 +156,7 @@ def _run_data(run, saved_route_ids, language=DEFAULT_LANGUAGE):
         "shared_route_id": shared_route.id if shared_route else None,
         "shared_title": shared_route.title if shared_route else "",
         "is_saved": route.id in saved_route_ids,
+        "source": route.source,
         "route": route.route,
     }
 
@@ -172,8 +174,9 @@ def route_runs(request):
 
     route_id = request.data.get("route_id")
     temporary_route_id = request.data.get("temporary_route_id")
-    if bool(route_id) == bool(temporary_route_id):
-        return _error("Provide either route_id or temporary_route_id.", status.HTTP_400_BAD_REQUEST)
+    path = request.data.get("path")
+    if sum(1 for value in (route_id, temporary_route_id, path) if value) != 1:
+        return _error("Provide one of route_id, temporary_route_id or path.", status.HTTP_400_BAD_REQUEST)
 
     distance_m = _non_negative_int(request.data.get("distance_m"))
     duration_s = _non_negative_int(request.data.get("duration_s"))
@@ -191,7 +194,21 @@ def route_runs(request):
     if off_route_count is None or off_route_seconds is None:
         return _error("off_route_count and off_route_seconds must be non-negative integers.", status.HTTP_400_BAD_REQUEST)
 
-    if temporary_route_id:
+    if path:
+        points, error = validate_path(path)
+        if error:
+            return _error(error, status.HTTP_400_BAD_REQUEST)
+        line, line_distance = free_route_line(points)
+        start_name = request.data.get("start_name")
+        route = Route.objects.create(
+            created_by=request.user,
+            distance=line_distance or 1,
+            briefing="",
+            route=[{"type": "LineString", "coordinates": line}],
+            start_name=start_name.strip()[:100] if isinstance(start_name, str) else "",
+            source="free",
+        )
+    elif temporary_route_id:
         try:
             temporary_route = TemporaryRoute.objects.get(
                 Q(user=request.user) | Q(user__isnull=True),
