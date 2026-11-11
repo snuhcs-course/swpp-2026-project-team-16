@@ -87,7 +87,7 @@ class CommunityViewModelTest {
         viewModel.changeSort(RouteSort.RATING)
         viewModel.changeSort(RouteSort.RATING)
 
-        assertEquals(listOf("latest", "rating"), api.sorts)
+        assertEquals(listOf("recommended", "rating"), api.sorts)
         assertEquals(RouteSort.RATING, viewModel.sort)
     }
 
@@ -156,6 +156,25 @@ class CommunityViewModelTest {
         assertEquals(false, viewModel.followingOnly)
     }
 
+    @Test
+    fun recommended_sendsMyLocationOnceItIsKnown() {
+        viewModel.refresh()
+        viewModel.updateLocation(37.5, 127.0)
+        viewModel.updateLocation(37.6, 127.1)
+
+        assertEquals(listOf(null, 37.5 to 127.0), api.origins)
+        assertEquals(listOf("recommended", "recommended"), api.sorts)
+    }
+
+    @Test
+    fun otherSortsDoNotSendTheLocation() {
+        viewModel.updateLocation(37.5, 127.0)
+        viewModel.changeSort(RouteSort.POPULAR)
+
+        assertEquals("popular", api.sorts.last())
+        assertEquals(null, api.origins.last())
+    }
+
     private class CommunityApi : FakeApiService() {
         var failList = false
         var failReview = false
@@ -166,9 +185,12 @@ class CommunityViewModelTest {
 
         val filters = mutableListOf<String?>()
 
-        override suspend fun sharedRoutes(sort: String, filter: String?): ApiResponse<List<SharedRoute>> {
+        val origins = mutableListOf<Pair<Double, Double>?>()
+
+        override suspend fun sharedRoutes(sort: String, filter: String?, latitude: Double?, longitude: Double?): ApiResponse<List<SharedRoute>> {
             sorts += sort
             filters += filter
+            origins += if (latitude != null && longitude != null) latitude to longitude else null
             if (failList) throw IOException("offline")
             return ApiResponse(status = "success", data = listOf(shared(1), shared(2)))
         }

@@ -66,7 +66,25 @@ class RunViewModel(
     var reportState by mutableStateOf<ReportState>(ReportState.Idle)
         private set
 
+    var runRating by mutableStateOf<Int?>(null)
+        private set
+
     private var savedRunId: Int? = null
+
+    fun rateRun(rating: Int) {
+        val runId = savedRunId ?: return
+        val previous = runRating
+        runRating = rating
+        viewModelScope.launch {
+            runRating = try {
+                repository.rateRun(runId, rating)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                previous
+            }
+        }
+    }
 
     fun start(target: RunTarget) {
         this.target = target
@@ -74,6 +92,7 @@ class RunViewModel(
         shareState = ShareState.Idle
         reportState = ReportState.Idle
         result = null
+        runRating = null
         savedRunId = null
     }
 

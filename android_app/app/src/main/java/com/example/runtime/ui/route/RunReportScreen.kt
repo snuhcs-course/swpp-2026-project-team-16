@@ -17,6 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.painterResource
+import com.example.runtime.ui.theme.StarYellow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,6 +71,8 @@ fun RunReportScreen(
     isLoggedIn: Boolean,
     recordState: RunRecordState,
     reportState: ReportState,
+    runRating: Int? = null,
+    onRate: (Int) -> Unit = {},
     onRetryReport: () -> Unit,
     onPlanNextRun: (RunPlan) -> Unit,
     onDone: () -> Unit,
@@ -134,6 +140,28 @@ fun RunReportScreen(
 
         ReportCard(title = stringResource(R.string.report_coach_comment)) {
             CoachComment(isLoggedIn, recordState, reportState, onRetryReport)
+        }
+
+        if (isLoggedIn && recordState is RunRecordState.Saved) {
+            ReportCard(title = stringResource(R.string.report_rate_route)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    (1..5).forEach { star ->
+                        IconButton(onClick = { onRate(star) }) {
+                            Icon(
+                                painterResource(if (runRating != null && star <= runRating) R.drawable.ic_star_filled else R.drawable.ic_star),
+                                contentDescription = stringResource(R.string.report_rate_star, star),
+                                tint = if (runRating != null && star <= runRating) StarYellow else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+                    }
+                }
+                Text(
+                    stringResource(if (runRating == null) R.string.report_rate_hint else R.string.report_rate_saved),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         ReportCard(title = stringResource(R.string.report_route)) {

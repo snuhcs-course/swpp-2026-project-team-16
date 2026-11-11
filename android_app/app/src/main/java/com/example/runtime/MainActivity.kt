@@ -431,6 +431,8 @@ fun RunTimeApp() {
                                                 isLoggedIn = authViewModel.isLoggedIn,
                                                 recordState = runViewModel.recordState,
                                                 reportState = runViewModel.reportState,
+                                                runRating = runViewModel.runRating,
+                                                onRate = runViewModel::rateRun,
                                                 onRetryReport = runViewModel::loadReport,
                                                 onPlanNextRun = { plan ->
                                                     routeViewModel.applyPlan(plan)

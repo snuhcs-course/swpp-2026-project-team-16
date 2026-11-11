@@ -1,6 +1,8 @@
+import math
 from django.db import IntegrityError, transaction
 from datetime import timedelta
 
+from django.utils import timezone
 from django.db.models import Avg, Count, F, Q
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -9,6 +11,7 @@ from rest_framework.response import Response
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
 from api.services.notifications import notify
+from api.services.recommendation import POPULAR_DAYS, reason_text, score_routes
 from api.services.run_coach import validate_plan, validate_splits
 from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, TemporaryRoute, UserSavedRoute
 
@@ -16,7 +19,7 @@ from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, 
 MAX_TITLE_LENGTH = 60
 MAX_DESCRIPTION_LENGTH = 300
 MAX_COMMENT_LENGTH = 500
-SORTS = ("latest", "rating", "reviews")
+SORTS = ("latest", "popular", "rating", "reviews", "recommended")
 ROUTE_FILTERS = ("all", "following")
 EDITED_AFTER = timedelta(seconds=1)
 
@@ -71,16 +74,35 @@ def _shared_route_data(shared_route, user, include_route=False, language=DEFAULT
 
 
 def _shared_routes(sort="latest"):
+    since = timezone.now() - timedelta(days=POPULAR_DAYS)
     shared_routes = SharedRoute.objects.select_related("route", "shared_by").annotate(
         run_count=Count("route__runs", distinct=True),
+        recent_runs=Count("route__runs", filter=Q(route__runs__finished_at__gte=since), distinct=True),
         review_count=Count("reviews", distinct=True),
         rating_average=Avg("reviews__rating"),
     )
+    if sort == "popular":
+        return shared_routes.annotate(popularity=F("recent_runs") + 2 * F("review_count")).order_by(
+            "-popularity", "-run_count", "-shared_at"
+        )
     if sort == "rating":
         return shared_routes.order_by(F("rating_average").desc(nulls_last=True), "-review_count", "-shared_at")
     if sort == "reviews":
         return shared_routes.order_by("-review_count", "-shared_at")
     return shared_routes.order_by("-shared_at", "-id")
+
+
+def _parse_origin(params):
+    if params.get("lat") is None and params.get("lng") is None:
+        return None, None
+    try:
+        lat = float(params.get("lat"))
+        lng = float(params.get("lng"))
+    except (TypeError, ValueError):
+        return None, "lat and lng must be valid coordinates."
+    if not (math.isfinite(lat) and math.isfinite(lng) and -90 <= lat <= 90 and -180 <= lng <= 180):
+        return None, "lat and lng must be valid coordinates."
+    return (lat, lng), None
 
 
 def _can_review(user, shared_route):
@@ -246,7 +268,19 @@ def shared_routes_list(request):
             if not request.user.is_authenticated:
                 return _auth_required()
             shared_routes = shared_routes.filter(shared_by__followers__follower=request.user)
-        data = [_shared_route_data(shared_route, request.user, language=request_language(request)) for shared_route in shared_routes]
+        language = request_language(request)
+        if sort == "recommended":
+            origin, error = _parse_origin(request.query_params)
+            if error:
+                return _error(error, status.HTTP_400_BAD_REQUEST)
+            data = []
+            for item in score_routes(list(shared_routes), request.user, origin):
+                route_data = _shared_route_data(item["shared_route"], request.user, language=language)
+                route_data["distance_from_me_m"] = item["distance_m"]
+                route_data["recommend_reason"] = reason_text(item, language)
+                data.append(route_data)
+            return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+        data = [_shared_route_data(shared_route, request.user, language=language) for shared_route in shared_routes]
         return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
     if not request.user.is_authenticated:
@@ -391,3 +425,18 @@ def review_detail(request, review_id):
     review.comment = comment
     review.save(update_fields=["rating", "comment", "updated_at"])
     return Response({"status": "success", "data": _review_data(review, request.user)}, status=status.HTTP_200_OK)
+
+
+@api_view(["PATCH"])
+def run_detail(request, run_id):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    run = RouteRun.objects.filter(id=run_id, user=request.user).first()
+    if run is None:
+        return _error("Run not found.", status.HTTP_404_NOT_FOUND)
+    rating = request.data.get("rating")
+    if isinstance(rating, bool) or not isinstance(rating, int) or not 1 <= rating <= 5:
+        return _error("Rating must be a whole number from 1 to 5.", status.HTTP_400_BAD_REQUEST)
+    run.rating = rating
+    run.save(update_fields=["rating"])
+    return Response({"status": "success", "data": {"id": run.id, "rating": run.rating}}, status=status.HTTP_200_OK)

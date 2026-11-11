@@ -31,6 +31,7 @@ urlpatterns = [
     # Community
     path("api/v1/runs/", community.route_runs, name="route_runs"),
     path("api/v1/runs/plan/", coach.run_plan, name="run_plan"),
+    path("api/v1/runs/<int:run_id>/", community.run_detail, name="run_detail"),
     path("api/v1/runs/<int:run_id>/report/", coach.run_report, name="run_report"),
     path("api/v1/community/routes/", community.shared_routes_list, name="shared_routes_list"),
     path(

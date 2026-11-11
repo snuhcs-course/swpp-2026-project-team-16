@@ -109,6 +109,7 @@ class RouteRun(models.Model):
     off_route_count = models.PositiveIntegerField(default=0)
     off_route_seconds = models.PositiveIntegerField(default=0)
     report = models.JSONField(null=True, blank=True)
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)
 
 
 class SharedRoute(models.Model):
