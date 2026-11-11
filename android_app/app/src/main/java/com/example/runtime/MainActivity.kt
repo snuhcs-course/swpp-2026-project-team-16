@@ -68,6 +68,8 @@ import com.example.runtime.data.push.Push
 import com.example.runtime.ui.group.GroupInvitesScreen
 import com.example.runtime.ui.calendar.CalendarScreen
 import com.example.runtime.ui.calendar.CalendarViewModel
+import com.example.runtime.ui.challenge.ChallengeScreen
+import com.example.runtime.ui.challenge.ChallengeViewModel
 import com.example.runtime.ui.calendar.WeatherCache
 import com.example.runtime.ui.calendar.WeatherState
 import com.example.runtime.ui.common.lastKnownLocation
@@ -174,6 +176,7 @@ fun RunTimeApp() {
     val context = LocalContext.current
     val notificationsViewModel: NotificationsViewModel = viewModel()
     val calendarViewModel: CalendarViewModel = viewModel()
+    val challengeViewModel: ChallengeViewModel = viewModel()
     var notificationsReturnScreen by rememberSaveable { mutableStateOf("MyPage") }
     var settingsReturnScreen by rememberSaveable { mutableStateOf("MyPage") }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -187,6 +190,7 @@ fun RunTimeApp() {
         communityViewModel.reset()
         notificationsViewModel.reset()
         calendarViewModel.reset()
+        challengeViewModel.reset()
         selectedRouteId = null
     }
 
@@ -322,6 +326,12 @@ fun RunTimeApp() {
                     RunTabItem(
                         selected = currentScreen == "route_input" || currentScreen == "route_result",
                         onClick = { currentScreen = "route_input" }
+                    )
+                    NavigationBarItem(
+                        selected = currentScreen == "challenge",
+                        onClick = { currentScreen = "challenge" },
+                        icon = { Icon(painterResource(R.drawable.ic_trophy), contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_challenge)) }
                     )
                     NavigationBarItem(
                         selected = currentScreen in setOf("MyPage", "saved_detail", "running_style"),
@@ -722,6 +732,11 @@ fun RunTimeApp() {
                                             groupReturnScreen = "group_invites"
                                             currentScreen = "group_detail"
                                         }
+                                    )
+                                    "challenge" -> ChallengeScreen(
+                                        viewModel = challengeViewModel,
+                                        isLoggedIn = authViewModel.isLoggedIn,
+                                        onLogIn = { openAuth("login", returnTo = "challenge", save = false) }
                                     )
                                     "calendar" -> CalendarScreen(
                                         viewModel = calendarViewModel,
