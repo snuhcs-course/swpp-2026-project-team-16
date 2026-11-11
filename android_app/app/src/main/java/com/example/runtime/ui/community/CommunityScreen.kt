@@ -11,7 +11,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import com.example.runtime.ui.common.currentLocation
+import com.example.runtime.ui.common.hasLocationPermission
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,8 +104,12 @@ private fun SharedRoutesTab(
     onRouteClick: (Int) -> Unit,
     onLogInRequired: () -> Unit,
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         communityViewModel.refresh()
+        if (context.hasLocationPermission()) {
+            context.currentLocation()?.let { communityViewModel.updateLocation(it.latitude, it.longitude) }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.m)) {
@@ -155,7 +162,11 @@ private fun SharedRoutesTab(
                 contentPadding = PaddingValues(vertical = Spacing.m)
             ) {
                 items(communityViewModel.routes, key = { it.id }) { route ->
-                    SharedRouteCard(route = route, onClick = { onRouteClick(route.id) })
+                    SharedRouteCard(
+                        route = route,
+                        reason = route.recommendReason.takeIf { communityViewModel.sort == RouteSort.RECOMMENDED },
+                        onClick = { onRouteClick(route.id) }
+                    )
                 }
             }
         }
@@ -163,7 +174,7 @@ private fun SharedRoutesTab(
 }
 
 @Composable
-fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit) {
+fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit, reason: String? = null) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
@@ -206,6 +217,25 @@ fun SharedRouteCard(route: SharedRoute, onClick: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.width(Spacing.s))
                 DistanceBadge(formatDistance(route.distance))
+            }
+            reason?.let {
+                Spacer(modifier = Modifier.height(Spacing.s))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painterResource(R.drawable.ic_trending_up),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             if (route.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(Spacing.s))

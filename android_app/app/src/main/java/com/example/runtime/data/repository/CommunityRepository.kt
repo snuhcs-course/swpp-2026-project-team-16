@@ -2,6 +2,7 @@ package com.example.runtime.data.repository
 
 import com.example.runtime.data.remote.ApiClient
 import com.example.runtime.data.remote.ApiService
+import com.example.runtime.data.remote.RateRunRequest
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.ReviewRequest
 import com.example.runtime.data.remote.RouteReview
@@ -17,7 +18,10 @@ class CommunityRepository(private val api: ApiService = ApiClient.api) {
 
     suspend fun runs(): List<RunHistoryItem> = api.runs().data.orEmpty()
 
-    suspend fun sharedRoutes(sort: String, filter: String? = null): List<SharedRoute> = api.sharedRoutes(sort, filter).data.orEmpty()
+    suspend fun sharedRoutes(sort: String, filter: String? = null, latitude: Double? = null, longitude: Double? = null): List<SharedRoute> =
+        api.sharedRoutes(sort, filter, latitude, longitude).data.orEmpty()
+
+    suspend fun rateRun(runId: Int, rating: Int): Int = api.rateRun(runId, RateRunRequest(rating)).requireData().rating
 
     suspend fun sharedRoute(sharedRouteId: Int): SharedRoute = api.sharedRoute(sharedRouteId).requireData()
 

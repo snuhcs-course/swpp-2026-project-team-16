@@ -4,7 +4,9 @@ import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.NextRunRecommendation
+import com.example.runtime.data.remote.RateRunRequest
 import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.remote.RunRating
 import com.example.runtime.data.remote.RunRecord
 import com.example.runtime.data.remote.RunReport
 import com.example.runtime.data.remote.ShareRouteRequest
@@ -167,6 +169,29 @@ class RunViewModelTest {
         assertEquals(ReportState.Loaded(REPORT), viewModel.reportState)
     }
 
+    @Test
+    fun rateRun_savesTheStarsForTheSavedRun() {
+        viewModel.start(RunTarget(emptyList(), 3000, routeId = 42))
+        viewModel.finish(RunResult(3010, 1200), isLoggedIn = true)
+
+        viewModel.rateRun(4)
+
+        assertEquals(listOf(1 to 4), api.ratings)
+        assertEquals(4, viewModel.runRating)
+    }
+
+    @Test
+    fun rateRun_failureRestoresThePreviousStars() {
+        viewModel.start(RunTarget(emptyList(), 3000, routeId = 42))
+        viewModel.finish(RunResult(3010, 1200), isLoggedIn = true)
+        viewModel.rateRun(5)
+        api.failRating = true
+
+        viewModel.rateRun(2)
+
+        assertEquals(5, viewModel.runRating)
+    }
+
     private class RunApi : FakeApiService() {
         var failRun = false
         var failShare = false
@@ -180,6 +205,14 @@ class RunViewModelTest {
         }
 
         var failReport = false
+        var failRating = false
+        val ratings = mutableListOf<Pair<Int, Int>>()
+
+        override suspend fun rateRun(runId: Int, body: RateRunRequest): ApiResponse<RunRating> {
+            if (failRating) throw IOException("offline")
+            ratings += runId to body.rating
+            return ApiResponse(status = "success", data = RunRating(runId, body.rating))
+        }
         val reportRequests = mutableListOf<Int>()
 
         override suspend fun runReport(runId: Int): ApiResponse<RunReport> {

@@ -1130,3 +1130,38 @@ No login needed. Uses Open-Meteo (no API key) for the current weather, the highe
 ```
 
 `wind_speed` is in m/s. `air_grade` is `good`, `moderate`, `bad` or `very_bad`, using the Korean standard (PM10 30/80/150, PM2.5 15/35/75 µg/m³) and taking the worse of the two. Air fields are null when air quality data is unavailable. Labels and tips follow the request language. Returns 400 for invalid coordinates and 503 when the weather service is down.
+
+---
+
+# Route Recommendations
+
+## Sorts
+
+`GET /api/v1/community/routes/?sort=<sort>` now accepts:
+
+* `recommended`: personalized order (see below). Optional `lat` and `lng` for the viewer's current location.
+* `popular`: runs in the last 30 days plus twice the review count, then total runs, then newest.
+* `latest`, `rating`, `reviews`: unchanged.
+
+With `sort=recommended` each item also has `distance_from_me_m` (or null) and `recommend_reason`, a short sentence in the request language.
+
+## How "recommended" scores a route
+
+Each route gets up to four scores between 0 and 1, combined as a weighted average of the ones available:
+
+| Factor | Weight | Score |
+|---|---|---|
+| Rating | 0.35 | Bayesian average of reviews (prior 3.5 from 3 reviews), scaled from 1–5 to 0–1 |
+| Popularity | 0.20 | log(1 + recent runs + 2 × reviews), relative to the most popular route |
+| Nearby | 0.25 | exp(−km / 3) from the viewer's location, or from the center of the routes they have run |
+| Distance fit | 0.20 | Gaussian around the viewer's preferred distance |
+
+The preferred distance and its spread come from the viewer's runs and reviews. Each one counts with weight `max(0, stars − 2)`, or 1 when a run has no rating, so routes rated 1–2 stars pull nothing. Routes the viewer already ran are multiplied by 0.85 and their own shared routes by 0.7. Logged-out viewers get rating, popularity and (with `lat`/`lng`) nearby only.
+
+## Rate a Run
+
+```
+PATCH /api/v1/runs/<run_id>/
+```
+
+Login required; only the runner. Body `{"rating": 1-5}`. Returns `{"id", "rating"}`. The rating is private and only used for recommendations.

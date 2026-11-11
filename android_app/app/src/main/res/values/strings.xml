@@ -592,4 +592,10 @@
     <string name="air_pm25">PM2.5 %1$d</string>
     <string name="air_unavailable">No air quality data.</string>
     <string name="error_weather_unavailable">Weather is unavailable right now.</string>
+    <string name="sort_recommended">For you</string>
+    <string name="sort_popular">Popular</string>
+    <string name="report_rate_route">How was this route?</string>
+    <string name="report_rate_star">%1$d stars</string>
+    <string name="report_rate_hint">Your rating tunes the community "For you" order to your taste.</string>
+    <string name="report_rate_saved">Rating saved. It will shape your next recommendations.</string>
 </resources>

@@ -294,6 +294,12 @@ data class RunReport(
 )
 
 @Serializable
+data class RateRunRequest(val rating: Int)
+
+@Serializable
+data class RunRating(val id: Int, val rating: Int)
+
+@Serializable
 data class RunRecord(
     val id: Int,
     @SerialName("route_id") val routeId: Int,
@@ -344,6 +350,8 @@ data class SharedRoute(
     @SerialName("rating_counts") val ratingCounts: Map<String, Int> = emptyMap(),
     @SerialName("can_review") val canReview: Boolean = false,
     @SerialName("my_review_id") val myReviewId: Int? = null,
+    @SerialName("distance_from_me_m") val distanceFromMe: Int? = null,
+    @SerialName("recommend_reason") val recommendReason: String? = null,
 )
 
 @Serializable

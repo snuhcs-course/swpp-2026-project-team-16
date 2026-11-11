@@ -21,7 +21,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 enum class RouteSort(val key: String, @StringRes val label: Int) {
+    RECOMMENDED("recommended", R.string.sort_recommended),
     LATEST("latest", R.string.sort_latest),
+    POPULAR("popular", R.string.sort_popular),
     RATING("rating", R.string.sort_rating),
     REVIEWS("reviews", R.string.sort_reviews),
 }
@@ -39,8 +41,20 @@ class CommunityViewModel(
     var routes by mutableStateOf<List<SharedRoute>>(emptyList())
         private set
 
-    var sort by mutableStateOf(RouteSort.LATEST)
+    var sort by mutableStateOf(RouteSort.RECOMMENDED)
         private set
+
+    private var location: Pair<Double, Double>? = null
+
+    fun updateLocation(latitude: Double, longitude: Double) {
+        val changed = location == null
+        location = latitude to longitude
+        if (changed && sort == RouteSort.RECOMMENDED) {
+            refreshJob?.cancel()
+            isLoading = false
+            refresh()
+        }
+    }
 
     var followingOnly by mutableStateOf(false)
         private set
@@ -95,9 +109,10 @@ class CommunityViewModel(
         error = null
         val sort = sort
         val filter = if (followingOnly) FOLLOWING_FILTER else null
+        val origin = location.takeIf { sort == RouteSort.RECOMMENDED }
         refreshJob = viewModelScope.launch {
             try {
-                routes = repository.sharedRoutes(sort.key, filter)
+                routes = repository.sharedRoutes(sort.key, filter, origin?.first, origin?.second)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

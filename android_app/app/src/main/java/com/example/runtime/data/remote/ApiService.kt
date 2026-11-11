@@ -127,7 +127,15 @@ interface ApiService {
     suspend fun updateRunningStyle(@Body body: RunningStyle): ApiResponse<RunningStyle>
 
     @GET("api/v1/community/routes/")
-    suspend fun sharedRoutes(@Query("sort") sort: String, @Query("filter") filter: String? = null): ApiResponse<List<SharedRoute>>
+    suspend fun sharedRoutes(
+        @Query("sort") sort: String,
+        @Query("filter") filter: String? = null,
+        @Query("lat") latitude: Double? = null,
+        @Query("lng") longitude: Double? = null,
+    ): ApiResponse<List<SharedRoute>>
+
+    @PATCH("api/v1/runs/{runId}/")
+    suspend fun rateRun(@Path("runId") runId: Int, @Body body: RateRunRequest): ApiResponse<RunRating>
 
     @GET("api/v1/users/{username}/profile/")
     suspend fun userProfile(@Path("username") username: String): ApiResponse<UserProfile>
