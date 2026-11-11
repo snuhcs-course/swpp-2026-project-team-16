@@ -258,6 +258,8 @@ class Profile(models.Model):
     avatar_updated_at = models.DateTimeField(null=True, blank=True)
     running_style = models.JSONField(default=dict, blank=True)
     notification_settings = models.JSONField(default=dict, blank=True)
+    weekly_goal_m = models.PositiveIntegerField(default=0)
+    monthly_goal_m = models.PositiveIntegerField(default=0)
 
 
 class Follow(models.Model):

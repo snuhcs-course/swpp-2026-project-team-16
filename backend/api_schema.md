@@ -1185,3 +1185,31 @@ Login required; only the runner. Body `{"rating": 1-5}`. Returns `{"id", "rating
 `path` is the recorded trail as `[longitude, latitude]` points (2 to 20000). The server simplifies it (5 m tolerance) and, for paths of 1 km or more, removes the first and last 200 m so the runner's home isn't exposed. It is saved as a new route owned by the runner with `source: "free"`, so it can be saved, shared, reviewed and run again like any other route. `distance_m` stays the distance the runner actually ran.
 
 Run history items include `source` (`generated` or `free`).
+
+---
+
+# Challenges
+
+## Summary
+
+```
+GET /api/v1/challenges/?tz=Asia/Seoul
+```
+
+Login required. `tz` is the phone's IANA time zone (default `Asia/Seoul`); weeks (Sunday to Saturday), months and streaks are counted in it.
+
+Returns:
+
+* `goals`: `weekly_goal_m`, `monthly_goal_m` (0 means no goal), `week_m`, `month_m`, `week_start`, `month_start`
+* `streak`: `current` (consecutive days ending today or yesterday) and `best`
+* `totals`: `runs`, `distance_m`
+* `personal_bests`: `longest_run_m`, `fastest_pace_s` (runs of 1 km or more), `fastest_1k_s`, `fastest_5k_s` (best five consecutive km splits), `best_week_m`; each `{"value", "date"}` or null. Empty when there are no runs.
+* `badges`: 17 badges, each with `id`, `title`, `description` (request language), `earned`, `earned_at`, `progress`, `target`. Distance badges use meters for `progress` and `target`.
+
+## Goals
+
+```
+PUT /api/v1/challenges/goals/
+```
+
+Body: `{"weekly_goal_m": 20000, "monthly_goal_m": 80000}`. Either key may be left out. Values are 0 to 1,000,000.

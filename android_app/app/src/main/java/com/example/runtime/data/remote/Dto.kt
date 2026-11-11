@@ -520,3 +520,52 @@ data class WeatherBriefing(
     @SerialName("air_label") val airLabel: String? = null,
     @SerialName("air_tip") val airTip: String? = null,
 )
+
+@Serializable
+data class ChallengeGoals(
+    @SerialName("weekly_goal_m") val weeklyGoalMeters: Int = 0,
+    @SerialName("monthly_goal_m") val monthlyGoalMeters: Int = 0,
+    @SerialName("week_m") val weekMeters: Int = 0,
+    @SerialName("month_m") val monthMeters: Int = 0,
+)
+
+@Serializable
+data class ChallengeStreak(val current: Int = 0, val best: Int = 0)
+
+@Serializable
+data class ChallengeTotals(val runs: Int = 0, @SerialName("distance_m") val distanceMeters: Int = 0)
+
+@Serializable
+data class PersonalBest(val value: Int, val date: String)
+
+@Serializable
+data class Badge(
+    val id: String,
+    val title: String,
+    val description: String,
+    val earned: Boolean,
+    @SerialName("earned_at") val earnedAt: String? = null,
+    val progress: Int = 0,
+    val target: Int = 1,
+)
+
+@Serializable
+data class ChallengeSummary(
+    val goals: ChallengeGoals,
+    val streak: ChallengeStreak,
+    val totals: ChallengeTotals,
+    @SerialName("personal_bests") val personalBests: Map<String, PersonalBest?> = emptyMap(),
+    val badges: List<Badge> = emptyList(),
+)
+
+@Serializable
+data class GoalsRequest(
+    @SerialName("weekly_goal_m") val weeklyGoalMeters: Int,
+    @SerialName("monthly_goal_m") val monthlyGoalMeters: Int,
+)
+
+@Serializable
+data class GoalsResponse(
+    @SerialName("weekly_goal_m") val weeklyGoalMeters: Int,
+    @SerialName("monthly_goal_m") val monthlyGoalMeters: Int,
+)
