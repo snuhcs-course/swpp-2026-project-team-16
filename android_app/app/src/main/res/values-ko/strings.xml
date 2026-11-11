@@ -1,5 +1,5 @@
 <resources>
-    <string name="nav_route">경로</string>
+    <string name="nav_route">러닝</string>
     <string name="nav_my_page">마이페이지</string>
     <string name="splash_tagline">나에게 맞는 러닝 경로</string>
 
@@ -588,4 +588,26 @@
     <string name="label_nickname_optional">닉네임 (선택)</string>
     <string name="nickname_hint">다른 사람과 겹치지 않는 이름이어야 해요. 비워 두면 아이디가 보여요.</string>
     <string name="error_nickname_taken">이미 사용 중인 닉네임이에요.</string>
+    <string name="guidance_free">자유롭게</string>
+    <string name="guidance_distance">거리만</string>
+    <string name="guidance_destination">도착지까지</string>
+    <string name="guidance_free_hint">코스 없이 지금 위치에서 바로 달려요. 달린 길이 그대로 기록돼요.</string>
+    <string name="guidance_distance_hint">출발지와 거리만 정하면 돌아오는 코스를 만들어 드려요.</string>
+    <string name="guidance_destination_hint">출발지에서 도착지까지 가는 코스를 만들어 드려요.</string>
+    <string name="action_start_free_run">바로 달리기</string>
+    <string name="error_end_point_required">도착지를 선택해 주세요.</string>
+    <string name="run_free_ready">시작을 누르면 지금 위치부터 기록해요.</string>
+    <string name="run_free_tracking">자유롭게 달리는 중이에요.</string>
+    <string name="run_return_route">출발점으로 돌아가는 코스 만들기</string>
+    <string name="run_return_route_again">돌아가는 코스 다시 만들기</string>
+    <string name="run_return_route_making">돌아가는 코스를 만드는 중…</string>
+    <string name="run_return_route_title">돌아가는 코스</string>
+    <string name="run_return_route_message">지금 위치에서 출발점까지 얼마나 더 달릴까요?</string>
+    <string name="run_return_route_confirm">코스 만들기</string>
+    <string name="report_title_free">자유 러닝 리포트</string>
+    <string name="report_free_route">오늘 달린 길</string>
+    <string name="report_free_route_message">달린 길을 코스로 저장하면 다시 달리거나 커뮤니티에 공유할 수 있어요. 집 위치가 드러나지 않도록 시작과 끝 200m는 빼고 저장돼요.</string>
+    <string name="report_free_route_save">이 길을 코스로 저장</string>
+    <string name="report_free_route_saved">저장한 코스에 추가했어요</string>
+    <string name="report_plan_similar">%1$s로 새 코스 만들기</string>
 </resources>

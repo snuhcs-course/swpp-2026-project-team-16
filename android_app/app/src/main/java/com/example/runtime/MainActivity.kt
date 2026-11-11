@@ -21,6 +21,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
+import com.example.runtime.ui.common.asString
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -208,6 +211,9 @@ fun RunTimeApp() {
     val appMessages = remember { AppMessages(snackbarHostState, appScope) }
     val sharedMessage = stringResource(R.string.route_shared_message)
     val accountDeletedMessage = stringResource(R.string.account_deleted_message)
+    val appLanguage = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language
+    val returnRouteError = runViewModel.returnRouteError?.asString()
+    LaunchedEffect(returnRouteError) { returnRouteError?.let(appMessages::show) }
 
     fun openAuth(screen: String, returnTo: String, save: Boolean) {
         loginReturnScreen = returnTo
@@ -302,12 +308,6 @@ fun RunTimeApp() {
             if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation", "group_chat", "group_create", "post_detail", "post_editor")) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     NavigationBarItem(
-                        selected = currentScreen == "route_input" || currentScreen == "route_result",
-                        onClick = { currentScreen = "route_input" },
-                        icon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) },
-                        label = { Text(stringResource(R.string.nav_route)) }
-                    )
-                    NavigationBarItem(
                         selected = currentScreen == "calendar",
                         onClick = { currentScreen = "calendar" },
                         icon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
@@ -318,6 +318,10 @@ fun RunTimeApp() {
                         onClick = { currentScreen = "community" },
                         icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_community)) }
+                    )
+                    RunTabItem(
+                        selected = currentScreen == "route_input" || currentScreen == "route_result",
+                        onClick = { currentScreen = "route_input" }
                     )
                     NavigationBarItem(
                         selected = currentScreen in setOf("MyPage", "saved_detail", "running_style"),
@@ -376,6 +380,11 @@ fun RunTimeApp() {
                                     )
                                     "route_input" -> RouteInputScreen(
                                         routeViewModel = routeViewModel,
+                                        onStartFree = {
+                                            runViewModel.start(RunTarget(lines = emptyList(), distanceMeters = 0, isFree = true))
+                                            runReturnScreen = "route_input"
+                                            currentScreen = "run_navigation"
+                                        },
                                         onGenerate = {
                                             if (!authViewModel.isLoggedIn && authViewModel.isGuestTrialUsed) {
                                                 loginPrompt = LOGIN_PROMPT_TRIAL
@@ -437,6 +446,11 @@ fun RunTimeApp() {
                                                 onRunFinished = { runResult ->
                                                     runViewModel.finish(runResult, authViewModel.isLoggedIn)
                                                 },
+                                                isFree = target.isFree,
+                                                isMakingReturnRoute = runViewModel.isMakingReturnRoute,
+                                                onMakeReturnRoute = { from, to, meters ->
+                                                    runViewModel.makeReturnRoute(from, to, meters, appLanguage)
+                                                },
                                             )
                                         } else {
                                             BackHandler { currentScreen = runReturnScreen }
@@ -451,6 +465,13 @@ fun RunTimeApp() {
                                                 onRetryReport = runViewModel::loadReport,
                                                 onPlanNextRun = { plan ->
                                                     routeViewModel.applyPlan(plan)
+                                                    currentScreen = "route_input"
+                                                },
+                                                isFree = target.isFree,
+                                                saveRouteState = runViewModel.saveRouteState,
+                                                onSaveRoute = runViewModel::saveFreeRoute,
+                                                onPlanSimilar = {
+                                                    routeViewModel.planNextFromDistance(result.distanceMeters)
                                                     currentScreen = "route_input"
                                                 },
                                                 onDone = { currentScreen = runReturnScreen },
@@ -819,3 +840,28 @@ private const val LOGIN_PROMPT_BOARD = "board"
 private const val LOGIN_PROMPT_POST = "post"
 private const val LOGIN_PROMPT_SHARE_ROUTE = "share_route"
 private const val LOGIN_PROMPT_FOLLOW = "follow"
+
+@Composable
+private fun RowScope.RunTabItem(selected: Boolean, onClick: () -> Unit) {
+    NavigationBarItem(
+        selected = selected,
+        onClick = onClick,
+        colors = NavigationBarItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color.Transparent),
+        icon = {
+            Box(
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+                modifier = Modifier
+                    .size(52.dp)
+                    .background(com.example.runtime.ui.theme.Lime, androidx.compose.foundation.shape.CircleShape)
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_directions_run),
+                    contentDescription = null,
+                    tint = com.example.runtime.ui.theme.Charcoal,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        },
+        label = { Text(stringResource(R.string.nav_route), fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else null) }
+    )
+}

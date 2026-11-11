@@ -2,6 +2,12 @@ package com.example.runtime.ui.route
 
 import com.example.runtime.R
 import com.example.runtime.data.remote.ApiResponse
+import com.example.runtime.data.remote.SaveRouteResponse
+import com.example.runtime.data.remote.SaveRouteRequest
+import com.example.runtime.data.remote.GeoJsonLineString
+import com.example.runtime.data.remote.RouteBody
+import com.example.runtime.data.remote.GeneratedRouteData
+import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.NextRunRecommendation
 import com.example.runtime.data.remote.RateRunRequest
@@ -13,6 +19,7 @@ import com.example.runtime.data.remote.ShareRouteRequest
 import com.example.runtime.data.remote.SharedRoute
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
+import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.testing.FakeApiService
 import com.example.runtime.testing.MainDispatcherRule
 import com.example.runtime.ui.common.UiText
@@ -28,7 +35,7 @@ class RunViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = RunApi()
-    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api)) }
+    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api)) }
 
     @Test
     fun recordRun_usesTheTemporaryRouteUntilItIsSaved() {
@@ -192,6 +199,52 @@ class RunViewModelTest {
         assertEquals(5, viewModel.runRating)
     }
 
+    @Test
+    fun freeRun_sendsThePathInsteadOfARoute() {
+        viewModel.start(RunTarget(emptyList(), 0, routeId = 42, isFree = true))
+
+        viewModel.finish(RunResult(2010, 700, path = listOf(listOf(127.0, 37.5), listOf(127.0, 37.51))), isLoggedIn = true)
+
+        val request = api.runs.single()
+        assertNull(request.routeId)
+        assertNull(request.temporaryRouteId)
+        assertEquals(2, request.path?.size)
+    }
+
+    @Test
+    fun guidedRun_doesNotSendAPath() {
+        viewModel.start(RunTarget(emptyList(), 3000, routeId = 42))
+
+        viewModel.finish(RunResult(3010, 1200, path = listOf(listOf(127.0, 37.5))), isLoggedIn = true)
+
+        assertNull(api.runs.single().path)
+    }
+
+    @Test
+    fun makeReturnRoute_guidesBackToTheStart() {
+        viewModel.start(RunTarget(emptyList(), 0, isFree = true))
+
+        viewModel.makeReturnRoute(RouteCoordinate(37.51, 127.0), RouteCoordinate(37.5, 127.0), 2000, "ko")
+
+        val request = api.generateRequests.single()
+        assertEquals(listOf(127.0, 37.51), request.startingPoint.coordinates)
+        assertEquals(listOf(127.0, 37.5), request.endPoint?.coordinates)
+        assertEquals(2000, request.distance)
+        assertEquals(1, viewModel.target?.lines?.size)
+        assertEquals(true, viewModel.target?.isFree)
+    }
+
+    @Test
+    fun saveFreeRoute_savesTheRecordedRoute() {
+        viewModel.start(RunTarget(emptyList(), 0, isFree = true))
+        viewModel.finish(RunResult(2010, 700, path = listOf(listOf(127.0, 37.5), listOf(127.0, 37.51))), isLoggedIn = true)
+
+        viewModel.saveFreeRoute()
+
+        assertEquals(listOf(42), api.savedRouteIds)
+        assertEquals(SaveRouteState.Saved, viewModel.saveRouteState)
+    }
+
     private class RunApi : FakeApiService() {
         var failRun = false
         var failShare = false
@@ -206,6 +259,28 @@ class RunViewModelTest {
 
         var failReport = false
         var failRating = false
+        val generateRequests = mutableListOf<GenerateRouteRequest>()
+        val savedRouteIds = mutableListOf<Int>()
+
+        override suspend fun generateRoute(body: GenerateRouteRequest): ApiResponse<GeneratedRouteData> {
+            generateRequests += body
+            return ApiResponse(
+                status = "success",
+                data = GeneratedRouteData(
+                    temporaryRouteId = 9,
+                    route = RouteBody(
+                        distance = body.distance,
+                        briefing = "",
+                        route = listOf(GeoJsonLineString(listOf(listOf(127.0, 37.51), listOf(127.0, 37.5)))),
+                    ),
+                ),
+            )
+        }
+
+        override suspend fun saveRoute(body: SaveRouteRequest): SaveRouteResponse {
+            savedRouteIds += requireNotNull(body.routeId)
+            return SaveRouteResponse(status = "success", routeId = body.routeId)
+        }
         val ratings = mutableListOf<Pair<Int, Int>>()
 
         override suspend fun rateRun(runId: Int, body: RateRunRequest): ApiResponse<RunRating> {

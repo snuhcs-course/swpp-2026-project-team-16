@@ -13,6 +13,7 @@ data class RunResult(
     val offRouteCount: Int = 0,
     val offRouteSeconds: Long = 0,
     val finishedAtMillis: Long = 0,
+    val path: List<List<Double>> = emptyList(),
 ) {
     val splitDurations: List<Long>
         get() = splitTimes.mapIndexed { index, time ->

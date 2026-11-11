@@ -77,6 +77,9 @@ fun RunNavigationScreen(
     routeDistanceMeters: Int,
     onFinish: () -> Unit,
     onRunFinished: (RunResult) -> Unit = {},
+    isFree: Boolean = false,
+    isMakingReturnRoute: Boolean = false,
+    onMakeReturnRoute: (from: RouteCoordinate, to: RouteCoordinate, distanceMeters: Int) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val metrics by RunTrackingState.metrics.collectAsState()
@@ -97,6 +100,8 @@ fun RunNavigationScreen(
     var offRouteMillis by remember { mutableStateOf(0L) }
     var offRouteSince by remember { mutableStateOf<Long?>(null) }
     var permissionError by remember { mutableStateOf(false) }
+    var showReturnDialog by remember { mutableStateOf(false) }
+    val hasRoute = routePoints.size >= 2
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -194,7 +199,20 @@ fun RunNavigationScreen(
         val remainingMeters = (routeDistanceMeters - completedMeters.roundToInt()).coerceAtLeast(0)
         val nextTurn = turnGuide.nextTurn(routeProgress.distanceAlongMeters)
 
-        if (isOffRoute) {
+        if (!hasRoute) {
+            Text(
+                text = when {
+                    metrics.locationError -> stringResource(R.string.run_location_unavailable)
+                    metrics.latitude == null -> stringResource(R.string.run_waiting_for_gps)
+                    metrics.isTracking -> stringResource(R.string.run_free_tracking)
+                    else -> stringResource(R.string.run_free_ready)
+                },
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else if (isOffRoute) {
             Surface(
                 color = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -240,16 +258,35 @@ fun RunNavigationScreen(
             )
         }
 
-        LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
-        Text(
-            stringResource(
-                R.string.run_route_progress,
-                formatDistance(completedMeters.roundToInt()),
-                formatDistance(remainingMeters),
-            ),
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.align(Alignment.End),
-        )
+        if (hasRoute) {
+            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+            Text(
+                stringResource(
+                    R.string.run_route_progress,
+                    formatDistance(completedMeters.roundToInt()),
+                    formatDistance(remainingMeters),
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.align(Alignment.End),
+            )
+        }
+        if (isFree && metrics.isTracking && currentLocation != null && trail.isNotEmpty()) {
+            OutlinedButton(
+                onClick = { showReturnDialog = true },
+                enabled = !isMakingReturnRoute,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(
+                        when {
+                            isMakingReturnRoute -> R.string.run_return_route_making
+                            hasRoute -> R.string.run_return_route_again
+                            else -> R.string.run_return_route
+                        }
+                    )
+                )
+            }
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             RunMetricCard(
@@ -312,6 +349,28 @@ fun RunNavigationScreen(
         }
     }
 
+    if (showReturnDialog) {
+        val start = trail.firstOrNull()
+        val here = currentLocation
+        if (start == null || here == null) {
+            showReturnDialog = false
+        } else {
+            val straight = distanceBetweenMeters(here.latitude to here.longitude, start.latitude to start.longitude)
+            ReturnRouteDialog(
+                suggestedKm = suggestedReturnKm(straight),
+                onDismiss = { showReturnDialog = false },
+                onConfirm = { km ->
+                    showReturnDialog = false
+                    onMakeReturnRoute(
+                        RouteCoordinate(here.latitude, here.longitude),
+                        RouteCoordinate(start.latitude, start.longitude),
+                        (km * 1000).roundToInt(),
+                    )
+                },
+            )
+        }
+    }
+
     if (permissionError) {
         AlertDialog(
             onDismissRequest = { permissionError = false },
@@ -343,6 +402,7 @@ fun RunNavigationScreen(
                             offRouteCount = offRouteCount,
                             offRouteSeconds = (offRouteMillis + openOffRoute) / 1000L,
                             finishedAtMillis = System.currentTimeMillis(),
+                            path = if (isFree) trail.map { listOf(it.longitude, it.latitude) } else emptyList(),
                         )
                         onRunFinished(result)
                     },
@@ -460,3 +520,45 @@ private fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordin
 
 private val MAP_CORNER_RADIUS = 18.dp
 private const val NEAR_FINISH_PROGRESS = 0.95f
+
+fun suggestedReturnKm(straightMeters: Double): Double {
+    val km = straightMeters * RETURN_DETOUR_FACTOR / 1000.0
+    return (Math.round(km * 2) / 2.0).coerceAtLeast(MIN_RETURN_KM)
+}
+
+private const val RETURN_DETOUR_FACTOR = 1.4
+private const val MIN_RETURN_KM = 1.0
+
+@Composable
+private fun ReturnRouteDialog(suggestedKm: Double, onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
+    var input by remember { mutableStateOf(String.format(Locale.US, "%.1f", suggestedKm).removeSuffix(".0")) }
+    val km = input.trim().toDoubleOrNull()?.takeIf { it.isFinite() && it >= MIN_RETURN_KM && it <= 42.0 }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.run_return_route_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.run_return_route_message))
+                androidx.compose.material3.OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    singleLine = true,
+                    suffix = { Text(stringResource(R.string.unit_km)) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                    ),
+                    isError = km == null,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { km?.let(onConfirm) }, enabled = km != null) {
+                Text(stringResource(R.string.run_return_route_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}

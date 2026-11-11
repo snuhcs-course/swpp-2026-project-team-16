@@ -253,6 +253,8 @@ data class RecordRunRequest(
     val splits: List<Long> = emptyList(),
     @SerialName("off_route_count") val offRouteCount: Int = 0,
     @SerialName("off_route_seconds") val offRouteSeconds: Long = 0,
+    val path: List<List<Double>>? = null,
+    @SerialName("start_name") val startName: String? = null,
 )
 
 @Serializable
@@ -321,6 +323,7 @@ data class RunHistoryItem(
     @SerialName("shared_title") val sharedTitle: String = "",
     @SerialName("is_saved") val isSaved: Boolean = false,
     val route: List<GeoJsonLineString> = emptyList(),
+    val source: String = "generated",
 )
 
 @Serializable

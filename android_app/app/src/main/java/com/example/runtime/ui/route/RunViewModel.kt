@@ -11,6 +11,9 @@ import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunReport
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
+import com.example.runtime.data.repository.RouteRepository
+import com.example.runtime.data.remote.GeoJsonPoint
+import com.example.runtime.data.remote.Place
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -24,6 +27,7 @@ data class RunTarget(
     val startName: String = "",
     val groupId: Int? = null,
     val plan: RunPlan? = null,
+    val isFree: Boolean = false,
 )
 
 sealed interface RunRecordState {
@@ -40,6 +44,13 @@ sealed interface ReportState {
     data object Failed : ReportState
 }
 
+sealed interface SaveRouteState {
+    data object Idle : SaveRouteState
+    data object Saving : SaveRouteState
+    data object Saved : SaveRouteState
+    data class Failed(val message: UiText) : SaveRouteState
+}
+
 sealed interface ShareState {
     data object Idle : ShareState
     data object Sharing : ShareState
@@ -49,7 +60,36 @@ sealed interface ShareState {
 class RunViewModel(
     private val repository: CommunityRepository = CommunityRepository(),
     private val coachRepository: CoachRepository = CoachRepository(),
+    private val routeRepository: RouteRepository = RouteRepository(),
 ) : ViewModel() {
+
+    var isMakingReturnRoute by mutableStateOf(false)
+        private set
+    var returnRouteError by mutableStateOf<UiText?>(null)
+        private set
+
+    fun makeReturnRoute(from: RouteCoordinate, to: RouteCoordinate, distanceMeters: Int, language: String) {
+        if (isMakingReturnRoute) return
+        isMakingReturnRoute = true
+        returnRouteError = null
+        viewModelScope.launch {
+            try {
+                val generated = routeRepository.generate(
+                    startingPoint = Place("", "", GeoJsonPoint.of(from.longitude, from.latitude)),
+                    endPoint = Place("", "", GeoJsonPoint.of(to.longitude, to.latitude)),
+                    distanceMeters = distanceMeters,
+                    language = language,
+                )
+                useGuide(generated.route.route, generated.route.distance)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                returnRouteError = e.toUiText()
+            } finally {
+                isMakingReturnRoute = false
+            }
+        }
+    }
 
     var target by mutableStateOf<RunTarget?>(null)
         private set
@@ -93,6 +133,7 @@ class RunViewModel(
         reportState = ReportState.Idle
         result = null
         runRating = null
+        saveRouteState = SaveRouteState.Idle
         savedRunId = null
     }
 
@@ -118,7 +159,10 @@ class RunViewModel(
                         splits = result.splitDurations,
                         offRouteCount = result.offRouteCount,
                         offRouteSeconds = result.offRouteSeconds,
-                    ),
+                        path = result.path.takeIf { target.isFree },
+                    ).let { request ->
+                        if (target.isFree) request.copy(routeId = null, temporaryRouteId = null) else request
+                    },
                 )
                 savedRunId = record.id
                 RunRecordState.Saved(record.routeId, record.sharedRouteId)
@@ -133,6 +177,30 @@ class RunViewModel(
 
     fun retryRecord() {
         recordRun(result ?: return)
+    }
+
+    fun useGuide(lines: List<GeoJsonLineString>, distanceMeters: Int) {
+        val current = target ?: return
+        target = current.copy(lines = lines, distanceMeters = distanceMeters)
+    }
+
+    var saveRouteState by mutableStateOf<SaveRouteState>(SaveRouteState.Idle)
+        private set
+
+    fun saveFreeRoute() {
+        val saved = recordState as? RunRecordState.Saved ?: return
+        if (saveRouteState != SaveRouteState.Idle && saveRouteState !is SaveRouteState.Failed) return
+        saveRouteState = SaveRouteState.Saving
+        viewModelScope.launch {
+            saveRouteState = try {
+                repository.saveRoute(saved.routeId)
+                SaveRouteState.Saved
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                SaveRouteState.Failed(e.toUiText())
+            }
+        }
     }
 
     fun loadReport() {

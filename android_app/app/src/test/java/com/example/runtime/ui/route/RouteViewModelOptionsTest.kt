@@ -301,12 +301,45 @@ class RouteViewModelOptionsTest {
 
     @Test
     fun prepare_rejectsTypedButUnselectedEndPoint() {
+        viewModel.changeGuidance(RunGuidance.DESTINATION)
         viewModel.selectPoint(viewModel.startField, "Start", 126.952, 37.46)
         viewModel.onPlaceInputChange(viewModel.endField, "G")
         viewModel.distanceInput = "3"
 
         assertFalse(viewModel.prepare("en"))
         assertEquals(UiText.Resource(R.string.error_end_point_not_selected), viewModel.error)
+    }
+
+    @Test
+    fun destinationMode_needsAnEndPoint() {
+        viewModel.changeGuidance(RunGuidance.DESTINATION)
+        viewModel.selectPoint(viewModel.startField, "Start", 126.952, 37.46)
+        viewModel.distanceInput = "3"
+
+        assertFalse(viewModel.prepare("en"))
+        assertEquals(UiText.Resource(R.string.error_end_point_required), viewModel.error)
+    }
+
+    @Test
+    fun distanceMode_ignoresAnEndPointFromBefore() {
+        viewModel.changeGuidance(RunGuidance.DESTINATION)
+        viewModel.selectPoint(viewModel.endField, "End", 126.96, 37.47)
+        viewModel.changeGuidance(RunGuidance.DISTANCE)
+        viewModel.selectPoint(viewModel.startField, "Start", 126.952, 37.46)
+        viewModel.distanceInput = "3"
+
+        assertTrue(viewModel.prepare("en"))
+        assertNull(viewModel.pendingEnd)
+    }
+
+    @Test
+    fun planNextFromDistance_switchesToDistanceMode() {
+        viewModel.changeGuidance(RunGuidance.FREE)
+
+        viewModel.planNextFromDistance(6230)
+
+        assertEquals(RunGuidance.DISTANCE, viewModel.guidance)
+        assertEquals("6.2", viewModel.distanceInput)
     }
 
     @Test
