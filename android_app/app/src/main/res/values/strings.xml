@@ -580,4 +580,16 @@
     <string name="calendar_day_empty">No runs or group runs on this day.</string>
     <string name="calendar_group_time">Starts %1$s, %2$s</string>
     <string name="calendar_run_summary">Finished %1$s, %2$s, %3$s</string>
+    <string name="weather_title">Weather</string>
+    <string name="weather_near_me">Near you</string>
+    <string name="weather_default_city">Seoul</string>
+    <string name="weather_degrees">%1$d°</string>
+    <string name="weather_feels_like">Feels %1$d°</string>
+    <string name="weather_precipitation">Rain %1$d%%</string>
+    <string name="weather_unavailable">Couldn\'t load the weather.</string>
+    <string name="air_title">Fine dust</string>
+    <string name="air_pm10">PM10 %1$d</string>
+    <string name="air_pm25">PM2.5 %1$d</string>
+    <string name="air_unavailable">No air quality data.</string>
+    <string name="error_weather_unavailable">Weather is unavailable right now.</string>
 </resources>

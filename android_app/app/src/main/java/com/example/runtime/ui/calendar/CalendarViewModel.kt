@@ -7,8 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.RunningGroup
+import com.example.runtime.data.remote.WeatherBriefing
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.GroupRepository
+import com.example.runtime.data.repository.WeatherRepository
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -18,9 +20,16 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 
+sealed interface WeatherState {
+    data object Loading : WeatherState
+    data class Loaded(val briefing: WeatherBriefing, val isNearMe: Boolean) : WeatherState
+    data object Failed : WeatherState
+}
+
 class CalendarViewModel(
     private val communityRepository: CommunityRepository = CommunityRepository(),
     private val groupRepository: GroupRepository = GroupRepository(),
+    private val weatherRepository: WeatherRepository = WeatherRepository(),
     private val zone: ZoneId = ZoneId.systemDefault(),
     today: LocalDate = LocalDate.now(),
 ) : ViewModel() {
@@ -37,6 +46,24 @@ class CalendarViewModel(
         private set
     var error by mutableStateOf<UiText?>(null)
         private set
+    var weather by mutableStateOf<WeatherState>(WeatherState.Loading)
+        private set
+
+    fun loadWeather(latitude: Double?, longitude: Double?) {
+        val isNearMe = latitude != null && longitude != null
+        val lat = latitude ?: DEFAULT_LATITUDE
+        val lng = longitude ?: DEFAULT_LONGITUDE
+        if (weather !is WeatherState.Loaded) weather = WeatherState.Loading
+        viewModelScope.launch {
+            weather = try {
+                WeatherState.Loaded(weatherRepository.briefing(lat, lng), isNearMe)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (weather is WeatherState.Loaded) weather else WeatherState.Failed
+            }
+        }
+    }
 
     fun load() {
         if (isLoading) return
@@ -85,3 +112,6 @@ class CalendarViewModel(
         error = null
     }
 }
+
+const val DEFAULT_LATITUDE = 37.5665
+const val DEFAULT_LONGITUDE = 126.9780

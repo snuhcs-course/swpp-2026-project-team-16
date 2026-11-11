@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import auth, board, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social
+from api.views import auth, board, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social, weather
 
 urlpatterns = [
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
@@ -60,6 +60,7 @@ urlpatterns = [
     path("api/v1/board/comments/<int:comment_id>/", board.comment_detail, name="comment_detail"),
     path("api/v1/board/comments/<int:comment_id>/report/", board.comment_report, name="comment_report"),
 
+    path("api/v1/weather/", weather.weather_briefing, name="weather_briefing"),
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
     path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),
     path("api/v1/places/translate/", places.translate_place_api, name="translate_place"),

@@ -57,6 +57,7 @@ private val serverMessages = mapOf(
     "They are already in this group." to R.string.error_invite_already_member,
     "You can only invite people who follow each other with you." to R.string.error_invite_not_mutual,
     "User not found." to R.string.error_user_not_found,
+    "Weather is unavailable right now." to R.string.error_weather_unavailable,
     "Username already exists" to R.string.error_username_exists,
     "Username and password are required" to R.string.error_username_password_required,
     "You already joined this group." to R.string.error_group_already_joined,

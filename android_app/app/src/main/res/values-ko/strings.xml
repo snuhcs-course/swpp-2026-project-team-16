@@ -568,4 +568,16 @@
     <string name="calendar_day_empty">이 날은 러닝 기록이나 그룹 일정이 없어요.</string>
     <string name="calendar_group_time">%1$s 출발, %2$s</string>
     <string name="calendar_run_summary">%1$s 완료, %2$s, %3$s</string>
+    <string name="weather_title">오늘 날씨</string>
+    <string name="weather_near_me">내 위치</string>
+    <string name="weather_default_city">서울 기준</string>
+    <string name="weather_degrees">%1$d°</string>
+    <string name="weather_feels_like">체감 %1$d°</string>
+    <string name="weather_precipitation">강수 %1$d%%</string>
+    <string name="weather_unavailable">날씨 정보를 불러오지 못했어요.</string>
+    <string name="air_title">미세먼지</string>
+    <string name="air_pm10">PM10 %1$d</string>
+    <string name="air_pm25">PM2.5 %1$d</string>
+    <string name="air_unavailable">미세먼지 정보가 없어요.</string>
+    <string name="error_weather_unavailable">지금은 날씨 정보를 가져올 수 없어요.</string>
 </resources>

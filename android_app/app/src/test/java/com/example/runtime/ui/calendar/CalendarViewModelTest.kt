@@ -3,8 +3,10 @@ package com.example.runtime.ui.calendar
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.RunHistoryItem
 import com.example.runtime.data.remote.RunningGroup
+import com.example.runtime.data.remote.WeatherBriefing
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.GroupRepository
+import com.example.runtime.data.repository.WeatherRepository
 import com.example.runtime.testing.FakeApiService
 import com.example.runtime.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
@@ -22,7 +24,7 @@ class CalendarViewModelTest {
 
     private val api = CalendarApi()
     private val viewModel by lazy {
-        CalendarViewModel(CommunityRepository(api), GroupRepository(api), ZoneOffset.UTC, LocalDate.of(2026, 11, 10))
+        CalendarViewModel(CommunityRepository(api), GroupRepository(api), WeatherRepository(api), ZoneOffset.UTC, LocalDate.of(2026, 11, 10))
     }
 
     @Test
@@ -64,8 +66,59 @@ class CalendarViewModelTest {
         assertTrue(viewModel.groupsByDay.isEmpty())
     }
 
+    @Test
+    fun loadWeather_usesMyLocationOrFallsBackToSeoul() {
+        viewModel.loadWeather(35.1, 129.0)
+        assertEquals(35.1 to 129.0, api.weatherQueries.last())
+        assertEquals(true, (viewModel.weather as WeatherState.Loaded).isNearMe)
+
+        viewModel.loadWeather(null, null)
+        assertEquals(DEFAULT_LATITUDE to DEFAULT_LONGITUDE, api.weatherQueries.last())
+        assertEquals(false, (viewModel.weather as WeatherState.Loaded).isNearMe)
+    }
+
+    @Test
+    fun loadWeather_failureKeepsTheLastBriefing() {
+        viewModel.loadWeather(null, null)
+        api.failWeather = true
+
+        viewModel.loadWeather(null, null)
+
+        assertTrue(viewModel.weather is WeatherState.Loaded)
+    }
+
+    @Test
+    fun loadWeather_failureWithoutDataShowsFailed() {
+        api.failWeather = true
+
+        viewModel.loadWeather(null, null)
+
+        assertEquals(WeatherState.Failed, viewModel.weather)
+    }
+
     private class CalendarApi : FakeApiService() {
         val groupFilters = mutableListOf<String>()
+        val weatherQueries = mutableListOf<Pair<Double, Double>>()
+        var failWeather = false
+
+        override suspend fun weather(latitude: Double, longitude: Double): ApiResponse<WeatherBriefing> {
+            weatherQueries += latitude to longitude
+            if (failWeather) throw java.io.IOException("offline")
+            return ApiResponse(
+                status = "success",
+                data = WeatherBriefing(
+                    temperature = 9.0,
+                    condition = "clear",
+                    conditionLabel = "Clear",
+                    weatherTip = "Great weather for a run.",
+                    pm10 = 20,
+                    pm25 = 10,
+                    airGrade = "good",
+                    airLabel = "Good",
+                    airTip = "The air is clean.",
+                ),
+            )
+        }
 
         override suspend fun runs() = ApiResponse(
             status = "success",

@@ -1,5 +1,7 @@
 package com.example.runtime.ui.calendar
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.example.runtime.ui.common.LOCATION_PERMISSIONS
+import com.example.runtime.ui.common.currentLocation
+import com.example.runtime.ui.common.hasLocationPermission
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,9 +75,25 @@ fun CalendarScreen(
     onGroupClick: (Int) -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    fun refreshWeather() {
+        scope.launch {
+            val location = if (context.hasLocationPermission()) context.currentLocation() else null
+            viewModel.loadWeather(location?.latitude, location?.longitude)
+        }
+    }
+
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        refreshWeather()
+    }
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) viewModel.load() else viewModel.reset()
+    }
+    LaunchedEffect(Unit) {
+        if (context.hasLocationPermission()) refreshWeather() else locationPermission.launch(LOCATION_PERMISSIONS)
     }
 
     Column(
@@ -83,6 +107,8 @@ fun CalendarScreen(
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(start = Spacing.s, top = Spacing.m, bottom = Spacing.s),
         )
+        WeatherCards(state = viewModel.weather, onRetry = ::refreshWeather)
+        Spacer(Modifier.height(Spacing.m))
 
         if (!isLoggedIn) {
             EmptyState(

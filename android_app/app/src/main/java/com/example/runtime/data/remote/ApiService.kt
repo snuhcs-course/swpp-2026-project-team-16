@@ -67,6 +67,9 @@ interface ApiService {
     @DELETE("api/v1/routes/saved/{routeId}/")
     suspend fun deleteSavedRoute(@Path("routeId") routeId: Int): ApiResponse<Unit>
 
+    @GET("api/v1/weather/")
+    suspend fun weather(@Query("lat") latitude: Double, @Query("lng") longitude: Double): ApiResponse<WeatherBriefing>
+
     @GET("api/v1/places/search/")
     suspend fun searchPlaces(@Query("q") query: String, @Query("language") language: String): ApiResponse<List<Place>>
 

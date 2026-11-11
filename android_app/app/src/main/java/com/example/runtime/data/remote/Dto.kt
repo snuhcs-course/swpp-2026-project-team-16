@@ -491,3 +491,20 @@ data class ReportRequest(val reason: String)
 
 @Serializable
 data class ReportResult(val hidden: Boolean = false)
+
+@Serializable
+data class WeatherBriefing(
+    val temperature: Double,
+    @SerialName("apparent_temperature") val apparentTemperature: Double? = null,
+    val humidity: Int? = null,
+    @SerialName("wind_speed") val windSpeed: Double? = null,
+    @SerialName("precipitation_probability") val precipitationProbability: Int? = null,
+    val condition: String,
+    @SerialName("condition_label") val conditionLabel: String,
+    @SerialName("weather_tip") val weatherTip: String,
+    val pm10: Int? = null,
+    @SerialName("pm2_5") val pm25: Int? = null,
+    @SerialName("air_grade") val airGrade: String? = null,
+    @SerialName("air_label") val airLabel: String? = null,
+    @SerialName("air_tip") val airTip: String? = null,
+)
