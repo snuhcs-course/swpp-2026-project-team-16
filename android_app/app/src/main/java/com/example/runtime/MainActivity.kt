@@ -21,6 +21,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.example.runtime.ui.common.asString
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
@@ -841,27 +844,54 @@ private const val LOGIN_PROMPT_POST = "post"
 private const val LOGIN_PROMPT_SHARE_ROUTE = "share_route"
 private const val LOGIN_PROMPT_FOLLOW = "follow"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RowScope.RunTabItem(selected: Boolean, onClick: () -> Unit) {
-    NavigationBarItem(
-        selected = selected,
-        onClick = onClick,
-        colors = NavigationBarItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color.Transparent),
-        icon = {
-            Box(
-                contentAlignment = androidx.compose.ui.Alignment.Center,
-                modifier = Modifier
-                    .size(52.dp)
-                    .background(com.example.runtime.ui.theme.Lime, androidx.compose.foundation.shape.CircleShape)
-            ) {
-                Icon(
-                    painterResource(R.drawable.ic_directions_run),
-                    contentDescription = null,
-                    tint = com.example.runtime.ui.theme.Charcoal,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        },
-        label = { Text(stringResource(R.string.nav_route), fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else null) }
-    )
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val glowing = selected || pressed
+    CompositionLocalProvider(LocalRippleConfiguration provides null) {
+        NavigationBarItem(
+            selected = selected,
+            onClick = onClick,
+            interactionSource = interactionSource,
+            colors = NavigationBarItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color.Transparent),
+            icon = {
+                Box(
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                    modifier = Modifier
+                        .size(RUN_GLOW_SIZE)
+                        .background(
+                            if (glowing) RUN_GLOW_COLOR else androidx.compose.ui.graphics.Color.Transparent,
+                            androidx.compose.foundation.shape.CircleShape
+                        )
+                ) {
+                    Box(
+                        contentAlignment = androidx.compose.ui.Alignment.Center,
+                        modifier = Modifier
+                            .size(52.dp)
+                            .shadow(
+                                elevation = if (glowing) 10.dp else 0.dp,
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                ambientColor = RUN_SHADOW_COLOR,
+                                spotColor = RUN_SHADOW_COLOR
+                            )
+                            .background(com.example.runtime.ui.theme.Lime, androidx.compose.foundation.shape.CircleShape)
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_directions_run),
+                            contentDescription = null,
+                            tint = com.example.runtime.ui.theme.Charcoal,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            },
+            label = { Text(stringResource(R.string.nav_route), fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else null) }
+        )
+    }
 }
+
+private val RUN_GLOW_SIZE = 62.dp
+private val RUN_GLOW_COLOR = androidx.compose.ui.graphics.Color(0x663F7A00)
+private val RUN_SHADOW_COLOR = androidx.compose.ui.graphics.Color(0xFF2F5E00)
