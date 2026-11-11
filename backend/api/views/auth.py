@@ -9,7 +9,8 @@ from rest_framework import status
 
 from rest_framework.authtoken.models import Token
 
-from api.views.profile import profile_data, update_profile
+from api.models import Profile
+from api.views.profile import MAX_DISPLAY_NAME_LENGTH, NICKNAME_TAKEN, get_profile, nickname_taken, profile_data, update_profile
 
 from google.auth.exceptions import GoogleAuthError, TransportError
 from google.auth.transport import requests as google_requests
@@ -27,6 +28,7 @@ def register_user(request):
     username = request.data.get("username")
     email = request.data.get("email")
     password = request.data.get("password")
+    display_name = request.data.get("display_name") or ""
 
 
     if not all(isinstance(value, str) and value.strip() for value in (username, email, password)):
@@ -53,9 +55,22 @@ def register_user(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if User.objects.filter(username=username).exists():
+    if not isinstance(display_name, str) or len(display_name.strip()) > MAX_DISPLAY_NAME_LENGTH:
+        return Response(
+            {'status': 'error', "message": f"Name must be {MAX_DISPLAY_NAME_LENGTH} characters or fewer."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    display_name = display_name.strip()
+
+    if User.objects.filter(username=username).exists() or Profile.objects.filter(display_name__iexact=username).exists():
         return Response(
             {'status': 'error', "message": "Username already exists"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if display_name and display_name.lower() != username.lower() and nickname_taken(display_name):
+        return Response(
+            {'status': 'error', "message": NICKNAME_TAKEN},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -72,6 +87,11 @@ def register_user(request):
         password=password
     )
 
+
+    if display_name:
+        profile = get_profile(user)
+        profile.display_name = display_name
+        profile.save(update_fields=["display_name"])
 
     token = Token.objects.create(
         user=user

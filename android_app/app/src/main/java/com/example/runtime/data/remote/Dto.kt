@@ -33,6 +33,7 @@ data class RegisterRequest(
     val username: String,
     val email: String,
     val password: String,
+    @SerialName("display_name") val displayName: String = "",
 )
 
 @Serializable

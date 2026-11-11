@@ -69,6 +69,8 @@ fun UserProfileScreen(
     onGroupClick: (Int) -> Unit,
     onPostClick: (Int) -> Unit,
     onLogInRequired: () -> Unit,
+    initialList: FollowListType? = null,
+    onInitialListShown: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable(username) { mutableIntStateOf(TAB_ROUTES) }
     val messages = LocalAppMessages.current
@@ -79,6 +81,12 @@ fun UserProfileScreen(
     BackHandler(onBack = onBack)
 
     val profile = viewModel.profile?.takeIf { it.username == username }
+    LaunchedEffect(profile != null, initialList) {
+        if (profile != null && initialList != null) {
+            viewModel.openList(initialList)
+            onInitialListShown()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(

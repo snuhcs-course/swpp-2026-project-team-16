@@ -50,6 +50,21 @@ def profile_data(user):
     }
 
 
+NICKNAME_TAKEN = "This nickname is already taken."
+
+
+def nickname_taken(name, user=None):
+    name = name.strip()
+    if not name:
+        return False
+    profiles = Profile.objects.filter(display_name__iexact=name)
+    users = User.objects.filter(username__iexact=name)
+    if user is not None:
+        profiles = profiles.exclude(user=user)
+        users = users.exclude(id=user.id)
+    return profiles.exists() or users.exists()
+
+
 def update_profile(user, data):
     profile = get_profile(user)
     fields = []
@@ -60,6 +75,8 @@ def update_profile(user, data):
         if not isinstance(value, str) or len(value.strip()) > limit:
             label = "Name" if name == "display_name" else "Status message"
             return f"{label} must be {limit} characters or fewer."
+        if name == "display_name" and nickname_taken(value, user):
+            return NICKNAME_TAKEN
         setattr(profile, name, value.strip())
         fields.append(name)
     if fields:
