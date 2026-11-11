@@ -63,6 +63,8 @@ import com.example.runtime.data.push.NotificationNavigation
 import com.example.runtime.data.push.NotificationTarget
 import com.example.runtime.data.push.Push
 import com.example.runtime.ui.group.GroupInvitesScreen
+import com.example.runtime.ui.calendar.CalendarScreen
+import com.example.runtime.ui.calendar.CalendarViewModel
 import com.example.runtime.ui.notifications.NotificationsScreen
 import com.example.runtime.ui.notifications.NotificationsViewModel
 import com.example.runtime.ui.notifications.SettingsScreen
@@ -163,6 +165,7 @@ fun RunTimeApp() {
     val appScope = rememberCoroutineScope()
     val context = LocalContext.current
     val notificationsViewModel: NotificationsViewModel = viewModel()
+    val calendarViewModel: CalendarViewModel = viewModel()
     var notificationsReturnScreen by rememberSaveable { mutableStateOf("MyPage") }
     var settingsReturnScreen by rememberSaveable { mutableStateOf("MyPage") }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -175,6 +178,7 @@ fun RunTimeApp() {
         boardViewModel.reset()
         communityViewModel.reset()
         notificationsViewModel.reset()
+        calendarViewModel.reset()
         selectedRouteId = null
     }
 
@@ -287,6 +291,12 @@ fun RunTimeApp() {
                         onClick = { currentScreen = "route_input" },
                         icon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_route)) }
+                    )
+                    NavigationBarItem(
+                        selected = currentScreen == "calendar",
+                        onClick = { currentScreen = "calendar" },
+                        icon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_calendar)) }
                     )
                     NavigationBarItem(
                         selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor", "user_profile", "group_invites"),
@@ -667,6 +677,16 @@ fun RunTimeApp() {
                                         onOpenGroup = { groupId ->
                                             selectedGroupId = groupId
                                             groupReturnScreen = "group_invites"
+                                            currentScreen = "group_detail"
+                                        }
+                                    )
+                                    "calendar" -> CalendarScreen(
+                                        viewModel = calendarViewModel,
+                                        isLoggedIn = authViewModel.isLoggedIn,
+                                        onLogIn = { openAuth("login", returnTo = "calendar", save = false) },
+                                        onGroupClick = { groupId ->
+                                            selectedGroupId = groupId
+                                            groupReturnScreen = "calendar"
                                             currentScreen = "group_detail"
                                         }
                                     )

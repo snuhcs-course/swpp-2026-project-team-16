@@ -552,4 +552,20 @@
     <string name="notification_kind_post_comment_desc">내 글에 댓글이 달렸을 때</string>
     <string name="notification_kind_route_review">코스 리뷰</string>
     <string name="notification_kind_route_review_desc">내가 공유한 코스에 리뷰가 달렸을 때</string>
+    <string name="nav_calendar">캘린더</string>
+    <string name="calendar_title">러닝 캘린더</string>
+    <string name="calendar_log_in_title">로그인하면 러닝 캘린더를 볼 수 있어요</string>
+    <string name="calendar_log_in_message">뛴 날과 참가한 그룹 일정이 달력에 표시돼요.</string>
+    <string name="calendar_previous_month">이전 달</string>
+    <string name="calendar_next_month">다음 달</string>
+    <string name="calendar_month_title">%1$d년 %2$s</string>
+    <string name="calendar_month_summary">이번 달 %1$d일 달렸어요, 총 %2$s</string>
+    <string name="calendar_legend_title">하루에 달린 거리</string>
+    <string name="calendar_legend_up_to">~%1$dkm</string>
+    <string name="calendar_legend_range">%1$d–%2$dkm</string>
+    <string name="calendar_legend_over">%1$dkm~</string>
+    <string name="calendar_legend_group">참가한 러닝 그룹 일정</string>
+    <string name="calendar_day_empty">이 날은 러닝 기록이나 그룹 일정이 없어요.</string>
+    <string name="calendar_group_time">%1$s 출발, %2$s</string>
+    <string name="calendar_run_summary">%1$s 완료, %2$s, %3$s</string>
 </resources>
