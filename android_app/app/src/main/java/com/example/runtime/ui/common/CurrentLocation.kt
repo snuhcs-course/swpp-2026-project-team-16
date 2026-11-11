@@ -42,3 +42,13 @@ suspend fun Context.currentLocation(): Location? {
     }
     return providers.firstNotNullOfOrNull { manager.getLastKnownLocation(it) }
 }
+
+@SuppressLint("MissingPermission")
+fun Context.lastKnownLocation(): Location? {
+    if (!hasLocationPermission()) return null
+    val manager = getSystemService(LocationManager::class.java)
+    return listOf(LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        .filter { manager.isProviderEnabled(it) }
+        .mapNotNull { manager.getLastKnownLocation(it) }
+        .maxByOrNull { it.time }
+}

@@ -72,7 +72,7 @@ class CalendarViewModelTest {
         assertEquals(35.1 to 129.0, api.weatherQueries.last())
         assertEquals(true, (viewModel.weather as WeatherState.Loaded).isNearMe)
 
-        viewModel.loadWeather(null, null)
+        viewModel.loadWeather(null, null, force = true)
         assertEquals(DEFAULT_LATITUDE to DEFAULT_LONGITUDE, api.weatherQueries.last())
         assertEquals(false, (viewModel.weather as WeatherState.Loaded).isNearMe)
     }
@@ -82,7 +82,7 @@ class CalendarViewModelTest {
         viewModel.loadWeather(null, null)
         api.failWeather = true
 
-        viewModel.loadWeather(null, null)
+        viewModel.loadWeather(null, null, force = true)
 
         assertTrue(viewModel.weather is WeatherState.Loaded)
     }
@@ -94,6 +94,41 @@ class CalendarViewModelTest {
         viewModel.loadWeather(null, null)
 
         assertEquals(WeatherState.Failed, viewModel.weather)
+    }
+
+    @Test
+    fun loadWeather_skipsRepeatsForTheSameArea() {
+        viewModel.loadWeather(37.5, 127.0, now = 0)
+        viewModel.loadWeather(37.505, 127.005, now = 1_000)
+        viewModel.loadWeather(null, null, now = 2_000)
+
+        assertEquals(1, api.weatherQueries.size)
+    }
+
+    @Test
+    fun loadWeather_refinesTheFallbackWithMyLocation() {
+        viewModel.loadWeather(null, null, now = 0)
+        viewModel.loadWeather(35.1, 129.0, now = 1_000)
+        viewModel.loadWeather(37.5, 127.0, force = true, now = 2_000)
+
+        assertEquals(
+            listOf(DEFAULT_LATITUDE to DEFAULT_LONGITUDE, 35.1 to 129.0, 37.5 to 127.0),
+            api.weatherQueries,
+        )
+    }
+
+    @Test
+    fun cachedWeatherShowsUntilFreshDataArrives() {
+        val cached = WeatherState.Loaded(
+            WeatherBriefing(temperature = 1.0, condition = "snow", conditionLabel = "Snow", weatherTip = "Cold."),
+            isNearMe = true,
+        )
+        viewModel.showCachedWeather(cached)
+        assertEquals(cached, viewModel.weather)
+
+        viewModel.loadWeather(37.5, 127.0)
+
+        assertEquals(9.0, (viewModel.weather as WeatherState.Loaded).briefing.temperature, 0.0)
     }
 
     private class CalendarApi : FakeApiService() {

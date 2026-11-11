@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.runtime.ui.common.LOCATION_PERMISSIONS
 import com.example.runtime.ui.common.currentLocation
 import com.example.runtime.ui.common.hasLocationPermission
+import com.example.runtime.ui.common.lastKnownLocation
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,10 +79,13 @@ fun CalendarScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    fun refreshWeather() {
-        scope.launch {
-            val location = if (context.hasLocationPermission()) context.currentLocation() else null
-            viewModel.loadWeather(location?.latitude, location?.longitude)
+    fun refreshWeather(force: Boolean = false) {
+        val quick = context.lastKnownLocation()
+        viewModel.loadWeather(quick?.latitude, quick?.longitude, force)
+        if (context.hasLocationPermission()) {
+            scope.launch {
+                context.currentLocation()?.let { viewModel.loadWeather(it.latitude, it.longitude) }
+            }
         }
     }
 
@@ -93,7 +97,8 @@ fun CalendarScreen(
         if (isLoggedIn) viewModel.load() else viewModel.reset()
     }
     LaunchedEffect(Unit) {
-        if (context.hasLocationPermission()) refreshWeather() else locationPermission.launch(LOCATION_PERMISSIONS)
+        refreshWeather()
+        if (!context.hasLocationPermission()) locationPermission.launch(LOCATION_PERMISSIONS)
     }
 
     Column(
@@ -107,7 +112,7 @@ fun CalendarScreen(
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(start = Spacing.s, top = Spacing.m, bottom = Spacing.s),
         )
-        WeatherCards(state = viewModel.weather, onRetry = ::refreshWeather)
+        WeatherCards(state = viewModel.weather, onRetry = { refreshWeather(force = true) })
         Spacer(Modifier.height(Spacing.m))
 
         if (!isLoggedIn) {

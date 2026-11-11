@@ -65,6 +65,9 @@ import com.example.runtime.data.push.Push
 import com.example.runtime.ui.group.GroupInvitesScreen
 import com.example.runtime.ui.calendar.CalendarScreen
 import com.example.runtime.ui.calendar.CalendarViewModel
+import com.example.runtime.ui.calendar.WeatherCache
+import com.example.runtime.ui.calendar.WeatherState
+import com.example.runtime.ui.common.lastKnownLocation
 import com.example.runtime.ui.notifications.NotificationsScreen
 import com.example.runtime.ui.notifications.NotificationsViewModel
 import com.example.runtime.ui.notifications.SettingsScreen
@@ -180,6 +183,16 @@ fun RunTimeApp() {
         notificationsViewModel.reset()
         calendarViewModel.reset()
         selectedRouteId = null
+    }
+
+    val weatherCache = remember { WeatherCache(context) }
+    LaunchedEffect(Unit) {
+        weatherCache.load()?.let(calendarViewModel::showCachedWeather)
+        val quick = context.lastKnownLocation()
+        calendarViewModel.loadWeather(quick?.latitude, quick?.longitude)
+    }
+    LaunchedEffect(calendarViewModel.weather) {
+        (calendarViewModel.weather as? WeatherState.Loaded)?.let(weatherCache::save)
     }
 
     LaunchedEffect(authViewModel.isLoggedIn) {
