@@ -32,6 +32,7 @@ import com.example.runtime.data.remote.DeviceRequest
 import com.example.runtime.data.remote.NotificationPage
 import com.example.runtime.data.remote.ReadNotificationRequest
 import com.example.runtime.data.remote.RunHistoryItem
+import com.example.runtime.data.remote.WeatherBriefing
 import com.example.runtime.data.remote.UnreadCount
 import com.example.runtime.data.remote.UserProfile
 import com.example.runtime.data.remote.RunPlan
@@ -72,6 +73,7 @@ open class FakeApiService : ApiService {
     override suspend fun savedRoute(routeId: Int): ApiResponse<SavedRoute> = unexpected()
     override suspend fun renameSavedRoute(routeId: Int, body: RenameRouteRequest): ApiResponse<RenamedRoute> = unexpected()
     override suspend fun deleteSavedRoute(routeId: Int): ApiResponse<Unit> = unexpected()
+    override suspend fun weather(latitude: Double, longitude: Double): ApiResponse<WeatherBriefing> = unexpected()
     override suspend fun searchPlaces(query: String, language: String): ApiResponse<List<Place>> = unexpected()
     override suspend fun reversePlace(latitude: Double, longitude: Double, language: String): ApiResponse<Place> = unexpected()
     override suspend fun translatePlace(name: String, address: String, language: String): ApiResponse<PlaceName> = unexpected()

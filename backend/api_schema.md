@@ -1094,3 +1094,39 @@ DELETE /api/v1/users/my_profile/
 Body `{"password": "..."}` for accounts with a password. Accounts created with Google sign-in have no password and need no body. Deletes the user and everything they own.
 
 `GET /api/v1/users/my_profile/` now also returns `unread_notification_count` and `has_password`.
+
+---
+
+# Weather Briefing
+
+```
+GET /api/v1/weather/?lat=37.5665&lng=126.978
+```
+
+No login needed. Uses Open-Meteo (no API key) for the current weather, the highest chance of rain in the next 6 hours, and current PM10 / PM2.5. Results are cached for 10 minutes per area (about 5 km).
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": {
+        "temperature": 9.0,
+        "apparent_temperature": 7.4,
+        "humidity": 77,
+        "wind_speed": 0.7,
+        "precipitation_probability": 10,
+        "condition": "partly_cloudy",
+        "condition_label": "구름 조금",
+        "weather_tip": "달리기 좋은 날씨예요.",
+        "pm10": 64,
+        "pm2_5": 49,
+        "air_grade": "bad",
+        "air_label": "나쁨",
+        "air_tip": "미세먼지가 나빠요. 짧게 달리거나 마스크를 챙기세요.",
+        "observed_at": "2026-11-11T10:45"
+    }
+}
+```
+
+`wind_speed` is in m/s. `air_grade` is `good`, `moderate`, `bad` or `very_bad`, using the Korean standard (PM10 30/80/150, PM2.5 15/35/75 µg/m³) and taking the worse of the two. Air fields are null when air quality data is unavailable. Labels and tips follow the request language. Returns 400 for invalid coordinates and 503 when the weather service is down.
