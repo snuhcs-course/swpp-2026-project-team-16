@@ -1204,7 +1204,7 @@ Returns:
 * `streak`: `current` (consecutive days ending today or yesterday) and `best`
 * `totals`: `runs`, `distance_m`
 * `personal_bests`: `longest_run_m`, `fastest_pace_s` (runs of 1 km or more), `fastest_1k_s`, `fastest_5k_s` (best five consecutive km splits), `best_week_m`; each `{"value", "date"}` or null. Empty when there are no runs.
-* `badges`: 17 badges, each with `id`, `title`, `description` (request language), `earned`, `earned_at`, `progress`, `target`. Distance badges use meters for `progress` and `target`.
+* `badges`: 25 lifetime quests (shown as a checklist; finishing one earns its badge), each with `id`, `title`, `description` (request language), `earned`, `earned_at`, `progress`, `target`. Distance badges use meters for `progress` and `target`.
 
 ## Goals
 

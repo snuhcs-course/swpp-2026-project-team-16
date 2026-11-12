@@ -638,7 +638,11 @@
     <string name="challenge_best_5k">가장 빠른 5km</string>
     <string name="challenge_best_week">한 주 최다 거리</string>
     <string name="challenge_best_none">아직 없음</string>
-    <string name="challenge_badges">배지 %1$d / %2$d</string>
     <string name="challenge_badge_earned_on">%1$s에 받았어요</string>
     <string name="challenge_badge_progress">진행 %1$s / %2$s</string>
+    <string name="challenge_my_badges">모은 배지</string>
+    <string name="challenge_no_badges">퀘스트를 완료하면 배지를 받아요.</string>
+    <string name="challenge_quests">평생 퀘스트</string>
+    <string name="challenge_quests_done">완료 %1$d / %2$d</string>
+    <string name="challenge_quest_reward">%2$s에 완료, %1$s 배지 획득</string>
 </resources>
