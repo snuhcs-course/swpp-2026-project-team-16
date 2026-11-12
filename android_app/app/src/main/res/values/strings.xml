@@ -650,7 +650,11 @@
     <string name="challenge_best_5k">Fastest 5 km</string>
     <string name="challenge_best_week">Biggest week</string>
     <string name="challenge_best_none">None yet</string>
-    <string name="challenge_badges">Badges %1$d / %2$d</string>
     <string name="challenge_badge_earned_on">Earned on %1$s</string>
     <string name="challenge_badge_progress">Progress %1$s / %2$s</string>
+    <string name="challenge_my_badges">My badges</string>
+    <string name="challenge_no_badges">Finish a quest to earn its badge.</string>
+    <string name="challenge_quests">Lifetime quests</string>
+    <string name="challenge_quests_done">%1$d / %2$d done</string>
+    <string name="challenge_quest_reward">Done on %2$s, earned %1$s</string>
 </resources>

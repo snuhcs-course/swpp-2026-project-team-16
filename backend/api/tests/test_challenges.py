@@ -7,7 +7,7 @@ from django.test import SimpleTestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from api.models import Route, RouteRun, SharedRoute
+from api.models import Route, RouteRun, RunningGroup, SharedRoute
 from api.services.challenges import streaks, validate_goals, week_start
 
 
@@ -100,6 +100,24 @@ class ChallengeApiTests(APITestCase):
         self.assertTrue(badges["sharer"]["earned"])
         self.assertEqual(badges["goal_crusher"]["earned_at"], "2026-11-04")
         self.assertEqual(badges["streak_3"]["progress"], 2)
+
+    def test_weekly_and_group_quests(self, _):
+        for day in (1, 9, 15, 22):
+            run = self.run_at(datetime(2026, 10, day, 8, 0), 3000, 1000)
+        self.run_at(datetime(2026, 11, 5, 8, 0), 3000, 1000)
+        group = RunningGroup.objects.create(
+            host=self.user, route=run.route, title="Crew", capacity=4,
+            meet_at=NOW, join_deadline=NOW, start_latitude=37.5, start_longitude=127.0,
+        )
+        RouteRun.objects.filter(id=run.id).update(group=group)
+
+        badges = {badge["id"]: badge for badge in self.get()["badges"]}
+
+        self.assertEqual(badges["weekly_4"]["earned_at"], "2026-10-22")
+        self.assertEqual(badges["weekly_12"]["progress"], 4)
+        self.assertEqual(badges["runs_10"]["progress"], 5)
+        self.assertTrue(badges["group_run"]["earned"])
+        self.assertEqual((badges["group_5"]["progress"], badges["group_5"]["target"]), (1, 5))
 
     def test_empty_history(self, _):
         data = self.get()

@@ -1,6 +1,8 @@
 package com.example.runtime.ui.challenge
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.runtime.R
@@ -108,10 +112,17 @@ fun ChallengeScreen(viewModel: ChallengeViewModel, isLoggedIn: Boolean, onLogIn:
         StreakCard(summary)
         SectionTitle(stringResource(R.string.challenge_personal_bests))
         PersonalBests(summary.personalBests)
-        SectionTitle(
-            stringResource(R.string.challenge_badges, summary.badges.count { it.earned }, summary.badges.size),
-        )
-        BadgeGrid(summary.badges, onOpen = { openBadge = it })
+        SectionTitle(stringResource(R.string.challenge_my_badges))
+        EarnedBadges(summary.badges.filter { it.earned }, onOpen = { openBadge = it })
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = Spacing.s)) {
+            Text(stringResource(R.string.challenge_quests), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(R.string.challenge_quests_done, summary.badges.count { it.earned }, summary.badges.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        QuestList(summary.badges)
         Spacer(Modifier.height(Spacing.l))
     }
 
@@ -283,37 +294,103 @@ private fun bestValueText(key: String, value: Int): String = when (key) {
 }
 
 @Composable
-private fun BadgeGrid(badges: List<Badge>, onOpen: (Badge) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        badges.chunked(3).forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                row.forEach { badge ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f).clip(MaterialTheme.shapes.medium).clickable { onOpen(badge) }.padding(Spacing.xs),
-                    ) {
-                        BadgeMedal(badge.earned, size = 56)
-                        Spacer(Modifier.height(Spacing.xs))
-                        Text(
-                            badge.title,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (badge.earned) FontWeight.Bold else null,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                        if (!badge.earned) {
-                            LinearProgressIndicator(
-                                progress = { badge.progress.toFloat() / badge.target.coerceAtLeast(1) },
-                                modifier = Modifier.width(56.dp).padding(top = 4.dp),
-                                drawStopIndicator = {},
-                            )
-                        }
-                    }
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+private fun EarnedBadges(badges: List<Badge>, onOpen: (Badge) -> Unit) {
+    if (badges.isEmpty()) {
+        Text(
+            stringResource(R.string.challenge_no_badges),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+    ) {
+        badges.sortedByDescending { it.earnedAt }.forEach { badge ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.width(72.dp).clip(MaterialTheme.shapes.medium).clickable { onOpen(badge) }.padding(Spacing.xs),
+            ) {
+                BadgeMedal(earned = true, size = 52)
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    badge.title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun QuestList(badges: List<Badge>) {
+    val ordered = badges.filter { !it.earned }.sortedByDescending { it.progress.toFloat() / it.target.coerceAtLeast(1) } +
+        badges.filter { it.earned }.sortedByDescending { it.earnedAt }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(vertical = Spacing.xs)) {
+            ordered.forEachIndexed { index, badge ->
+                if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.m), color = MaterialTheme.colorScheme.outlineVariant)
+                QuestRow(badge)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestRow(badge: Badge) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.m, vertical = Spacing.s),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .then(
+                    if (badge.earned) Modifier.background(Lime)
+                    else Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                ),
+        ) {
+            if (badge.earned) {
+                Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = Charcoal, modifier = Modifier.size(18.dp))
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                badge.description,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (badge.earned) null else FontWeight.SemiBold,
+                color = if (badge.earned) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                textDecoration = if (badge.earned) TextDecoration.LineThrough else null,
+            )
+            if (badge.earned) {
+                Text(
+                    stringResource(R.string.challenge_quest_reward, badge.title, badge.earnedAt.orEmpty()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(top = 4.dp)) {
+                    LinearProgressIndicator(
+                        progress = { badge.progress.toFloat() / badge.target.coerceAtLeast(1) },
+                        modifier = Modifier.weight(1f),
+                        drawStopIndicator = {},
+                    )
+                    Text(badgeProgressText(badge), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        BadgeMedal(badge.earned, size = 32)
     }
 }
 
