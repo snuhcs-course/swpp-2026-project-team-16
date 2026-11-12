@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - iteration-3-demo
+      - iteration-4-demo
   workflow_dispatch:
 
 jobs:
