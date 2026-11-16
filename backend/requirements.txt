@@ -32,3 +32,7 @@ six==1.17.0
 sqlparse==0.6.0
 threadpoolctl==3.7.0
 urllib3==2.8.0
+dj-database-url==3.1.2
+gunicorn==27.0.1
+psycopg[binary]==3.3.9
+whitenoise==6.12.0
