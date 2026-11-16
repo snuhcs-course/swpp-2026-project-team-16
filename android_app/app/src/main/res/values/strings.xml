@@ -173,6 +173,7 @@
     <string name="run_pace_unavailable">--:--</string>
     <string name="run_pause">Pause</string>
     <string name="run_resume">Resume</string>
+    <string name="run_auto_paused">Auto-paused. Move above 1 km/h to resume.</string>
     <string name="run_finish">Finish</string>
     <string name="run_finish_title">Finish this run?</string>
     <string name="run_finish_message">Your run summary will be shown before returning to the route.</string>

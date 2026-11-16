@@ -107,6 +107,15 @@ class PlanTests(SimpleTestCase):
         self.assertIn("언덕 싫어요", prompt["user"])
         self.assertIn("Korean", prompt["system"])
 
+    def test_selected_distance_is_total_and_overrides_section_distance_from_llm(self):
+        prompt = build_goal_prompt("마지막 1km는 빠르게", RunningStyle(), "ko", 3000)
+        self.assertIn("Selected total distance: 3 km", prompt["user"])
+        self.assertIn("parts of this total", prompt["user"])
+
+        reply = '{"run_type":"tempo","distance_km":1,"explicit_pace_s":null,"route_preferences":[],"intensity":"빠르게","summary":"마지막 구간을 빠르게 달려요."}'
+        plan = plan_from_goal("마지막 1km는 빠르게", RunningStyle(), 3000, "ko", llm=lambda _: reply)
+        self.assertEqual(plan["distance_m"], 3000)
+
     def test_validate_plan(self):
         self.assertEqual(validate_plan(None), (None, None))
         self.assertEqual(validate_plan(RECOVERY_PLAN)[0]["run_type"], "recovery")
@@ -187,11 +196,11 @@ class RunCoachApiTests(APITestCase):
         self.assertEqual(bad.status_code, 400)
 
     @mock.patch("api.services.run_coach.generate_text", side_effect=LLMError("down"))
-    def test_plan_works_for_guests(self, _):
+    def test_guest_plan_keeps_the_selected_total_distance(self, _):
         response = self.client.post("/api/v1/runs/plan/", {"text": "천천히 4km", "distance_m": 5000}, format="json")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["run_type"], "recovery")
-        self.assertEqual(response.data["data"]["distance_m"], 4000)
+        self.assertEqual(response.data["data"]["distance_m"], 5000)
         self.assertEqual(self.client.post("/api/v1/runs/plan/", {"text": " "}, format="json").status_code, 400)
 
     def test_run_is_recorded_with_plan_and_splits(self):

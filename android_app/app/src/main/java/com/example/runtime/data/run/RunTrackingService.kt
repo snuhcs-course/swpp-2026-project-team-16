@@ -38,11 +38,13 @@ import kotlinx.coroutines.flow.asStateFlow
 data class RunMetrics(
     val isTracking: Boolean = false,
     val isPaused: Boolean = false,
+    val isAutoPaused: Boolean = false,
     val distanceMeters: Double = 0.0,
     val elapsedSeconds: Long = 0L,
     val speedMetersPerSecond: Double = 0.0,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val headingDegrees: Double? = null,
     val locationError: Boolean = false,
 )
 
@@ -102,15 +104,23 @@ class RunTrackingService : Service() {
     private val rotationMatrix = FloatArray(9)
     private var elapsedBeforeResumeMs = 0L
     private var resumedAtMs = 0L
-    private var isPaused = false
+    private var isManuallyPaused = false
+    private var isAutoPaused = false
+    private val isPaused: Boolean get() = isManuallyPaused || isAutoPaused
+    private val autoPauseController = RunAutoPauseController()
+    private var lastSpeedLocation: Location? = null
+    private var latestLocation: Location? = null
+    private var headingDegrees: Double? = null
     private var lastNotificationUpdateMs = 0L
 
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
             when (event.sensor.type) {
                 Sensor.TYPE_STEP_DETECTOR -> {
-                    fusion.onStep(event.timestamp / NANOS_PER_MILLI)
-                    publishMetrics()
+                    if (!isPaused) {
+                        fusion.onStep(event.timestamp / NANOS_PER_MILLI)
+                        publishMetrics()
+                    }
                 }
                 Sensor.TYPE_GAME_ROTATION_VECTOR, Sensor.TYPE_ROTATION_VECTOR -> {
                     SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
@@ -158,7 +168,12 @@ class RunTrackingService : Service() {
 
         elapsedBeforeResumeMs = 0L
         resumedAtMs = SystemClock.elapsedRealtime()
-        isPaused = false
+        isManuallyPaused = false
+        isAutoPaused = false
+        autoPauseController.reset()
+        lastSpeedLocation = null
+        latestLocation = null
+        headingDegrees = null
         fusion = RunFusion(stepsAvailable = canCountSteps())
 
         val notification = buildNotification()
@@ -266,24 +281,57 @@ class RunTrackingService : Service() {
     }
 
     private fun acceptLocation(location: Location) {
-        if (isPaused) return
-        fusion.onGps(
-            GpsFix(
-                latitude = location.latitude,
-                longitude = location.longitude,
-                accuracyMeters = if (location.hasAccuracy()) location.accuracy.toDouble() else UNKNOWN_ACCURACY_METERS,
-                timeMs = location.elapsedRealtimeNanos / NANOS_PER_MILLI,
-                bearingDegrees = location.bearing.toDouble().takeIf { location.hasBearing() && location.hasSpeed() },
-                speedMps = location.speed.toDouble().takeIf { location.hasSpeed() },
-            ),
+        if (isManuallyPaused) return
+        val timeMs = location.elapsedRealtimeNanos / NANOS_PER_MILLI
+        latestLocation = Location(location)
+        val accuracyMeters = if (location.hasAccuracy()) location.accuracy.toDouble() else UNKNOWN_ACCURACY_METERS
+        val measuredSpeed = location.speed.toDouble().takeIf { location.hasSpeed() && it.isFinite() && it >= 0.0 }
+            ?: speedFromRecentLocation(location, timeMs, accuracyMeters)
+        if (measuredSpeed != null && measuredSpeed >= MIN_HEADING_SPEED_MPS) {
+            val measuredHeading = location.bearing.toDouble().takeIf { location.hasBearing() }
+                ?: lastSpeedLocation?.let { bearingDegrees(it.latitude, it.longitude, location.latitude, location.longitude) }
+            if (measuredHeading != null) headingDegrees = measuredHeading
+        }
+        if (accuracyMeters <= GOOD_LOCATION_ACCURACY_METERS) lastSpeedLocation = Location(location)
+
+        val fix = GpsFix(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            accuracyMeters = accuracyMeters,
+            timeMs = timeMs,
+            bearingDegrees = headingDegrees,
+            speedMps = measuredSpeed,
         )
+
+        if (isAutoPaused) {
+            if (autoPauseController.update(measuredSpeed?.times(METERS_PER_SECOND_TO_KMH), timeMs) == RunAutoPauseController.Transition.RESUMED) {
+                isAutoPaused = false
+                resumedAtMs = SystemClock.elapsedRealtime()
+                fusion.pause()
+                fusion.onGps(fix)
+                publishMetrics(locationError = false)
+                updateNotification()
+            } else {
+                publishMetrics(locationError = false, location = location)
+            }
+            return
+        }
+
+        fusion.onGps(fix)
+        if (autoPauseController.update(measuredSpeed?.times(METERS_PER_SECOND_TO_KMH), timeMs) == RunAutoPauseController.Transition.PAUSED) {
+            elapsedBeforeResumeMs += SystemClock.elapsedRealtime() - resumedAtMs
+            isAutoPaused = true
+            fusion.pause()
+            updateNotification()
+        }
         publishMetrics(locationError = false)
     }
 
     private fun pauseRun() {
         if (!RunTrackingState.metrics.value.isTracking || isPaused) return
         elapsedBeforeResumeMs += SystemClock.elapsedRealtime() - resumedAtMs
-        isPaused = true
+        isManuallyPaused = true
+        autoPauseController.reset()
         removeLocationUpdates()
         stopSensors()
         fusion.pause()
@@ -293,10 +341,19 @@ class RunTrackingService : Service() {
 
     private fun resumeRun() {
         if (!RunTrackingState.metrics.value.isTracking || !isPaused) return
-        isPaused = false
+        if (isManuallyPaused) {
+            isManuallyPaused = false
+            startLocationUpdates()
+            startSensors()
+        } else {
+            isAutoPaused = false
+            latestLocation?.let { location ->
+                fusion.pause()
+                fusion.onGps(gpsFix(location))
+            }
+        }
+        autoPauseController.reset()
         resumedAtMs = SystemClock.elapsedRealtime()
-        startLocationUpdates()
-        startSensors()
         publishMetrics()
         updateNotification()
     }
@@ -305,6 +362,9 @@ class RunTrackingService : Service() {
         if (RunTrackingState.metrics.value.isTracking && !isPaused) {
             elapsedBeforeResumeMs += SystemClock.elapsedRealtime() - resumedAtMs
         }
+        isManuallyPaused = false
+        isAutoPaused = false
+        autoPauseController.reset()
         removeLocationUpdates()
         stopSensors()
         handler.removeCallbacks(ticker)
@@ -316,6 +376,7 @@ class RunTrackingService : Service() {
     private fun publishMetrics(
         locationError: Boolean = RunTrackingState.metrics.value.locationError,
         isTracking: Boolean = RunTrackingState.metrics.value.isTracking,
+        location: Location? = null,
     ) {
         val latitude = fusion.latitude
         val longitude = fusion.longitude
@@ -329,14 +390,41 @@ class RunTrackingService : Service() {
             RunMetrics(
                 isTracking = isTracking,
                 isPaused = isPaused,
+                isAutoPaused = isAutoPaused,
                 distanceMeters = fusion.distanceMeters,
                 elapsedSeconds = elapsedMs / 1000L,
                 speedMetersPerSecond = if (isPaused) 0.0 else fusion.speedMps(SystemClock.elapsedRealtime()),
-                latitude = fusion.latitude ?: RunTrackingState.metrics.value.latitude,
-                longitude = fusion.longitude ?: RunTrackingState.metrics.value.longitude,
+                latitude = location?.latitude ?: fusion.latitude ?: RunTrackingState.metrics.value.latitude,
+                longitude = location?.longitude ?: fusion.longitude ?: RunTrackingState.metrics.value.longitude,
+                headingDegrees = headingDegrees,
                 locationError = locationError,
             ),
         )
+    }
+
+    private fun gpsFix(location: Location) = GpsFix(
+        latitude = location.latitude,
+        longitude = location.longitude,
+        accuracyMeters = if (location.hasAccuracy()) location.accuracy.toDouble() else UNKNOWN_ACCURACY_METERS,
+        timeMs = location.elapsedRealtimeNanos / NANOS_PER_MILLI,
+        bearingDegrees = headingDegrees,
+        speedMps = location.speed.toDouble().takeIf { location.hasSpeed() },
+    )
+
+    private fun speedFromRecentLocation(location: Location, timeMs: Long, accuracyMeters: Double): Double? {
+        if (accuracyMeters > GOOD_LOCATION_ACCURACY_METERS) return null
+        val previous = lastSpeedLocation ?: return null
+        val elapsedMs = timeMs - previous.elapsedRealtimeNanos / NANOS_PER_MILLI
+        if (elapsedMs <= 0L) return null
+        val result = FloatArray(1)
+        Location.distanceBetween(previous.latitude, previous.longitude, location.latitude, location.longitude, result)
+        return (result[0].toDouble() / (elapsedMs / 1000.0)).takeIf { it <= MAX_REASONABLE_SPEED_MPS }
+    }
+
+    private fun bearingDegrees(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Double {
+        val result = FloatArray(3)
+        Location.distanceBetween(fromLat, fromLon, toLat, toLon, result)
+        return ((result[1].toDouble() % 360.0) + 360.0) % 360.0
     }
 
     private fun updateNotification() {
@@ -406,6 +494,10 @@ class RunTrackingService : Service() {
         private const val FASTEST_LOCATION_INTERVAL_MS = 500L
         private const val MAX_LAST_LOCATION_AGE_NANOS = 30_000_000_000L
         private const val UNKNOWN_ACCURACY_METERS = 30.0
+        private const val GOOD_LOCATION_ACCURACY_METERS = 20.0
+        private const val MIN_HEADING_SPEED_MPS = 1.0
+        private const val MAX_REASONABLE_SPEED_MPS = 12.0
+        private const val METERS_PER_SECOND_TO_KMH = 3.6
         private const val NANOS_PER_MILLI = 1_000_000L
     }
 }

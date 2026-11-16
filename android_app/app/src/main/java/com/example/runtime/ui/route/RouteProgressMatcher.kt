@@ -149,8 +149,11 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
 
         val minDistance = max(0.0, progressMeters - BACKTRACK_WINDOW_METERS)
         val nearby = closestMatch(latitude, longitude, minDistance, min(routeLengthMeters, progressMeters + LOOKAHEAD_WINDOW_METERS))
-        val match = if (isOffRoute && nearby.distanceFromRoute > REJOIN_DISTANCE_METERS) {
-            closestMatch(latitude, longitude, minDistance, routeLengthMeters)
+        val match = if (isOffRoute) {
+            // Once off route, the runner may rejoin behind the last matched point.
+            // Search the whole course so the old forward-only window cannot keep
+            // the guidance stuck in the off-route state.
+            closestMatch(latitude, longitude, 0.0, routeLengthMeters)
         } else {
             nearby
         }
@@ -159,7 +162,7 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
             if (match.distanceFromRoute <= REJOIN_DISTANCE_METERS) {
                 isOffRoute = false
                 farSinceMs = null
-                progressMeters = max(progressMeters, match.along)
+                progressMeters = match.along
             }
         } else if (match.distanceFromRoute > OFF_ROUTE_DISTANCE_METERS) {
             val since = farSinceMs ?: timeMs.also { farSinceMs = it }

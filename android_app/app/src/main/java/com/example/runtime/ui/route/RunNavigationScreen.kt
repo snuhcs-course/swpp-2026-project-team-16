@@ -60,6 +60,7 @@ import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.common.formatDuration
 import com.example.runtime.ui.common.formatPace
 import com.naver.maps.geometry.LatLng
+import com.naver.maps.map.CameraAnimation
 import com.naver.maps.map.CameraPosition
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.compose.ExperimentalNaverMapApi
@@ -185,6 +186,7 @@ fun RunNavigationScreen(
             points = routePoints,
             trail = trail,
             currentLocation = currentLocation,
+            headingDegrees = metrics.headingDegrees,
             isOffRoute = isOffRoute,
             modifier = Modifier
                 .fillMaxWidth()
@@ -199,7 +201,15 @@ fun RunNavigationScreen(
         val remainingMeters = (routeDistanceMeters - completedMeters.roundToInt()).coerceAtLeast(0)
         val nextTurn = turnGuide.nextTurn(routeProgress.distanceAlongMeters)
 
-        if (!hasRoute) {
+        if (metrics.isAutoPaused) {
+            Text(
+                text = stringResource(R.string.run_auto_paused),
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else if (!hasRoute) {
             Text(
                 text = when {
                     metrics.locationError -> stringResource(R.string.run_location_unavailable)
@@ -442,16 +452,26 @@ private fun RunningRouteMap(
     points: List<RouteCoordinate>,
     trail: List<TrailPoint>,
     currentLocation: LatLng?,
+    headingDegrees: Double?,
     isOffRoute: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val initialPosition = points.firstOrNull()?.let { LatLng(it.latitude, it.longitude) }
         ?: LatLng(37.5666, 126.9784)
+    val initialHeading = points.getOrNull(1)?.let { next ->
+        bearingDegrees(initialPosition.latitude, initialPosition.longitude, next.latitude, next.longitude)
+    } ?: 0.0
     val cameraState = rememberCameraPositionState {
-        position = CameraPosition(initialPosition, 16.0)
+        position = CameraPosition(initialPosition, RUN_MAP_ZOOM, RUN_MAP_TILT, initialHeading)
     }
-    LaunchedEffect(currentLocation) {
-        currentLocation?.let { cameraState.move(CameraUpdate.scrollTo(it)) }
+    LaunchedEffect(currentLocation, headingDegrees) {
+        currentLocation?.let { location ->
+            cameraState.move(
+                CameraUpdate.toCameraPosition(
+                    CameraPosition(location, RUN_MAP_ZOOM, RUN_MAP_TILT, headingDegrees ?: initialHeading),
+                ).animate(CameraAnimation.Easing, CAMERA_FOLLOW_ANIMATION_MS),
+            )
+        }
     }
 
     Box(modifier = modifier) {
@@ -519,7 +539,20 @@ private fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordin
     }
 
 private val MAP_CORNER_RADIUS = 18.dp
+private const val RUN_MAP_ZOOM = 18.5
+private const val RUN_MAP_TILT = 45.0
+private const val CAMERA_FOLLOW_ANIMATION_MS = 800L
 private const val NEAR_FINISH_PROGRESS = 0.95f
+
+private fun bearingDegrees(fromLatitude: Double, fromLongitude: Double, toLatitude: Double, toLongitude: Double): Double {
+    val lat1 = Math.toRadians(fromLatitude)
+    val lat2 = Math.toRadians(toLatitude)
+    val deltaLongitude = Math.toRadians(toLongitude - fromLongitude)
+    val y = kotlin.math.sin(deltaLongitude) * kotlin.math.cos(lat2)
+    val x = kotlin.math.cos(lat1) * kotlin.math.sin(lat2) -
+        kotlin.math.sin(lat1) * kotlin.math.cos(lat2) * kotlin.math.cos(deltaLongitude)
+    return (Math.toDegrees(kotlin.math.atan2(y, x)) + 360.0) % 360.0
+}
 
 fun suggestedReturnKm(straightMeters: Double): Double {
     val km = straightMeters * RETURN_DETOUR_FACTOR / 1000.0
