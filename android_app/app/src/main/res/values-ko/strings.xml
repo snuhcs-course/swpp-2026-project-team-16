@@ -169,6 +169,7 @@
     <string name="run_pace_unavailable">--:--</string>
     <string name="run_pause">일시 정지</string>
     <string name="run_resume">계속 달리기</string>
+    <string name="run_auto_paused">자동 일시 정지됐어요. 시속 1km 이상으로 움직이면 기록을 다시 시작해요.</string>
     <string name="run_finish">종료</string>
     <string name="run_finish_title">러닝을 종료할까요?</string>
     <string name="run_finish_message">러닝 요약을 확인한 뒤 경로 화면으로 돌아갑니다.</string>

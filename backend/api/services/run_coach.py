@@ -220,15 +220,23 @@ GOAL_SYSTEM_PROMPT = (
     '- "summary": one sentence explaining the plan, under 120 characters\n'
     "Rules:\n"
     "- Tired legs, heavy legs, or a hard workout yesterday usually mean recovery.\n"
+    "- If a selected total distance is provided, use that exact total in distance_km; shorter distances in the request may describe intervals.\n"
     "- Do not invent a pace. Leave explicit_pace_s null unless the runner wrote one.\n"
     "- Write intensity and summary in {language}, with no markdown."
 )
 
 
-def build_goal_prompt(text, style, language):
+def build_goal_prompt(text, style, language, default_distance_m=None):
+    request_lines = [f"Today's request: {text}"]
+    if default_distance_m is not None:
+        request_lines = [
+            f"Selected total distance: {default_distance_m / 1000:g} km. Keep this as the total route distance.",
+            "Distances mentioned for sections or intervals are parts of this total, not a replacement for it.",
+            *request_lines,
+        ]
     return {
         "system": GOAL_SYSTEM_PROMPT.replace("{language}", _reply_language(language)),
-        "user": "\n".join(["Runner profile:", *_style_lines(style), "", f"Today's request: {text}"]),
+        "user": "\n".join(["Runner profile:", *_style_lines(style), "", *request_lines]),
     }
 
 
@@ -260,7 +268,7 @@ def _keyword_run_type(text):
 
 def fallback_plan(text, style, default_distance_m, language):
     run_type = _keyword_run_type(text)
-    distance_m = _distance_from_text(text) or default_distance_m or DEFAULT_DISTANCE_M
+    distance_m = default_distance_m or _distance_from_text(text) or DEFAULT_DISTANCE_M
     return build_plan(run_type, distance_m, style, language)
 
 
@@ -268,7 +276,7 @@ def plan_from_goal(text, style, default_distance_m=None, language=DEFAULT_LANGUA
     language = _language(language)
     llm = llm or (lambda prompt: generate_text(prompt, timeout=LLM_TIMEOUT_SECONDS, retries=0))
     try:
-        data = _json_object(llm(build_goal_prompt(text, style, language)))
+        data = _json_object(llm(build_goal_prompt(text, style, language, default_distance_m)))
         run_type = data.get("run_type")
         if run_type not in RUN_TYPES:
             raise ValueError("unknown run type")
@@ -278,7 +286,7 @@ def plan_from_goal(text, style, default_distance_m=None, language=DEFAULT_LANGUA
             distance_m = int(round(distance_km * 1000))
             if not MIN_DISTANCE_M <= distance_m <= MAX_DISTANCE_M:
                 distance_m = None
-        distance_m = distance_m or _distance_from_text(text) or default_distance_m or DEFAULT_DISTANCE_M
+        distance_m = default_distance_m or distance_m or _distance_from_text(text) or DEFAULT_DISTANCE_M
         explicit = _int_or_none(data.get("explicit_pace_s"))
         preferences = data.get("route_preferences") if isinstance(data.get("route_preferences"), list) else []
         intensity = data.get("intensity") if isinstance(data.get("intensity"), str) else ""

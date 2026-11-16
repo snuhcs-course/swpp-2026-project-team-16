@@ -110,6 +110,30 @@ class RouteProgressMatcherTest {
     }
 
     @Test
+    fun resumesGuidanceWhenRejoiningBehindTheLastMatchedPoint() {
+        val matcher = RouteProgressMatcher(
+            listOf(
+                RouteCoordinate(37.0, 127.0),
+                RouteCoordinate(37.0, 127.01),
+            ),
+        )
+
+        // Advance in steps within the matcher's normal 250 m look-ahead window.
+        matcher.update(37.0, 127.001, 0L)
+        matcher.update(37.0, 127.003, 500L)
+        val laterProgress = matcher.update(37.0, 127.005, 1_000L).distanceAlongMeters
+        matcher.update(37.002, 127.006, 2_000L)
+        val offRoute = matcher.update(37.002, 127.006, 6_500L)
+        assertTrue(offRoute.isOffRoute)
+
+        val rejoinedBehind = matcher.update(37.0, 127.0025, 7_000L)
+
+        assertFalse(rejoinedBehind.isOffRoute)
+        assertTrue(rejoinedBehind.distanceAlongMeters < laterProgress - 100.0)
+        assertTrue(rejoinedBehind.distanceFromRouteMeters <= RouteProgressMatcher.REJOIN_DISTANCE_METERS)
+    }
+
+    @Test
     fun findsTheNextTurnFromTheGeneratedCourseGeometry() {
         val guide = RouteTurnGuide(
             listOf(
