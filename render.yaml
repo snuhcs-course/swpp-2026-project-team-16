@@ -2,11 +2,11 @@ services:
   - type: web
     name: runtime-backend
     runtime: python
-    plan: free
+    plan: standard
     region: singapore
     branch: iteration-4-demo
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    buildCommand: ./build.sh
     startCommand: python manage.py migrate --noinput && gunicorn backend.wsgi --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
@@ -29,6 +29,10 @@ services:
         sync: false
       - key: FIREBASE_CREDENTIALS
         value: /etc/secrets/firebase.json
+      - key: STREET_GRAPH_URL
+        value: https://github.com/snuhcs-course/swpp-2026-project-team-16/releases/download/street-graph-v1/seoul_walk.pkl.gz
+      - key: STREET_GRAPH_SHA256
+        value: 5070adfa24d1a7fd6a059f249e94f275a1d3acad3dcc13eb597ae8689dd2a1e4
 
 databases:
   - name: runtime-db
