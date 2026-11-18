@@ -109,8 +109,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
                     stringResource(
                         when (routeViewModel.guidance) {
                             RunGuidance.FREE -> R.string.guidance_free_hint
-                            RunGuidance.DISTANCE -> R.string.guidance_distance_hint
-                            RunGuidance.DESTINATION -> R.string.guidance_destination_hint
+                            RunGuidance.ROUTE -> R.string.guidance_route_hint
                         }
                     ),
                     style = MaterialTheme.typography.labelMedium,
@@ -147,15 +146,13 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
                         }
                     }
                 )
-                if (routeViewModel.guidance == RunGuidance.DESTINATION) {
-                    Spacer(modifier = Modifier.height(Spacing.s))
-                    PlaceSearchField(
-                        field = routeViewModel.endField,
-                        label = stringResource(R.string.label_end_point),
-                        onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.endField, it) },
-                        onSelect = { routeViewModel.selectPlace(routeViewModel.endField, it) }
-                    )
-                }
+                Spacer(modifier = Modifier.height(Spacing.s))
+                PlaceSearchField(
+                    field = routeViewModel.endField,
+                    label = stringResource(R.string.label_end_point),
+                    onInputChange = { routeViewModel.onPlaceInputChange(routeViewModel.endField, it) },
+                    onSelect = { routeViewModel.selectPlace(routeViewModel.endField, it) }
+                )
                 Spacer(modifier = Modifier.height(Spacing.s))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -241,7 +238,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
         Box(modifier = Modifier.fillMaxSize()) {
             PlacePickerMap(
                 start = routeViewModel.startField.selected,
-                end = routeViewModel.endField.selected.takeIf { routeViewModel.guidance == RunGuidance.DESTINATION },
+                end = routeViewModel.endField.selected,
                 onPick = { point ->
                     val field = if (routeViewModel.pickTarget == PickTarget.START) routeViewModel.startField else routeViewModel.endField
                     routeViewModel.selectPoint(field, mapPointName, point.longitude, point.latitude)
@@ -254,7 +251,6 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
             )
             if (routeViewModel.guidance != RunGuidance.FREE) MapPickBar(
                 target = routeViewModel.pickTarget,
-                showEnd = routeViewModel.guidance == RunGuidance.DESTINATION,
                 onTargetChange = { routeViewModel.pickTarget = it },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -266,7 +262,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
 }
 
 @Composable
-private fun MapPickBar(target: PickTarget, showEnd: Boolean, onTargetChange: (PickTarget) -> Unit, modifier: Modifier = Modifier) {
+private fun MapPickBar(target: PickTarget, onTargetChange: (PickTarget) -> Unit, modifier: Modifier = Modifier) {
     GlassSurface(modifier = modifier, shape = MaterialTheme.shapes.extraLarge) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -286,15 +282,13 @@ private fun MapPickBar(target: PickTarget, showEnd: Boolean, onTargetChange: (Pi
                 label = { Text(stringResource(R.string.map_pick_start)) },
                 shape = MaterialTheme.shapes.extraLarge
             )
-            if (showEnd) {
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                FilterChip(
-                    selected = target == PickTarget.END,
-                    onClick = { onTargetChange(PickTarget.END) },
-                    label = { Text(stringResource(R.string.map_pick_end)) },
-                    shape = MaterialTheme.shapes.extraLarge
-                )
-            }
+            Spacer(modifier = Modifier.width(Spacing.xs))
+            FilterChip(
+                selected = target == PickTarget.END,
+                onClick = { onTargetChange(PickTarget.END) },
+                label = { Text(stringResource(R.string.map_pick_end)) },
+                shape = MaterialTheme.shapes.extraLarge
+            )
         }
     }
 }

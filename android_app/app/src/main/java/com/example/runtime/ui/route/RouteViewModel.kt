@@ -49,8 +49,7 @@ enum class PickTarget { START, END }
 
 enum class RunGuidance(@StringRes val label: Int) {
     FREE(R.string.guidance_free),
-    DISTANCE(R.string.guidance_distance),
-    DESTINATION(R.string.guidance_destination),
+    ROUTE(R.string.guidance_route),
 }
 
 enum class RoutePreference(val apiValue: String, @StringRes val label: Int) {
@@ -90,7 +89,7 @@ class RouteViewModel(
     val endField = PlaceField()
     var distanceInput by mutableStateOf("")
     var pickTarget by mutableStateOf(PickTarget.START)
-    var guidance by mutableStateOf(RunGuidance.DISTANCE)
+    var guidance by mutableStateOf(RunGuidance.ROUTE)
         private set
     var preferences by mutableStateOf<Set<RoutePreference>>(emptySet())
         private set
@@ -161,16 +160,11 @@ class RouteViewModel(
         sessionScope = newSessionScope()
         listOf(startField, endField).forEach { field ->
             field.searchJob = null
-            field.input = ""
-            field.selected = null
-            field.suggestions = emptyList()
-            field.isSearching = false
-            field.noResults = false
-            field.searchError = null
+            clearPlace(field)
         }
         distanceInput = ""
         pickTarget = PickTarget.START
-        guidance = RunGuidance.DISTANCE
+        guidance = RunGuidance.ROUTE
         preferences = emptySet()
         preferenceText = ""
         goalText = ""
@@ -233,7 +227,7 @@ class RouteViewModel(
     }
 
     fun applyPlan(plan: RunPlan) {
-        if (guidance == RunGuidance.FREE) guidance = RunGuidance.DISTANCE
+        if (guidance == RunGuidance.FREE) guidance = RunGuidance.ROUTE
         runPlan = plan
         distanceInput = formatKilometers(plan.distanceMeters)
         plan.routePreferences
@@ -298,6 +292,16 @@ class RouteViewModel(
         field.input = name
         if (pendingStart == place) pendingStart = localized
         if (pendingEnd == place) pendingEnd = localized
+    }
+
+    private fun clearPlace(field: PlaceField) {
+        field.searchJob?.cancel()
+        field.input = ""
+        field.selected = null
+        field.suggestions = emptyList()
+        field.isSearching = false
+        field.noResults = false
+        field.searchError = null
     }
 
     fun onPlaceInputChange(field: PlaceField, text: String) {
@@ -398,7 +402,8 @@ class RouteViewModel(
     }
 
     fun planNextFromDistance(distanceMeters: Int) {
-        guidance = RunGuidance.DISTANCE
+        guidance = RunGuidance.ROUTE
+        clearPlace(endField)
         distanceInput = String.format(Locale.US, "%.1f", (distanceMeters / 1000.0).coerceAtLeast(1.0)).removeSuffix(".0")
     }
 
@@ -409,11 +414,9 @@ class RouteViewModel(
             return false
         }
 
-        val end = if (guidance == RunGuidance.DESTINATION) endField.selected else null
-        if (guidance == RunGuidance.DESTINATION && end == null) {
-            error = UiText.Resource(
-                if (endField.input.isNotBlank()) R.string.error_end_point_not_selected else R.string.error_end_point_required
-            )
+        val end = endField.selected
+        if (end == null && endField.input.isNotBlank()) {
+            error = UiText.Resource(R.string.error_end_point_not_selected)
             return false
         }
 

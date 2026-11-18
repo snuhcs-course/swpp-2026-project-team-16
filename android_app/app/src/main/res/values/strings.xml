@@ -601,13 +601,10 @@
     <string name="nickname_hint">Must be different from everyone else\'s. If empty, your username is shown.</string>
     <string name="error_nickname_taken">That nickname is already taken.</string>
     <string name="guidance_free">Free run</string>
-    <string name="guidance_distance">Distance</string>
-    <string name="guidance_destination">Destination</string>
+    <string name="guidance_route">Route</string>
     <string name="guidance_free_hint">Start right here without a route. Your path is recorded as you run.</string>
-    <string name="guidance_distance_hint">Pick a start and a distance, and we\'ll make a loop for you.</string>
-    <string name="guidance_destination_hint">We\'ll make a route from your start to your destination.</string>
+    <string name="guidance_route_hint">Pick a start and a distance for a loop. Add a destination to end somewhere else.</string>
     <string name="action_start_free_run">Start running</string>
-    <string name="error_end_point_required">Choose a destination.</string>
     <string name="run_free_ready">Tap Start to record from where you are.</string>
     <string name="run_free_tracking">Free run in progress.</string>
     <string name="run_return_route">Make a route back to the start</string>

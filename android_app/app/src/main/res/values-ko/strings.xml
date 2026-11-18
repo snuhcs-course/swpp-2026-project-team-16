@@ -589,13 +589,10 @@
     <string name="nickname_hint">다른 사람과 겹치지 않는 이름이어야 해요. 비워 두면 아이디가 보여요.</string>
     <string name="error_nickname_taken">이미 사용 중인 닉네임이에요.</string>
     <string name="guidance_free">자유롭게</string>
-    <string name="guidance_distance">거리만</string>
-    <string name="guidance_destination">도착지까지</string>
+    <string name="guidance_route">코스 따라</string>
     <string name="guidance_free_hint">코스 없이 지금 위치에서 바로 달려요. 달린 길이 그대로 기록돼요.</string>
-    <string name="guidance_distance_hint">출발지와 거리만 정하면 돌아오는 코스를 만들어 드려요.</string>
-    <string name="guidance_destination_hint">출발지에서 도착지까지 가는 코스를 만들어 드려요.</string>
+    <string name="guidance_route_hint">출발지와 거리만 정하면 돌아오는 코스를, 도착지도 정하면 도착지까지 가는 코스를 만들어 드려요.</string>
     <string name="action_start_free_run">바로 달리기</string>
-    <string name="error_end_point_required">도착지를 선택해 주세요.</string>
     <string name="run_free_ready">시작을 누르면 지금 위치부터 기록해요.</string>
     <string name="run_free_tracking">자유롭게 달리는 중이에요.</string>
     <string name="run_return_route">출발점으로 돌아가는 코스 만들기</string>
