@@ -25,6 +25,8 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
       - key: TMAP_APP_KEY
         sync: false
       - key: FIREBASE_CREDENTIALS

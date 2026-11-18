@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
+from api.services import google_places
 from api.services.place_translation import translate_places
 from api.services.tmap import Place, PlaceSearchError, reverse_geocode, search_places
 
@@ -12,7 +13,20 @@ MAX_PLACE_NAME_LENGTH = 200
 
 
 def _place_data(place, original):
-    return {**place.to_dict(), "name_ko": original.name, "address_ko": original.address}
+    return {
+        **place.to_dict(),
+        "name_ko": original.name if original else None,
+        "address_ko": original.address if original else None,
+    }
+
+
+def _from_google(search, *args):
+    if not google_places.is_configured():
+        return None
+    try:
+        return search(*args)
+    except PlaceSearchError:
+        return None
 
 
 def _invalid_language(language):
@@ -52,6 +66,13 @@ def search_places_api(request):
     if error := _invalid_language(language):
         return error
 
+    english = _from_google(google_places.search_places_in_english, query) if language == "en" else None
+    if english is not None:
+        return Response(
+            {"status": "success", "data": [_place_data(place, korean) for place, korean in english]},
+            status=status.HTTP_200_OK,
+        )
+
     try:
         places = search_places(query)
     except PlaceSearchError:
@@ -82,6 +103,11 @@ def reverse_geocode_api(request):
 
     if error := _invalid_language(language):
         return error
+
+    english = _from_google(google_places.reverse_geocode_in_english, latitude, longitude) if language == "en" else None
+    if english is not None:
+        place, korean = english
+        return Response({"status": "success", "data": _place_data(place, korean)}, status=status.HTTP_200_OK)
 
     try:
         place = reverse_geocode(latitude, longitude)

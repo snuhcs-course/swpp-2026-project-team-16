@@ -73,9 +73,10 @@ class TranslatePlacesTests(SimpleTestCase):
 class SearchPlacesLanguageApiTests(APITestCase):
     URL = "/api/v1/places/search/"
 
+    @mock.patch("api.views.places.google_places.is_configured", return_value=False)
     @mock.patch("api.views.places.translate_places", side_effect=lambda places: places)
     @mock.patch("api.views.places.search_places", return_value=[GANGNAM])
-    def test_english_translates_results(self, search, translate):
+    def test_english_without_google_places_translates_results(self, search, translate, configured):
         response = self.client.get(self.URL, {"q": "Gangnam", "language": "en"})
         self.assertEqual(response.status_code, 200)
         translate.assert_called_once_with([GANGNAM])
