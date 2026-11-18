@@ -30,6 +30,7 @@ RunTime creates running routes along real pedestrian streets and helps runners n
 
 - `TMAP_APP_KEY`: TMAP POI search key
 - `GOOGLE_API_KEY`: Google AI Studio key for Gemini
+- `GOOGLE_PLACES_API_KEY` (optional): Google Cloud key with Places API (New) enabled, used for English place search and for naming the current location in English. Without it, English requests fall back to TMAP results translated by Gemini, which is much slower.
 - `GOOGLE_CLIENT_ID`: Google sign-in client ID for the backend
 - `NAVER_MAP_CLIENT_ID`: NAVER Cloud Maps client ID for the Android app package `com.example.runtime`
 - `FIREBASE_CREDENTIALS` (optional): path to a Firebase service account JSON file for push notifications

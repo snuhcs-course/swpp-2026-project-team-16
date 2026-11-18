@@ -522,9 +522,10 @@ Not required.
 `q` is the place keyword (for example `삼각지`). It is required and must be 50 characters or fewer.
 
 `language` is optional: `"ko"` (default) or `"en"`.
-With `"en"`, place names and addresses are translated into English by Gemini
-(for example `Samgakji (War Memorial of Korea) Station [Line 4]`).
-If translation fails, the Korean results are returned.
+
+* `"ko"`: results come from TMAP.
+* `"en"`: results come from Google Places Text Search in English (for example `Seoul National University`, `1 Gwanak-ro, Gwanak-gu, Seoul`). The same search runs in Korean at the same time, and `name_ko` / `address_ko` come from the Korean result with the same Google place ID. They are `null` when there is no match.
+* If `GOOGLE_PLACES_API_KEY` is not set or Google Places fails, `"en"` falls back to TMAP results translated by Gemini. This is much slower (several seconds).
 
 ### Response
 
@@ -554,8 +555,8 @@ Errors:
 
 ### Description
 
-Searches places by keyword using the TMAP POI search API.
-The TMAP key stays on the server (`TMAP_APP_KEY` in `.env`).
+Searches places by keyword using the TMAP POI search API (Korean) or Google Places Text Search (English, biased to 50 km around central Seoul).
+The keys stay on the server (`TMAP_APP_KEY` and `GOOGLE_PLACES_API_KEY` in `.env`).
 
 ---
 
