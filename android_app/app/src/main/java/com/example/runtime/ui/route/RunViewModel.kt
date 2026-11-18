@@ -1,5 +1,6 @@
 package com.example.runtime.ui.route
 
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,6 +15,8 @@ import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.run.RunMetrics
+import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -61,7 +64,69 @@ class RunViewModel(
     private val repository: CommunityRepository = CommunityRepository(),
     private val coachRepository: CoachRepository = CoachRepository(),
     private val routeRepository: RouteRepository = RouteRepository(),
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) : ViewModel() {
+
+    var routePoints by mutableStateOf<List<RouteCoordinate>>(emptyList())
+        private set
+    var routeProgress by mutableStateOf(RouteProgress(0.0, Double.POSITIVE_INFINITY, 0.0))
+        private set
+    var isOffRoute by mutableStateOf(false)
+        private set
+
+    private var progressMatcher = RouteProgressMatcher(emptyList())
+    private var lastLatitude: Double? = null
+    private var lastLongitude: Double? = null
+    private var offRouteCount = 0
+    private var offRouteMillis = 0L
+    private var offRouteSince: Long? = null
+
+    init {
+        viewModelScope.launch {
+            RunTrackingState.metrics.collect(::onMetrics)
+        }
+    }
+
+    val isRunActive: Boolean
+        get() = target != null && result == null && RunTrackingState.metrics.value.isTracking
+
+    private fun setRoute(lines: List<GeoJsonLineString>) {
+        routePoints = lines.flatMap { line ->
+            line.coordinates.mapNotNull { coordinate ->
+                if (coordinate.size >= 2) RouteCoordinate(coordinate[1], coordinate[0]) else null
+            }
+        }.distinctConsecutivePoints()
+        progressMatcher = RouteProgressMatcher(routePoints)
+        lastLatitude = null
+        lastLongitude = null
+    }
+
+    private fun onMetrics(metrics: RunMetrics) {
+        val latitude = metrics.latitude
+        val longitude = metrics.longitude
+        if (latitude != null && longitude != null && (latitude != lastLatitude || longitude != lastLongitude)) {
+            lastLatitude = latitude
+            lastLongitude = longitude
+            routeProgress = progressMatcher.update(latitude, longitude, clock())
+        }
+        val offRoute = metrics.isTracking && !metrics.isPaused && latitude != null && longitude != null &&
+            routeProgress.isOffRoute
+        if (offRoute == isOffRoute) return
+        val now = clock()
+        if (offRoute) {
+            offRouteCount += 1
+            offRouteSince = now
+        } else {
+            offRouteSince?.let { offRouteMillis += now - it }
+            offRouteSince = null
+        }
+        isOffRoute = offRoute
+    }
+
+    fun offRouteTotals(): Pair<Int, Long> {
+        val open = offRouteSince?.let { clock() - it } ?: 0L
+        return offRouteCount to (offRouteMillis + open) / 1000L
+    }
 
     var isMakingReturnRoute by mutableStateOf(false)
         private set
@@ -126,8 +191,15 @@ class RunViewModel(
         }
     }
 
-    fun start(target: RunTarget) {
+    fun start(target: RunTarget): Boolean {
+        if (isRunActive) return false
         this.target = target
+        setRoute(target.lines)
+        routeProgress = RouteProgress(0.0, Double.POSITIVE_INFINITY, progressMatcher.routeLengthMeters)
+        isOffRoute = false
+        offRouteCount = 0
+        offRouteMillis = 0L
+        offRouteSince = null
         recordState = RunRecordState.Idle
         shareState = ShareState.Idle
         reportState = ReportState.Idle
@@ -135,6 +207,7 @@ class RunViewModel(
         runRating = null
         saveRouteState = SaveRouteState.Idle
         savedRunId = null
+        return true
     }
 
     fun finish(result: RunResult, isLoggedIn: Boolean) {
@@ -182,6 +255,7 @@ class RunViewModel(
     fun useGuide(lines: List<GeoJsonLineString>, distanceMeters: Int) {
         val current = target ?: return
         target = current.copy(lines = lines, distanceMeters = distanceMeters)
+        setRoute(lines)
     }
 
     var saveRouteState by mutableStateOf<SaveRouteState>(SaveRouteState.Idle)

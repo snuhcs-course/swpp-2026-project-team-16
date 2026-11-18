@@ -66,6 +66,7 @@ object NotificationNavigation {
     }
 
     const val EXTRA_KIND = "kind"
+    const val KIND_RUN = "run"
     const val EXTRA_NOTIFICATION_ID = "notification_id"
     const val EXTRA_ACTOR = "actor"
     const val EXTRA_GROUP_ID = "group_id"

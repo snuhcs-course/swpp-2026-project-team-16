@@ -3,7 +3,6 @@ package com.example.runtime.ui.route
 import android.Manifest
 import android.content.Intent
 import android.os.Build
-import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +22,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,7 +55,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
-import com.example.runtime.data.remote.GeoJsonLineString
 import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.data.run.TrailPoint
@@ -74,9 +76,12 @@ import kotlin.math.roundToInt
 
 @Composable
 fun RunNavigationScreen(
-    lines: List<GeoJsonLineString>,
+    routePoints: List<RouteCoordinate>,
+    routeProgress: RouteProgress,
+    isOffRoute: Boolean,
+    offRouteTotals: () -> Pair<Int, Long>,
     routeDistanceMeters: Int,
-    onFinish: () -> Unit,
+    onClose: () -> Unit,
     onRunFinished: (RunResult) -> Unit = {},
     isFree: Boolean = false,
     isMakingReturnRoute: Boolean = false,
@@ -86,20 +91,8 @@ fun RunNavigationScreen(
     val metrics by RunTrackingState.metrics.collectAsState()
     val trail by RunTrackingState.trail.collectAsState()
     val splitTimes by RunTrackingState.splitTimes.collectAsState()
-    val routePoints = remember(lines) {
-        lines.flatMap { line ->
-            line.coordinates.mapNotNull { coordinate ->
-                if (coordinate.size >= 2) RouteCoordinate(coordinate[1], coordinate[0]) else null
-            }
-        }.distinctConsecutivePoints()
-    }
-    val progressMatcher = remember(routePoints) { RouteProgressMatcher(routePoints) }
     val turnGuide = remember(routePoints) { RouteTurnGuide(routePoints) }
-    var routeProgress by remember { mutableStateOf(RouteProgress(0.0, Double.POSITIVE_INFINITY, progressMatcher.routeLengthMeters)) }
     var showFinishConfirmation by remember { mutableStateOf(false) }
-    var offRouteCount by remember { mutableStateOf(0) }
-    var offRouteMillis by remember { mutableStateOf(0L) }
-    var offRouteSince by remember { mutableStateOf<Long?>(null) }
     var permissionError by remember { mutableStateOf(false) }
     var showReturnDialog by remember { mutableStateOf(false) }
     val hasRoute = routePoints.size >= 2
@@ -116,14 +109,6 @@ fun RunNavigationScreen(
             )
         } else {
             permissionError = true
-        }
-    }
-
-    LaunchedEffect(metrics.latitude, metrics.longitude) {
-        val latitude = metrics.latitude
-        val longitude = metrics.longitude
-        if (latitude != null && longitude != null) {
-            routeProgress = progressMatcher.update(latitude, longitude, SystemClock.elapsedRealtime())
         }
     }
 
@@ -158,23 +143,7 @@ fun RunNavigationScreen(
         null
     }
 
-    val isOffRoute = metrics.isTracking && !metrics.isPaused && currentLocation != null && routeProgress.isOffRoute
-
-    LaunchedEffect(isOffRoute) {
-        val now = SystemClock.elapsedRealtime()
-        if (isOffRoute) {
-            offRouteCount += 1
-            offRouteSince = now
-        } else {
-            offRouteSince?.let { offRouteMillis += now - it }
-            offRouteSince = null
-        }
-    }
-
-    BackHandler {
-        if (!metrics.isTracking) onFinish()
-        else showFinishConfirmation = true
-    }
+    BackHandler(onBack = onClose)
 
     Column(
         modifier = Modifier
@@ -182,16 +151,32 @@ fun RunNavigationScreen(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        RunningRouteMap(
-            points = routePoints,
-            trail = trail,
-            currentLocation = currentLocation,
-            headingDegrees = metrics.headingDegrees,
-            isOffRoute = isOffRoute,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-        )
+        ) {
+            RunningRouteMap(
+                points = routePoints,
+                trail = trail,
+                currentLocation = currentLocation,
+                headingDegrees = metrics.headingDegrees,
+                isOffRoute = isOffRoute,
+                modifier = Modifier.fillMaxSize(),
+            )
+            FilledIconButton(
+                onClick = onClose,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp),
+            ) {
+                Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.run_close))
+            }
+        }
 
         val totalRouteMeters = routeDistanceMeters.toDouble().coerceAtLeast(1.0)
         val completedMeters = (routeProgress.distanceAlongMeters /
@@ -403,14 +388,14 @@ fun RunNavigationScreen(
                 TextButton(
                     onClick = {
                         showFinishConfirmation = false
+                        val (offRouteCount, offRouteSeconds) = offRouteTotals()
                         sendServiceAction(RunTrackingService.ACTION_STOP)
-                        val openOffRoute = offRouteSince?.let { SystemClock.elapsedRealtime() - it } ?: 0L
                         val result = RunResult(
                             distanceMeters = metrics.distanceMeters.roundToInt(),
                             elapsedSeconds = metrics.elapsedSeconds,
                             splitTimes = splitTimes,
                             offRouteCount = offRouteCount,
-                            offRouteSeconds = (offRouteMillis + openOffRoute) / 1000L,
+                            offRouteSeconds = offRouteSeconds,
                             finishedAtMillis = System.currentTimeMillis(),
                             path = if (isFree) trail.map { listOf(it.longitude, it.latitude) } else emptyList(),
                         )
@@ -527,7 +512,7 @@ private fun RoundedCornerMask(radius: Dp, color: Color, modifier: Modifier = Mod
     }
 }
 
-private fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordinate> =
+internal fun List<RouteCoordinate>.distinctConsecutivePoints(): List<RouteCoordinate> =
     fold(mutableListOf()) { result, point ->
         val previous = result.lastOrNull()
         if (previous == null || distanceBetweenMeters(

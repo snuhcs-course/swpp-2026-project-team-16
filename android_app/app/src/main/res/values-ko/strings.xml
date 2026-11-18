@@ -173,6 +173,11 @@
     <string name="run_finish_title">러닝을 종료할까요?</string>
     <string name="run_finish_message">러닝 요약을 확인한 뒤 경로 화면으로 돌아갑니다.</string>
     <string name="run_continue">계속 달리기</string>
+    <string name="run_close">닫기</string>
+    <string name="run_in_progress">이미 진행 중인 러닝이 있어요.</string>
+    <string name="run_ongoing">러닝 중: %1$s, %2$s</string>
+    <string name="run_ongoing_paused">일시 정지: %1$s, %2$s</string>
+    <string name="run_ongoing_open">돌아가기</string>
     <string name="run_summary_title">러닝 요약</string>
     <string name="run_summary_distance">거리: %1$s</string>
     <string name="run_summary_time">시간: %1$s</string>

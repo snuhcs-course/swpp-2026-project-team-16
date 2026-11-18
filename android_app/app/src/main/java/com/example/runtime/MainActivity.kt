@@ -88,6 +88,8 @@ import com.example.runtime.ui.mypage.RunningStyleViewModel
 import com.example.runtime.ui.route.RouteResultScreen
 import com.example.runtime.ui.route.RouteViewModel
 import com.example.runtime.ui.route.RunTarget
+import com.example.runtime.ui.route.RunOngoingBar
+import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.ui.route.RunViewModel
 import com.example.runtime.ui.splash.SplashScreen
 import com.example.runtime.ui.theme.RunTimeTheme
@@ -220,6 +222,15 @@ fun RunTimeApp() {
     val appLanguage = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language
     val returnRouteError = runViewModel.returnRouteError?.asString()
     LaunchedEffect(returnRouteError) { returnRouteError?.let(appMessages::show) }
+    val runMetrics by RunTrackingState.metrics.collectAsState()
+    val isRunActive = runMetrics.isTracking && runViewModel.target != null && runViewModel.result == null
+    val runInProgressMessage = stringResource(R.string.run_in_progress)
+
+    fun openRun(target: RunTarget, returnTo: String) {
+        if (runViewModel.start(target)) runReturnScreen = returnTo
+        else appMessages.show(runInProgressMessage)
+        currentScreen = "run_navigation"
+    }
 
     fun openAuth(screen: String, returnTo: String, save: Boolean) {
         loginReturnScreen = returnTo
@@ -244,7 +255,13 @@ fun RunTimeApp() {
 
     LaunchedEffect(pendingNotification, currentScreen, authViewModel.isLoggedIn) {
         val target = pendingNotification ?: return@LaunchedEffect
-        if (currentScreen in setOf("splash", "login", "signup") || !authViewModel.isLoggedIn) return@LaunchedEffect
+        if (currentScreen == "splash") return@LaunchedEffect
+        if (target.kind == NotificationNavigation.KIND_RUN) {
+            NotificationNavigation.consume()
+            if (isRunActive) currentScreen = "run_navigation"
+            return@LaunchedEffect
+        }
+        if (currentScreen in setOf("login", "signup") || !authViewModel.isLoggedIn) return@LaunchedEffect
         NotificationNavigation.consume()
         target.notificationId?.let { notificationsViewModel.markRead(it) }
         val from = currentScreen
@@ -309,37 +326,45 @@ fun RunTimeApp() {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
-            if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation", "group_chat", "group_create", "post_detail", "post_editor")) {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                    NavigationBarItem(
-                        selected = currentScreen == "calendar",
-                        onClick = { currentScreen = "calendar" },
-                        icon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
-                        label = { Text(stringResource(R.string.nav_calendar)) }
+            Column {
+                if (isRunActive && currentScreen != "run_navigation" && currentScreen != "splash") {
+                    RunOngoingBar(
+                        metrics = runMetrics,
+                        onClick = { currentScreen = "run_navigation" }
                     )
-                    NavigationBarItem(
-                        selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor", "user_profile", "group_invites"),
-                        onClick = { currentScreen = "community" },
-                        icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
-                        label = { Text(stringResource(R.string.nav_community)) }
-                    )
-                    RunTabItem(
-                        selected = currentScreen == "route_input" || currentScreen == "route_result",
-                        onClick = { currentScreen = "route_input" }
-                    )
-                    NavigationBarItem(
-                        selected = currentScreen == "challenge",
-                        onClick = { currentScreen = "challenge" },
-                        icon = { Icon(painterResource(R.drawable.ic_trophy), contentDescription = null) },
-                        label = { Text(stringResource(R.string.nav_challenge)) }
-                    )
-                    NavigationBarItem(
-                        selected = currentScreen in setOf("MyPage", "saved_detail", "running_style"),
-                        onClick = { currentScreen = "MyPage" },
-                        icon = { Icon(painterResource(R.drawable.ic_account_circle), contentDescription = null) },
-                        label = { Text(stringResource(R.string.nav_my_page)) }
-                    )
+                }
+                // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
+                if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation", "group_chat", "group_create", "post_detail", "post_editor")) {
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                        NavigationBarItem(
+                            selected = currentScreen == "calendar",
+                            onClick = { currentScreen = "calendar" },
+                            icon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
+                            label = { Text(stringResource(R.string.nav_calendar)) }
+                        )
+                        NavigationBarItem(
+                            selected = currentScreen in setOf("community", "community_detail", "group_detail", "group_chat", "group_create", "post_detail", "post_editor", "user_profile", "group_invites"),
+                            onClick = { currentScreen = "community" },
+                            icon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
+                            label = { Text(stringResource(R.string.nav_community)) }
+                        )
+                        RunTabItem(
+                            selected = currentScreen == "route_input" || currentScreen == "route_result",
+                            onClick = { currentScreen = if (isRunActive) "run_navigation" else "route_input" }
+                        )
+                        NavigationBarItem(
+                            selected = currentScreen == "challenge",
+                            onClick = { currentScreen = "challenge" },
+                            icon = { Icon(painterResource(R.drawable.ic_trophy), contentDescription = null) },
+                            label = { Text(stringResource(R.string.nav_challenge)) }
+                        )
+                        NavigationBarItem(
+                            selected = currentScreen in setOf("MyPage", "saved_detail", "running_style"),
+                            onClick = { currentScreen = "MyPage" },
+                            icon = { Icon(painterResource(R.drawable.ic_account_circle), contentDescription = null) },
+                            label = { Text(stringResource(R.string.nav_my_page)) }
+                        )
+                    }
                 }
             }
         }
@@ -384,9 +409,7 @@ fun RunTimeApp() {
                                     "route_input" -> RouteInputScreen(
                                         routeViewModel = routeViewModel,
                                         onStartFree = {
-                                            runViewModel.start(RunTarget(lines = emptyList(), distanceMeters = 0, isFree = true))
-                                            runReturnScreen = "route_input"
-                                            currentScreen = "run_navigation"
+                                            openRun(RunTarget(lines = emptyList(), distanceMeters = 0, isFree = true), returnTo = "route_input")
                                         },
                                         onGenerate = {
                                             if (!authViewModel.isLoggedIn && authViewModel.isGuestTrialUsed) {
@@ -408,7 +431,7 @@ fun RunTimeApp() {
                                         routeViewModel = routeViewModel,
                                         onStartRun = {
                                             routeViewModel.generated?.let { generated ->
-                                                runViewModel.start(
+                                                openRun(
                                                     RunTarget(
                                                         lines = generated.route.route,
                                                         distanceMeters = generated.route.distance,
@@ -416,10 +439,9 @@ fun RunTimeApp() {
                                                         temporaryRouteId = generated.temporaryRouteId,
                                                         startName = routeViewModel.pendingStart?.name.orEmpty(),
                                                         plan = routeViewModel.runPlan
-                                                    )
+                                                    ),
+                                                    returnTo = "route_result"
                                                 )
-                                                runReturnScreen = "route_result"
-                                                currentScreen = "run_navigation"
                                             }
                                         },
                                         onSave = {
@@ -443,9 +465,12 @@ fun RunTimeApp() {
                                         val result = runViewModel.result
                                         if (result == null) {
                                             RunNavigationScreen(
-                                                lines = target.lines,
+                                                routePoints = runViewModel.routePoints,
+                                                routeProgress = runViewModel.routeProgress,
+                                                isOffRoute = runViewModel.isOffRoute,
+                                                offRouteTotals = runViewModel::offRouteTotals,
                                                 routeDistanceMeters = target.distanceMeters,
-                                                onFinish = { currentScreen = runReturnScreen },
+                                                onClose = { currentScreen = runReturnScreen },
                                                 onRunFinished = { runResult ->
                                                     runViewModel.finish(runResult, authViewModel.isLoggedIn)
                                                 },
@@ -563,17 +588,16 @@ fun RunTimeApp() {
                                             isLoggedIn = authViewModel.isLoggedIn,
                                             onBack = { currentScreen = groupReturnScreen },
                                             onRun = { group ->
-                                                runViewModel.start(
+                                                openRun(
                                                     RunTarget(
                                                         lines = group.route,
                                                         distanceMeters = group.routeDistance,
                                                         routeId = group.routeId,
                                                         startName = group.startName,
                                                         groupId = group.id
-                                                    )
+                                                    ),
+                                                    returnTo = "group_detail"
                                                 )
-                                                runReturnScreen = "group_detail"
-                                                currentScreen = "run_navigation"
                                             },
                                             onOpenChat = { currentScreen = "group_chat" },
                                             onLogInToJoin = { loginPrompt = LOGIN_PROMPT_GROUP_DETAIL },
@@ -605,15 +629,14 @@ fun RunTimeApp() {
                                             sharedRouteId = sharedRouteId,
                                             onBack = { currentScreen = sharedDetailReturnScreen },
                                             onRun = { shared ->
-                                                runViewModel.start(
+                                                openRun(
                                                     RunTarget(
                                                         lines = shared.route,
                                                         distanceMeters = shared.distance,
                                                         routeId = shared.routeId
-                                                    )
+                                                    ),
+                                                    returnTo = "community_detail"
                                                 )
-                                                runReturnScreen = "community_detail"
-                                                currentScreen = "run_navigation"
                                             },
                                             onSave = {
                                                 if (authViewModel.isLoggedIn) communityViewModel.save()
@@ -649,16 +672,15 @@ fun RunTimeApp() {
                                             currentScreen = "community_detail"
                                         },
                                         onRunAgain = { run ->
-                                            runViewModel.start(
+                                            openRun(
                                                 RunTarget(
                                                     lines = run.route,
                                                     distanceMeters = run.routeDistance,
                                                     routeId = run.routeId,
                                                     startName = run.startName
-                                                )
+                                                ),
+                                                returnTo = "MyPage"
                                             )
-                                            runReturnScreen = "MyPage"
-                                            currentScreen = "run_navigation"
                                         },
                                         onCreateRoute = { currentScreen = "route_input" },
                                         onOpenRunningStyle = { currentScreen = "running_style" },
@@ -783,16 +805,15 @@ fun RunTimeApp() {
                                             onBack = { currentScreen = "MyPage" },
                                             onCreateGroup = { choice -> openCreateGroup(choice, returnTo = "saved_detail") },
                                             onRun = { route ->
-                                                runViewModel.start(
+                                                openRun(
                                                     RunTarget(
                                                         lines = route.route,
                                                         distanceMeters = route.distance,
                                                         routeId = route.id,
                                                         startName = route.startName
-                                                    )
+                                                    ),
+                                                    returnTo = "saved_detail"
                                                 )
-                                                runReturnScreen = "saved_detail"
-                                                currentScreen = "run_navigation"
                                             }
                                         )
                                     }
