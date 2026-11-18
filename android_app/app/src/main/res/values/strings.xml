@@ -652,7 +652,6 @@
     <string name="challenge_best_1k">Fastest 1 km</string>
     <string name="challenge_best_5k">Fastest 5 km</string>
     <string name="challenge_best_week">Biggest week</string>
-    <string name="challenge_best_none">None yet</string>
     <string name="challenge_badge_earned_on">Earned on %1$s</string>
     <string name="challenge_badge_progress">Progress %1$s / %2$s</string>
     <string name="challenge_my_badges">My badges</string>
