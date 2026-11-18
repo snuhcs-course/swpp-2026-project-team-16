@@ -16,7 +16,6 @@ fun LoginScreen(
     authViewModel: AuthViewModel,
     onLoginSuccess: () -> Unit,
     onSignUpClick: () -> Unit,
-    onGoogleSignUpRequired: (String) -> Unit,
     onNotNow: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -44,8 +43,7 @@ fun LoginScreen(
         GoogleSignInButton(
             authViewModel = authViewModel,
             enabled = !uiState.isLoading,
-            onSuccess = onLoginSuccess,
-            onSignUpRequired = onGoogleSignUpRequired
+            onSuccess = onLoginSuccess
         )
         Spacer(modifier = Modifier.height(Spacing.s))
         TextButton(

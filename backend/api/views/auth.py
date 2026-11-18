@@ -1,7 +1,10 @@
+import re
+
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import IntegrityError, transaction
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -20,6 +23,47 @@ from google.oauth2 import id_token
 User = get_user_model()
 
 MIN_PASSWORD_LENGTH = 8
+MAX_USERNAME_LENGTH = 150
+DEFAULT_GOOGLE_USERNAME = "runner"
+USERNAME_INVALID_CHARS = re.compile(r"[^\w.@+-]")
+GOOGLE_SIGN_UP_ATTEMPTS = 3
+
+
+def _username_taken(name):
+    return (
+        User.objects.filter(username__iexact=name).exists()
+        or Profile.objects.filter(display_name__iexact=name).exists()
+    )
+
+
+def _unique_name(base, max_length, taken):
+    base = base[:max_length]
+    candidate = base
+    number = 2
+    while taken(candidate):
+        suffix = str(number)
+        candidate = base[:max_length - len(suffix)] + suffix
+        number += 1
+    return candidate
+
+
+def _create_google_user(email, name):
+    local_part = USERNAME_INVALID_CHARS.sub("", email.split("@")[0])
+    username = _unique_name(local_part or DEFAULT_GOOGLE_USERNAME, MAX_USERNAME_LENGTH, _username_taken)
+    with transaction.atomic():
+        user = User(username=username, email=email)
+        user.set_unusable_password()
+        user.save()
+        display_name = name.strip()[:MAX_DISPLAY_NAME_LENGTH] if isinstance(name, str) else ""
+        if display_name:
+            profile = get_profile(user)
+            profile.display_name = _unique_name(
+                display_name,
+                MAX_DISPLAY_NAME_LENGTH,
+                lambda candidate: nickname_taken(candidate, user),
+            )
+            profile.save(update_fields=["display_name"])
+    return user
 
 
 @api_view(["POST"])
@@ -200,23 +244,36 @@ def google_login(request):
         )
 
     user = matches.first()
+    created = False
+
+    for _ in range(GOOGLE_SIGN_UP_ATTEMPTS):
+        if user is not None:
+            break
+        try:
+            user = _create_google_user(email, google_user.get("name"))
+            created = True
+        except IntegrityError:
+            user = User.objects.filter(email__iexact=email).first()
 
     if user is None:
         return Response(
-            {"status": "error", "message": "No account found. Register first."},
-            status=status.HTTP_404_NOT_FOUND,
+            {"status": "error", "message": "Could not create an account. Please try again."},
+            status=status.HTTP_409_CONFLICT,
         )
 
     token, _ = Token.objects.get_or_create(user=user)
 
-    return Response({
-        "status": "success",
-        "data": {
-            "username": user.username,
-            "email": user.email,
-            "token": token.key,
+    return Response(
+        {
+            "status": "success",
+            "data": {
+                "username": user.username,
+                "email": user.email,
+                "token": token.key,
+            },
         },
-    })
+        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+    )
 
 
 

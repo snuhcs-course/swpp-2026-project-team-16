@@ -16,7 +16,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 
 sealed interface GoogleCredentialResult {
-    data class Success(val idToken: String, val email: String) : GoogleCredentialResult
+    data class Success(val idToken: String) : GoogleCredentialResult
     data object Cancelled : GoogleCredentialResult
     data class Failure(val message: UiText) : GoogleCredentialResult
 }
@@ -37,7 +37,7 @@ suspend fun requestGoogleCredential(context: Context): GoogleCredentialResult {
             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
         ) {
             val google = GoogleIdTokenCredential.createFrom(credential.data)
-            GoogleCredentialResult.Success(google.idToken, google.id)
+            GoogleCredentialResult.Success(google.idToken)
         } else {
             GoogleCredentialResult.Failure(UiText.Resource(R.string.error_google_sign_in_failed))
         }

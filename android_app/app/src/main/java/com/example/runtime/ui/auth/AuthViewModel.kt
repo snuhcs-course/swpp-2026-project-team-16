@@ -15,7 +15,6 @@ import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -73,14 +72,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         authenticate(onSuccess) { repository.register(username.trim(), email.trim(), password, displayName.trim()) }
     }
 
-    fun googleLogin(idToken: String, email: String, onSuccess: () -> Unit, onSignUpRequired: (String) -> Unit) {
-        authenticate(
-            onSuccess = onSuccess,
-            onNotFound = {
-                uiState = AuthUiState(error = UiText.Resource(R.string.google_account_not_registered))
-                onSignUpRequired(email)
-            },
-        ) { repository.googleLogin(idToken) }
+    fun googleLogin(idToken: String, onSuccess: () -> Unit) {
+        authenticate(onSuccess) { repository.googleLogin(idToken) }
     }
 
     fun showError(message: UiText) {
@@ -120,7 +113,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun authenticate(
         onSuccess: () -> Unit,
-        onNotFound: (() -> Unit)? = null,
         request: suspend () -> Unit,
     ) {
         if (uiState.isLoading) return
@@ -134,17 +126,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (onNotFound != null && e is HttpException && e.code() == HTTP_NOT_FOUND) {
-                    onNotFound()
-                } else {
-                    uiState = AuthUiState(error = e.toUiText())
-                }
+                uiState = AuthUiState(error = e.toUiText())
             }
         }
     }
 
     companion object {
         private const val MIN_PASSWORD_LENGTH = 8
-        private const val HTTP_NOT_FOUND = 404
     }
 }
