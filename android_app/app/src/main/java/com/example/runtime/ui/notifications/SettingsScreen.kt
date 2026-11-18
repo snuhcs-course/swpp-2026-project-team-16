@@ -23,9 +23,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -102,7 +105,7 @@ fun SettingsScreen(
             Text(stringResource(R.string.settings_display), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(Spacing.s))
             ThemeSetting()
-            Spacer(Modifier.height(Spacing.m))
+            Spacer(Modifier.height(Spacing.s))
             LanguageSetting()
 
             Spacer(Modifier.height(Spacing.l))
@@ -286,6 +289,7 @@ private fun LanguageSetting() {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun <T> ChoiceSetting(
     title: String,
@@ -294,16 +298,34 @@ private fun <T> ChoiceSetting(
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
 ) {
-    Text(title, style = MaterialTheme.typography.bodyLarge)
-    Spacer(Modifier.height(Spacing.xs))
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        options.forEachIndexed { index, option ->
-            SegmentedButton(
-                selected = option == selected,
-                onClick = { onSelect(option) },
-                shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                label = { Text(label(option), maxLines = 1) },
-            )
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = label(selected),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(title) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(label(option)) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
         }
     }
 }
