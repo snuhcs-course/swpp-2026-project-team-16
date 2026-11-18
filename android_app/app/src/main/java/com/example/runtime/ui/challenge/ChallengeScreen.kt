@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.runtime.ui.notifications.NotificationBell
 import com.example.runtime.R
 import com.example.runtime.data.remote.Badge
 import com.example.runtime.data.remote.ChallengeSummary
@@ -66,7 +67,13 @@ import com.example.runtime.ui.theme.Spacing
 import java.util.Locale
 
 @Composable
-fun ChallengeScreen(viewModel: ChallengeViewModel, isLoggedIn: Boolean, onLogIn: () -> Unit) {
+fun ChallengeScreen(
+    viewModel: ChallengeViewModel,
+    isLoggedIn: Boolean,
+    onLogIn: () -> Unit,
+    unreadNotificationCount: Int = 0,
+    onOpenNotifications: (() -> Unit)? = null,
+) {
     var showGoalDialog by remember { mutableStateOf(false) }
     var openBadge by remember { mutableStateOf<Badge?>(null) }
 
@@ -81,11 +88,19 @@ fun ChallengeScreen(viewModel: ChallengeViewModel, isLoggedIn: Boolean, onLogIn:
             .padding(horizontal = Spacing.m),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        Text(
-            stringResource(R.string.challenge_title),
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = Spacing.s, top = Spacing.m),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.s, top = Spacing.m),
+        ) {
+            Text(
+                stringResource(R.string.challenge_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f),
+            )
+            if (onOpenNotifications != null) {
+                NotificationBell(unreadCount = unreadNotificationCount, onClick = onOpenNotifications)
+            }
+        }
         if (!isLoggedIn) {
             EmptyState(
                 icon = R.drawable.ic_trophy,

@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import com.example.runtime.ui.notifications.NotificationBell
 import com.example.runtime.ui.common.LOCATION_PERMISSIONS
 import com.example.runtime.ui.common.currentLocation
 import com.example.runtime.ui.common.hasLocationPermission
@@ -74,6 +75,8 @@ fun CalendarScreen(
     isLoggedIn: Boolean,
     onLogIn: () -> Unit,
     onGroupClick: (Int) -> Unit,
+    unreadNotificationCount: Int = 0,
+    onOpenNotifications: (() -> Unit)? = null,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
@@ -107,11 +110,19 @@ fun CalendarScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.m),
     ) {
-        Text(
-            stringResource(R.string.calendar_title),
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = Spacing.s, top = Spacing.m, bottom = Spacing.s),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.s, top = Spacing.m, bottom = Spacing.s),
+        ) {
+            Text(
+                stringResource(R.string.calendar_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f),
+            )
+            if (onOpenNotifications != null) {
+                NotificationBell(unreadCount = unreadNotificationCount, onClick = onOpenNotifications)
+            }
+        }
         WeatherCards(state = viewModel.weather, onRetry = { refreshWeather(force = true) })
         Spacer(Modifier.height(Spacing.m))
 
