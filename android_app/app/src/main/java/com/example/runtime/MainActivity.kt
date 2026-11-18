@@ -170,7 +170,6 @@ fun RunTimeApp() {
     var selectedPostId by rememberSaveable { mutableStateOf<Int?>(null) }
     var editingPostId by rememberSaveable { mutableStateOf<Int?>(null) }
     val groupCreatedMessage = stringResource(R.string.group_created_message)
-    var signUpEmail by rememberSaveable { mutableStateOf("") }
     var loginReturnScreen by rememberSaveable { mutableStateOf("route_input") }
     var saveAfterLogin by rememberSaveable { mutableStateOf(false) }
     var loginPrompt by rememberSaveable { mutableStateOf<String?>(null) }
@@ -225,7 +224,6 @@ fun RunTimeApp() {
     fun openAuth(screen: String, returnTo: String, save: Boolean) {
         loginReturnScreen = returnTo
         saveAfterLogin = save
-        signUpEmail = ""
         authViewModel.clearError()
         currentScreen = screen
     }
@@ -372,14 +370,7 @@ fun RunTimeApp() {
                                     "login" -> LoginScreen(
                                         authViewModel = authViewModel,
                                         onLoginSuccess = ::onAuthenticated,
-                                        onSignUpClick = {
-                                            signUpEmail = ""
-                                            currentScreen = "signup"
-                                        },
-                                        onGoogleSignUpRequired = { email ->
-                                            signUpEmail = email
-                                            currentScreen = "signup"
-                                        },
+                                        onSignUpClick = { currentScreen = "signup" },
                                         onNotNow = {
                                             saveAfterLogin = false
                                             currentScreen = loginReturnScreen
@@ -387,7 +378,6 @@ fun RunTimeApp() {
                                     )
                                     "signup" -> SignUpScreen(
                                         authViewModel = authViewModel,
-                                        initialEmail = signUpEmail,
                                         onSignUpSuccess = ::onAuthenticated,
                                         onLogInClick = { currentScreen = "login" }
                                     )

@@ -14,13 +14,12 @@ import com.example.runtime.ui.theme.Spacing
 @Composable
 fun SignUpScreen(
     authViewModel: AuthViewModel,
-    initialEmail: String,
     onSignUpSuccess: () -> Unit,
     onLogInClick: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var nickname by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable(initialEmail) { mutableStateOf(initialEmail) }
+    var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
     val uiState = authViewModel.uiState
@@ -71,8 +70,7 @@ fun SignUpScreen(
         GoogleSignInButton(
             authViewModel = authViewModel,
             enabled = !uiState.isLoading,
-            onSuccess = onSignUpSuccess,
-            onSignUpRequired = { email = it }
+            onSuccess = onSignUpSuccess
         )
         Spacer(modifier = Modifier.height(Spacing.s))
         TextButton(onClick = ::goToLogIn, enabled = !uiState.isLoading) {

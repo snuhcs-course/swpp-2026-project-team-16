@@ -163,7 +163,6 @@ fun GoogleSignInButton(
     authViewModel: AuthViewModel,
     enabled: Boolean,
     onSuccess: () -> Unit,
-    onSignUpRequired: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -176,7 +175,7 @@ fun GoogleSignInButton(
             scope.launch {
                 when (val result = requestGoogleCredential(context)) {
                     is GoogleCredentialResult.Success ->
-                        authViewModel.googleLogin(result.idToken, result.email, onSuccess, onSignUpRequired)
+                        authViewModel.googleLogin(result.idToken, onSuccess)
                     is GoogleCredentialResult.Failure -> authViewModel.showError(result.message)
                     GoogleCredentialResult.Cancelled -> Unit
                 }

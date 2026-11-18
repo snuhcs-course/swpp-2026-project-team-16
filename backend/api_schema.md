@@ -255,7 +255,7 @@ The ID token comes from Google sign-in on the app. Its audience must be the back
 
 ### Response
 
-`200 OK`
+`200 OK` for an existing account, `201 Created` for a new account
 
 ```json
 {
@@ -272,21 +272,22 @@ The ID token comes from Google sign-in on the app. Its audience must be the back
 
 * `400 Bad Request`: `Google credential is required`
 * `401 Unauthorized`: `Invalid Google credential.` or `A verified Google email is required`
-* `404 Not Found`: `No account found. Register first.`
-* `409 Conflict`: `Multiple accounts use this email`
+* `409 Conflict`: `Multiple accounts use this email` or `Could not create an account. Please try again.`
 * `503 Service Unavailable`: `Google authentication is temporarily unavailable.`
 
 ### Description
 
-Logs in an existing user with Google.
+Logs in with Google, or signs up if no account uses the Google email.
 
 The endpoint:
 
 * verifies the Google ID token
 * finds the user whose email matches the Google email (case-insensitive)
+* if there is none, creates an account without a password:
+  * the username is the part of the email before `@`, with characters other than letters, digits and `.@+-_` removed (`runner` if nothing is left)
+  * the nickname is the Google profile name, cut to 30 characters
+  * if the username or nickname is already taken (case-insensitive), a number is added, starting from 2
 * returns an existing token or creates a new one
-
-It does not create accounts. The app sends the user to sign-up when it gets `404`.
 
 ---
 
