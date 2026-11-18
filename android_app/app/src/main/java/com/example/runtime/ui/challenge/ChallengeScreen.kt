@@ -288,7 +288,7 @@ private fun PersonalBests(bests: Map<String, PersonalBest?>) {
                         Column(modifier = Modifier.padding(Spacing.m)) {
                             Text(stringResource(label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                best?.let { bestValueText(key, it.value) } ?: stringResource(R.string.challenge_best_none),
+                                bestValueText(key, best?.value ?: 0),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )

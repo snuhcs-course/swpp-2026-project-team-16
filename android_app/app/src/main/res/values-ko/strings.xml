@@ -640,7 +640,6 @@
     <string name="challenge_best_1k">가장 빠른 1km</string>
     <string name="challenge_best_5k">가장 빠른 5km</string>
     <string name="challenge_best_week">한 주 최다 거리</string>
-    <string name="challenge_best_none">아직 없음</string>
     <string name="challenge_badge_earned_on">%1$s에 받았어요</string>
     <string name="challenge_badge_progress">진행 %1$s / %2$s</string>
     <string name="challenge_my_badges">모은 배지</string>
