@@ -530,6 +530,7 @@
     <string name="notifications_empty">알림이 없어요</string>
     <string name="notifications_empty_message">팔로우, 그룹 초대, 좋아요, 댓글 소식이 여기에 모여요.</string>
     <string name="settings_title">설정</string>
+    <string name="settings_display">화면 및 언어</string>
     <string name="settings_notifications">푸시 알림</string>
     <string name="settings_notifications_hint">꺼 둔 알림도 알림 목록에는 계속 쌓여요.</string>
     <string name="settings_phone_off">휴대폰에서 이 앱의 알림이 꺼져 있어요. 켜야 푸시 알림을 받을 수 있어요.</string>

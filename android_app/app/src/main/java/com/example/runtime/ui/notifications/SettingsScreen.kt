@@ -23,15 +23,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,20 +50,28 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.example.runtime.R
 import com.example.runtime.data.push.Push
 import com.example.runtime.ui.auth.PasswordField
+import com.example.runtime.ui.common.AppLanguage
 import com.example.runtime.ui.common.asString
+import com.example.runtime.ui.common.currentAppLanguage
+import com.example.runtime.ui.common.setAppLanguage
 import com.example.runtime.ui.theme.Spacing
+import com.example.runtime.ui.theme.ThemeMode
+import com.example.runtime.ui.theme.ThemeStorage
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
     viewModel: NotificationsViewModel,
     hasPassword: Boolean,
     onBack: () -> Unit,
+    onLogout: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var phoneAllowed by remember { mutableStateOf(Push.canPost(context)) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.loadSettings() }
     DisposableEffect(lifecycleOwner) {
@@ -86,6 +99,13 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.m),
         ) {
+            Text(stringResource(R.string.settings_display), style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(Spacing.s))
+            ThemeSetting()
+            Spacer(Modifier.height(Spacing.m))
+            LanguageSetting()
+
+            Spacer(Modifier.height(Spacing.l))
             Text(stringResource(R.string.settings_notifications), style = MaterialTheme.typography.titleLarge)
             Text(
                 stringResource(R.string.settings_notifications_hint),
@@ -152,6 +172,11 @@ fun SettingsScreen(
             Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(Spacing.s))
             OutlinedButton(
+                onClick = { showLogoutDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.action_log_out)) }
+            Spacer(Modifier.height(Spacing.s))
+            OutlinedButton(
                 onClick = {
                     viewModel.clearDeleteError()
                     showDeleteDialog = true
@@ -161,6 +186,23 @@ fun SettingsScreen(
             ) { Text(stringResource(R.string.settings_delete_account)) }
             Spacer(Modifier.height(Spacing.l))
         }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text(stringResource(R.string.log_out_dialog_title)) },
+            text = { Text(stringResource(R.string.log_out_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    onLogout()
+                }) { Text(stringResource(R.string.action_log_out)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
     }
 
     if (showDeleteDialog) {
@@ -213,5 +255,55 @@ private fun ToggleRow(title: String, description: String?, checked: Boolean, onC
             }
         }
         Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun ThemeSetting() {
+    val context = LocalContext.current
+    val storage = remember(context) { ThemeStorage(context.applicationContext) }
+    val current by storage.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+    val scope = rememberCoroutineScope()
+    ChoiceSetting(
+        title = stringResource(R.string.theme),
+        options = ThemeMode.entries,
+        selected = current,
+        label = { stringResource(it.label) },
+        onSelect = { mode -> scope.launch { storage.setThemeMode(mode) } },
+    )
+}
+
+@Composable
+private fun LanguageSetting() {
+    val context = LocalContext.current
+    val current = context.currentAppLanguage()
+    ChoiceSetting(
+        title = stringResource(R.string.language),
+        options = AppLanguage.entries,
+        selected = current,
+        label = { stringResource(it.label) },
+        onSelect = { language -> if (language != current) context.setAppLanguage(language) },
+    )
+}
+
+@Composable
+private fun <T> ChoiceSetting(
+    title: String,
+    options: List<T>,
+    selected: T,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+) {
+    Text(title, style = MaterialTheme.typography.bodyLarge)
+    Spacer(Modifier.height(Spacing.xs))
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                label = { Text(label(option), maxLines = 1) },
+            )
+        }
     }
 }

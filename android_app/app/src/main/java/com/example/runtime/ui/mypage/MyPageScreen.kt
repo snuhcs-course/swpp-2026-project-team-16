@@ -20,7 +20,6 @@ import com.example.runtime.ui.common.AccentButton
 import com.example.runtime.ui.profile.FollowListType
 import com.example.runtime.ui.common.EmptyState
 import com.example.runtime.ui.common.StatItem
-import com.example.runtime.ui.common.PreferenceButtons
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.asString
 import com.example.runtime.ui.common.formatDistance
@@ -50,12 +49,8 @@ fun MyPageScreen(
     onOpenRunningStyle: () -> Unit,
     onOpenMyFollows: (String, FollowListType) -> Unit,
     onOpenInvites: () -> Unit,
-    onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
-    onLogout: () -> Unit,
 ) {
-    var showAccountMenu by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
     var revealedRouteId by remember { mutableStateOf<Int?>(null) }
     val messages = LocalAppMessages.current
     val haptic = LocalHapticFeedback.current
@@ -75,44 +70,8 @@ fun MyPageScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f).padding(start = Spacing.s)
             )
-            PreferenceButtons()
-            IconButton(onClick = onOpenNotifications) {
-                BadgedBox(
-                    badge = {
-                        if (myPageViewModel.unreadNotificationCount > 0) {
-                            Badge { Text(myPageViewModel.unreadNotificationCount.coerceAtMost(99).toString()) }
-                        }
-                    }
-                ) {
-                    Icon(painterResource(R.drawable.ic_notifications), contentDescription = stringResource(R.string.notifications_title))
-                }
-            }
             IconButton(onClick = onOpenSettings) {
                 Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.settings_title))
-            }
-            Box {
-                IconButton(onClick = { showAccountMenu = true }) {
-                    Icon(
-                        painterResource(R.drawable.ic_account_circle),
-                        contentDescription = stringResource(R.string.menu)
-                    )
-                }
-                DropdownMenu(expanded = showAccountMenu, onDismissRequest = { showAccountMenu = false }) {
-                    Column(modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s)) {
-                        Text(myPageViewModel.username ?: "", style = MaterialTheme.typography.titleSmall)
-                        myPageViewModel.email?.let {
-                            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_log_out), color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showAccountMenu = false
-                            showLogoutDialog = true
-                        }
-                    )
-                }
             }
         }
         ProfileSection(
@@ -273,27 +232,6 @@ fun MyPageScreen(
                 }
             }
         }
-    }
-
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text(stringResource(R.string.log_out_dialog_title)) },
-            text = { Text(stringResource(R.string.log_out_dialog_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutDialog = false
-                    onLogout()
-                }) {
-                    Text(stringResource(R.string.action_log_out))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
-        )
     }
 }
 

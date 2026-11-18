@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import com.example.runtime.ui.notifications.NotificationBell
 import com.example.runtime.ui.common.currentLocation
 import com.example.runtime.ui.common.hasLocationPermission
 import androidx.compose.ui.res.pluralStringResource
@@ -50,15 +51,25 @@ fun CommunityScreen(
     onWritePost: () -> Unit,
     onLogInRequired: () -> Unit,
     onOpenInvites: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
+    onOpenNotifications: (() -> Unit)? = null,
 ) {
     val selectedTab = communityViewModel.selectedTab
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            stringResource(R.string.nav_community),
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = Spacing.l, top = Spacing.m, bottom = Spacing.s)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.l, end = Spacing.s, top = Spacing.m, bottom = Spacing.s)
+        ) {
+            Text(
+                stringResource(R.string.nav_community),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f)
+            )
+            if (onOpenNotifications != null) {
+                NotificationBell(unreadCount = unreadNotificationCount, onClick = onOpenNotifications)
+            }
+        }
         PrimaryTabRow(selectedTabIndex = selectedTab, containerColor = MaterialTheme.colorScheme.background) {
             Tab(
                 selected = selectedTab == TAB_ROUTES,

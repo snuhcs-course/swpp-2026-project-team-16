@@ -232,6 +232,20 @@ fun RunTimeApp() {
         currentScreen = "run_navigation"
     }
 
+    fun openNotificationsFrom(screen: String): (() -> Unit)? =
+        if (authViewModel.isLoggedIn) {
+            {
+                notificationsReturnScreen = screen
+                currentScreen = "notifications"
+            }
+        } else null
+
+    LaunchedEffect(currentScreen, authViewModel.isLoggedIn) {
+        if (authViewModel.isLoggedIn && currentScreen in setOf("calendar", "community", "challenge")) {
+            notificationsViewModel.load()
+        }
+    }
+
     fun openAuth(screen: String, returnTo: String, save: Boolean) {
         loginReturnScreen = returnTo
         saveAfterLogin = save
@@ -526,6 +540,8 @@ fun RunTimeApp() {
                                         currentScreen = "route_input"
                                     }
                                     "community" -> CommunityScreen(
+                                        unreadNotificationCount = notificationsViewModel.unreadCount,
+                                        onOpenNotifications = openNotificationsFrom("community"),
                                         communityViewModel = communityViewModel,
                                         groupsViewModel = groupsViewModel,
                                         boardViewModel = boardViewModel,
@@ -692,22 +708,9 @@ fun RunTimeApp() {
                                             invitesReturnScreen = "MyPage"
                                             currentScreen = "group_invites"
                                         },
-                                        onOpenNotifications = {
-                                            notificationsReturnScreen = "MyPage"
-                                            currentScreen = "notifications"
-                                        },
                                         onOpenSettings = {
                                             settingsReturnScreen = "MyPage"
                                             currentScreen = "settings"
-                                        },
-                                        onLogout = {
-                                            appScope.launch {
-                                                Push.unregister(context)
-                                                authViewModel.logout {
-                                                    clearUserState()
-                                                    currentScreen = "route_input"
-                                                }
-                                            }
                                         }
                                     )
                                     "user_profile" -> profileStack.lastOrNull()?.let { username ->
@@ -751,7 +754,9 @@ fun RunTimeApp() {
                                     "challenge" -> ChallengeScreen(
                                         viewModel = challengeViewModel,
                                         isLoggedIn = authViewModel.isLoggedIn,
-                                        onLogIn = { openAuth("login", returnTo = "challenge", save = false) }
+                                        onLogIn = { openAuth("login", returnTo = "challenge", save = false) },
+                                        unreadNotificationCount = notificationsViewModel.unreadCount,
+                                        onOpenNotifications = openNotificationsFrom("challenge")
                                     )
                                     "calendar" -> CalendarScreen(
                                         viewModel = calendarViewModel,
@@ -761,7 +766,9 @@ fun RunTimeApp() {
                                             selectedGroupId = groupId
                                             groupReturnScreen = "calendar"
                                             currentScreen = "group_detail"
-                                        }
+                                        },
+                                        unreadNotificationCount = notificationsViewModel.unreadCount,
+                                        onOpenNotifications = openNotificationsFrom("calendar")
                                     )
                                     "notifications" -> NotificationsScreen(
                                         viewModel = notificationsViewModel,
@@ -786,6 +793,15 @@ fun RunTimeApp() {
                                         viewModel = notificationsViewModel,
                                         hasPassword = myPageViewModel.hasPassword,
                                         onBack = { currentScreen = settingsReturnScreen },
+                                        onLogout = {
+                                            appScope.launch {
+                                                Push.unregister(context)
+                                                authViewModel.logout {
+                                                    clearUserState()
+                                                    currentScreen = "route_input"
+                                                }
+                                            }
+                                        },
                                         onAccountDeleted = {
                                             authViewModel.logout {
                                                 clearUserState()

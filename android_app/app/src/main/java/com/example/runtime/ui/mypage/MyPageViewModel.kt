@@ -56,9 +56,6 @@ class MyPageViewModel(
     var inviteCount by mutableStateOf(0)
         private set
 
-    var unreadNotificationCount by mutableStateOf(0)
-        private set
-
     var hasPassword by mutableStateOf(true)
         private set
 
@@ -114,7 +111,6 @@ class MyPageViewModel(
         followerCount = 0
         followingCount = 0
         inviteCount = 0
-        unreadNotificationCount = 0
         hasPassword = true
         avatar = null
         avatarUrl = null
@@ -163,7 +159,6 @@ class MyPageViewModel(
         followerCount = profile.followerCount
         followingCount = profile.followingCount
         inviteCount = profile.inviteCount
-        unreadNotificationCount = profile.unreadNotificationCount
         hasPassword = profile.hasPassword
         if (profile.avatarUrl == avatarUrl) return
         avatarUrl = profile.avatarUrl
