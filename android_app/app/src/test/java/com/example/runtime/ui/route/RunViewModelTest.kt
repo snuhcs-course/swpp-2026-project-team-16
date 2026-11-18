@@ -23,8 +23,13 @@ import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.testing.FakeApiService
 import com.example.runtime.testing.MainDispatcherRule
 import com.example.runtime.ui.common.UiText
+import com.example.runtime.data.run.RunMetrics
+import com.example.runtime.data.run.RunTrackingState
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.IOException
@@ -35,7 +40,100 @@ class RunViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = RunApi()
-    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api)) }
+    private var now = 0L
+    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api), clock = { now }) }
+    private val straightRoute = listOf(GeoJsonLineString(listOf(listOf(126.95, 37.46), listOf(126.96, 37.46))))
+
+    @After
+    fun resetTracking() {
+        RunTrackingState.update(RunMetrics())
+    }
+
+    private fun runAt(latitude: Double, longitude: Double, timeMs: Long, isPaused: Boolean = false) {
+        now = timeMs
+        RunTrackingState.update(RunMetrics(isTracking = true, isPaused = isPaused, latitude = latitude, longitude = longitude))
+    }
+
+    @Test
+    fun routeProgress_keepsUpdatingWithoutTheRunScreen() {
+        viewModel.start(RunTarget(straightRoute, 880))
+
+        runAt(37.46, 126.951, 0)
+        runAt(37.46, 126.953, 1_000)
+
+        assertTrue(viewModel.routeProgress.distanceAlongMeters > 200.0)
+        assertFalse(viewModel.isOffRoute)
+    }
+
+    @Test
+    fun offRoute_isCountedAndTimedWhileTheRunIsActive() {
+        viewModel.start(RunTarget(straightRoute, 880))
+        runAt(37.46, 126.951, 0)
+
+        runAt(37.461, 126.951, 1_000)
+        runAt(37.4611, 126.951, 6_000)
+        assertTrue(viewModel.isOffRoute)
+        runAt(37.46, 126.952, 9_000)
+
+        assertFalse(viewModel.isOffRoute)
+        assertEquals(1 to 3L, viewModel.offRouteTotals())
+    }
+
+    @Test
+    fun offRouteTotals_includeAnOpenOffRouteStretch() {
+        viewModel.start(RunTarget(straightRoute, 880))
+        runAt(37.46, 126.951, 0)
+        runAt(37.461, 126.951, 1_000)
+        runAt(37.4611, 126.951, 6_000)
+
+        now = 8_500
+
+        assertEquals(1 to 2L, viewModel.offRouteTotals())
+    }
+
+    @Test
+    fun offRoute_isNotCountedWhilePaused() {
+        viewModel.start(RunTarget(straightRoute, 880))
+        runAt(37.46, 126.951, 0)
+        runAt(37.461, 126.951, 1_000, isPaused = true)
+        runAt(37.4611, 126.951, 6_000, isPaused = true)
+
+        assertFalse(viewModel.isOffRoute)
+        assertEquals(0 to 0L, viewModel.offRouteTotals())
+    }
+
+    @Test
+    fun start_keepsTheActiveRun() {
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 1))
+        runAt(37.46, 126.951, 0)
+
+        assertFalse(viewModel.start(RunTarget(emptyList(), 3000, routeId = 2)))
+        assertEquals(1, viewModel.target?.routeId)
+        assertTrue(viewModel.isRunActive)
+    }
+
+    @Test
+    fun start_replacesATargetThatWasNotStarted() {
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 1))
+
+        assertTrue(viewModel.start(RunTarget(emptyList(), 3000, routeId = 2)))
+        assertEquals(2, viewModel.target?.routeId)
+    }
+
+    @Test
+    fun start_resetsOffRouteTotals() {
+        viewModel.start(RunTarget(straightRoute, 880))
+        runAt(37.46, 126.951, 0)
+        runAt(37.461, 126.951, 1_000)
+        runAt(37.4611, 126.951, 6_000)
+        viewModel.finish(RunResult(500, 300), isLoggedIn = false)
+        RunTrackingState.update(RunMetrics())
+
+        assertTrue(viewModel.start(RunTarget(straightRoute, 880)))
+
+        assertEquals(0 to 0L, viewModel.offRouteTotals())
+        assertFalse(viewModel.isOffRoute)
+    }
 
     @Test
     fun recordRun_usesTheTemporaryRouteUntilItIsSaved() {
