@@ -66,6 +66,41 @@ class RunViewModelTest {
     }
 
     @Test
+    fun voiceCues_playWithoutTheRunScreen() {
+        val spoken = mutableListOf<Pair<Int, Int?>>()
+        viewModel.speakCue = { messageId, distance -> spoken += messageId to distance }
+        viewModel.start(RunTarget(straightRoute, 880, uphillSections = listOf(RouteUphillSection(400, 500))))
+
+        listOf(126.951, 126.951, 126.9525, 126.9545, 126.9565, 126.9585, 126.95995).forEachIndexed { index, longitude ->
+            runAt(37.46, longitude, index * 1_000L)
+        }
+
+        assertEquals(
+            listOf(
+                R.string.run_voice_started to null,
+                R.string.run_voice_uphill_approaching to 180,
+                R.string.run_voice_arrived to null,
+            ),
+            spoken,
+        )
+    }
+
+    @Test
+    fun voiceCues_stopAfterTheRunEnds() {
+        val spoken = mutableListOf<Int>()
+        viewModel.speakCue = { messageId, _ -> spoken += messageId }
+        viewModel.start(RunTarget(straightRoute, 880))
+        runAt(37.46, 126.951, 0)
+        viewModel.finish(RunResult(distanceMeters = 100, elapsedSeconds = 60), isLoggedIn = false)
+
+        listOf(126.9525, 126.9545, 126.9565, 126.9585, 126.95995).forEachIndexed { index, longitude ->
+            runAt(37.46, longitude, (index + 1) * 1_000L)
+        }
+
+        assertEquals(listOf(R.string.run_voice_started), spoken)
+    }
+
+    @Test
     fun offRoute_isCountedAndTimedWhileTheRunIsActive() {
         viewModel.start(RunTarget(straightRoute, 880))
         runAt(37.46, 126.951, 0)
