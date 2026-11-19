@@ -28,6 +28,8 @@ class RunReportTest {
             splits.map { it.status },
         )
         assertEquals(listOf(0, 0, 9, 17, 4), splits.map { it.diffSeconds })
+        assertEquals(listOf(375, 375, 375, 375, 375), splits.map { it.targetMinSeconds })
+        assertEquals(listOf(405, 405, 405, 405, 405), splits.map { it.targetMaxSeconds })
     }
 
     @Test

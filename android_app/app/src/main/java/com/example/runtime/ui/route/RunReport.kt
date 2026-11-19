@@ -29,6 +29,8 @@ data class SplitPace(
     val paceSeconds: Int,
     val status: SplitStatus?,
     val diffSeconds: Int,
+    val targetMinSeconds: Int? = null,
+    val targetMaxSeconds: Int? = null,
 )
 
 enum class RunType(val apiValue: String, @StringRes val label: Int) {
@@ -71,7 +73,7 @@ fun RunResult.splitPaces(plan: RunPlan?): List<SplitPace> {
             targetMax != null && pace > targetMax -> SplitStatus.SLOW to pace - targetMax
             else -> SplitStatus.IN_RANGE to 0
         }
-        SplitPace(km, meters, pace, status, diff)
+        SplitPace(km, meters, pace, status, diff, targetMin, targetMax)
     }
 }
 

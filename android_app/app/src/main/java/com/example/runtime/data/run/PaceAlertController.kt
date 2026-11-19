@@ -25,7 +25,7 @@ internal class PaceAlertController(
 ) {
     private var settings: PaceAlertSettings? = null
     private var activeSegmentKey: Int? = null
-    private var alertedForSegment = false
+    private val alertedForSegment = mutableSetOf<PaceAlert>()
     private var slowSinceMs: Long? = null
     private var fastSinceMs: Long? = null
 
@@ -54,12 +54,10 @@ internal class PaceAlertController(
         val segmentKey = if (customIndex >= 0) customIndex else -((distance / METERS_PER_KILOMETER).toInt() + 1)
         if (segmentKey != activeSegmentKey) {
             activeSegmentKey = segmentKey
-            alertedForSegment = false
+            alertedForSegment.clear()
             slowSinceMs = null
             fastSinceMs = null
         }
-        if (alertedForSegment) return null
-
         if (isPaused || !speedMetersPerSecond.isFinite() || speedMetersPerSecond < MIN_ALERT_SPEED_MPS) {
             slowSinceMs = null
             fastSinceMs = null
@@ -71,22 +69,25 @@ internal class PaceAlertController(
         val paceMax = target?.paceMaxSeconds ?: plan.paceMaxSeconds
         val paceSecondsPerKm = (METERS_PER_KILOMETER / speedMetersPerSecond).roundToInt()
 
-        val tooSlow = plan.alertOnSlow && paceSecondsPerKm >= paceMax + ALERT_DEVIATION_SECONDS
+        val movingForSlowAlert = speedMetersPerSecond * METERS_PER_SECOND_TO_KMH >= MIN_SLOW_ALERT_SPEED_KMH
+        val tooSlow = plan.alertOnSlow && movingForSlowAlert && paceSecondsPerKm >= paceMax + ALERT_DEVIATION_SECONDS
         val tooFast = plan.alertOnFast && paceSecondsPerKm <= paceMin - ALERT_DEVIATION_SECONDS
-        if (!tooSlow) slowSinceMs = null
-        if (!tooFast) fastSinceMs = null
+        val slowPending = tooSlow && PaceAlert.TOO_SLOW !in alertedForSegment
+        val fastPending = tooFast && PaceAlert.TOO_FAST !in alertedForSegment
+        if (!slowPending) slowSinceMs = null
+        if (!fastPending) fastSinceMs = null
 
-        if (tooSlow) {
+        if (slowPending) {
             val since = slowSinceMs ?: nowMs.also { slowSinceMs = it }
             if (nowMs - since >= confirmDurationMs) {
-                alertedForSegment = true
+                alertedForSegment += PaceAlert.TOO_SLOW
                 return PaceAlert.TOO_SLOW
             }
         }
-        if (tooFast) {
+        if (fastPending) {
             val since = fastSinceMs ?: nowMs.also { fastSinceMs = it }
             if (nowMs - since >= confirmDurationMs) {
-                alertedForSegment = true
+                alertedForSegment += PaceAlert.TOO_FAST
                 return PaceAlert.TOO_FAST
             }
         }
@@ -95,7 +96,7 @@ internal class PaceAlertController(
 
     private fun resetSegment() {
         activeSegmentKey = null
-        alertedForSegment = false
+        alertedForSegment.clear()
         slowSinceMs = null
         fastSinceMs = null
     }
@@ -103,6 +104,8 @@ internal class PaceAlertController(
     private companion object {
         const val METERS_PER_KILOMETER = 1000.0
         const val MIN_ALERT_SPEED_MPS = 0.5
+        const val MIN_SLOW_ALERT_SPEED_KMH = 3.0
+        private const val METERS_PER_SECOND_TO_KMH = 3.6
         const val ALERT_DEVIATION_SECONDS = 30
         const val DEFAULT_CONFIRM_DURATION_MS = 10_000L
     }

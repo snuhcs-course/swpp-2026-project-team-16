@@ -11,7 +11,7 @@ RUN_TYPES = ("recovery", "easy", "long", "tempo", "interval")
 PURPOSES = ("fitness", "race", "weight")
 ROUTE_PREFERENCES = ("flat", "hills", "few_signals")
 DEFAULT_PACE_S = 390
-MIN_PACE_S = 180
+MIN_PACE_S = 120
 MAX_PACE_S = 900
 MIN_DISTANCE_M = 1000
 MAX_DISTANCE_M = 42000
@@ -313,7 +313,9 @@ GOAL_SYSTEM_PROMPT = (
     '- "intensity": a short description of the effort, under 30 characters\n'
     '- "summary": one sentence explaining the plan, under 120 characters\n'
     "Rules:\n"
-    "- Tired legs, heavy legs, or a hard workout yesterday usually mean recovery.\n"
+    "- Treat run_type as internal metadata. Only choose a specific type when the runner explicitly asks for it; otherwise use easy as a neutral placeholder.\n"
+    "- Do not label the run as easy, recovery, tempo, or another type in intensity or summary unless the runner used that label.\n"
+    "- Do not infer that a run is easy based only on distance or pace.\n"
     "- If a selected total distance is provided, use that exact total in distance_km; shorter distances in the request may describe intervals.\n"
     "- Convert clear section requests into non-overlapping pace_segments within the selected total distance.\n"
     "- Do not create a segment for a pace the runner did not specify. For a named pace, use the exact seconds per km.\n"
@@ -484,7 +486,6 @@ def _plan_lines(plan, language):
     if plan is None:
         return ["- no plan was set"]
     lines = [
-        f"- run type: {RUN_TYPE_NAMES[language][plan['run_type']]}",
         f"- distance: {plan['distance_m'] / 1000:g} km",
         f"- target pace: {format_pace(plan['pace_min_s'])}-{format_pace(plan['pace_max_s'])} /km",
     ]

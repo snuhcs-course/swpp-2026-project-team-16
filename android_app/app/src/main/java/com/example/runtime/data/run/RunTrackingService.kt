@@ -50,6 +50,7 @@ data class RunMetrics(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val headingDegrees: Double? = null,
+    val accuracyMeters: Double? = null,
     val locationError: Boolean = false,
 )
 
@@ -425,6 +426,8 @@ class RunTrackingService : Service() {
                 latitude = location?.latitude ?: fusion.latitude ?: RunTrackingState.metrics.value.latitude,
                 longitude = location?.longitude ?: fusion.longitude ?: RunTrackingState.metrics.value.longitude,
                 headingDegrees = headingDegrees,
+                accuracyMeters = (location?.takeIf { it.hasAccuracy() } ?: latestLocation?.takeIf { it.hasAccuracy() })
+                    ?.accuracy?.toDouble(),
                 locationError = locationError,
             ),
         )
@@ -465,7 +468,7 @@ class RunTrackingService : Service() {
         val alertOnFast = intent.getBooleanExtra(EXTRA_PACE_ALERT_ON_FAST, false)
         val paceMin = intent.getIntExtra(EXTRA_PACE_MIN_SECONDS, -1)
         val paceMax = intent.getIntExtra(EXTRA_PACE_MAX_SECONDS, -1)
-        if ((!alertOnSlow && !alertOnFast) || paceMin !in 180..900 || paceMax !in paceMin..900) {
+        if ((!alertOnSlow && !alertOnFast) || paceMin !in 120..900 || paceMax !in paceMin..900) {
             paceAlertController.configure(null)
             return
         }
@@ -480,7 +483,7 @@ class RunTrackingService : Service() {
             val end = ends[index]
             val min = mins[index]
             val max = maxes[index]
-            if (start < 0 || end <= start || min !in 180..900 || max !in min..900) null
+            if (start < 0 || end <= start || min !in 120..900 || max !in min..900) null
             else PaceAlertSegment(start, end, min, max)
         }
         paceAlertController.configure(

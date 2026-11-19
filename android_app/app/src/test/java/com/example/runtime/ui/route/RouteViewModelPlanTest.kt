@@ -3,6 +3,7 @@ package com.example.runtime.ui.route
 import com.example.runtime.data.remote.ApiResponse
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunPlanRequest
+import com.example.runtime.data.run.PaceAlertSettings
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
@@ -75,6 +76,27 @@ class RouteViewModelPlanTest {
         viewModel.reset()
         assertNull(viewModel.runPlan)
         assertEquals("", viewModel.goalText)
+    }
+
+    @Test
+    fun freeRunCanUseTheSelectedPaceAlertSettingsWithoutCreatingARoutePlan() {
+        viewModel.onPaceMakerEnabledChange(true)
+        viewModel.updatePaceRange(330f..410f)
+        viewModel.onAlertOnSlowChange(true)
+
+        assertEquals(
+            PaceAlertSettings(330, 410, alertOnSlow = true, alertOnFast = false),
+            viewModel.paceAlertSettingsForFreeRun(),
+        )
+        assertNull(viewModel.runPlan)
+    }
+
+    @Test
+    fun paceRangeSnapsToTenSecondStepsAcrossTheTwoToTenMinuteRange() {
+        viewModel.updatePaceRange(123f..596f)
+
+        assertEquals(120, viewModel.paceMinSeconds)
+        assertEquals(600, viewModel.paceMaxSeconds)
     }
 
     @Test

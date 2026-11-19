@@ -3,13 +3,17 @@ package com.example.runtime.ui.route
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -89,11 +93,13 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
             ) {
                 Text(stringResource(R.string.route_input_title), style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                Text(
-                    stringResource(R.string.route_input_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (routeViewModel.guidance != RunGuidance.FREE) {
+                    Text(
+                        stringResource(R.string.route_input_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Spacer(modifier = Modifier.height(Spacing.m))
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     RunGuidance.entries.forEachIndexed { index, option ->
@@ -118,6 +124,8 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
                 )
                 Spacer(modifier = Modifier.height(Spacing.m))
                 if (routeViewModel.guidance == RunGuidance.FREE) {
+                    PaceMakerSection(routeViewModel, showPlanBuilder = false)
+                    Spacer(modifier = Modifier.height(Spacing.m))
                     AccentButton(
                         text = stringResource(R.string.action_start_free_run),
                         icon = R.drawable.ic_directions_run,
@@ -177,7 +185,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
                     )
                 }
                 Spacer(modifier = Modifier.height(Spacing.m))
-                PaceMakerSection(routeViewModel)
+                PaceMakerSection(routeViewModel, showPlanBuilder = true)
                 Spacer(modifier = Modifier.height(Spacing.m))
                 Text(stringResource(R.string.label_preferences), style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -296,7 +304,7 @@ private fun MapPickBar(target: PickTarget, onTargetChange: (PickTarget) -> Unit,
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
-private fun PaceMakerSection(routeViewModel: RouteViewModel) {
+private fun PaceMakerSection(routeViewModel: RouteViewModel, showPlanBuilder: Boolean) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
@@ -327,8 +335,23 @@ private fun PaceMakerSection(routeViewModel: RouteViewModel) {
         RangeSlider(
             value = routeViewModel.paceMinSeconds.toFloat()..routeViewModel.paceMaxSeconds.toFloat(),
             onValueChange = routeViewModel::updatePaceRange,
-            valueRange = 180f..900f,
-            steps = 143,
+            valueRange = 120f..600f,
+            steps = 47,
+            colors = SliderDefaults.colors(
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+            ),
+            startThumb = { PaceRangeThumb() },
+            endThumb = { PaceRangeThumb() },
+            track = { state ->
+                SliderDefaults.Track(
+                    rangeSliderState = state,
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                )
+            },
         )
         Text(
             stringResource(R.string.pace_maker_range_hint),
@@ -357,6 +380,7 @@ private fun PaceMakerSection(routeViewModel: RouteViewModel) {
                 Text(stringResource(R.string.pace_maker_alert_none), style = MaterialTheme.typography.bodyMedium)
             }
         }
+        if (!showPlanBuilder) return@Column
         Spacer(modifier = Modifier.height(Spacing.s))
         var goalFocused by remember { mutableStateOf(false) }
         OutlinedTextField(
@@ -418,4 +442,15 @@ private fun PaceMakerSection(routeViewModel: RouteViewModel) {
             )
         }
     }
+}
+
+@Composable
+private fun PaceRangeThumb() {
+    Box(
+        Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+    )
 }
