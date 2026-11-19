@@ -1,8 +1,11 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import auth, board, challenges, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social, weather
+from api.views import auth, board, challenges, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social, telemetry, weather
 
 urlpatterns = [
+    path("admin/", admin.site.urls),
+    # Staff-only aggregate usage dashboard.
+    path("telemetry/dashboard/", telemetry.telemetry_dashboard, name="telemetry_dashboard"),
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
     path("api/v1/auth/login/", auth.login_user, name="login_user"),
     path("api/v1/auth/google/", auth.google_login, name="google_login"),
@@ -67,4 +70,5 @@ urlpatterns = [
     path("api/v1/places/search/", places.search_places_api, name="search_places"),
     path("api/v1/places/reverse/", places.reverse_geocode_api, name="reverse_geocode"),
     path("api/v1/places/translate/", places.translate_place_api, name="translate_place"),
+    path("api/v1/telemetry/events/", telemetry.collect_telemetry, name="collect_telemetry"),
 ]

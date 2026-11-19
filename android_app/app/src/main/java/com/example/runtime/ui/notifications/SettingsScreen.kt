@@ -52,6 +52,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.runtime.R
 import com.example.runtime.data.push.Push
+import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.auth.PasswordField
 import com.example.runtime.ui.common.AppLanguage
 import com.example.runtime.ui.common.asString
@@ -73,6 +74,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var phoneAllowed by remember { mutableStateOf(Push.canPost(context)) }
+    var telemetryEnabled by remember { mutableStateOf(Telemetry.isEnabled(context)) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -170,6 +172,23 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            Spacer(Modifier.height(Spacing.l))
+            Text(stringResource(R.string.settings_telemetry), style = MaterialTheme.typography.titleLarge)
+            Text(
+                stringResource(R.string.settings_telemetry_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ToggleRow(
+                title = stringResource(R.string.settings_telemetry_consent),
+                description = stringResource(R.string.settings_telemetry_consent_hint),
+                checked = telemetryEnabled,
+                onChange = { enabled ->
+                    telemetryEnabled = enabled
+                    Telemetry.setEnabled(context, enabled)
+                },
+            )
 
             Spacer(Modifier.height(Spacing.l))
             Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleLarge)

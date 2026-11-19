@@ -16,6 +16,11 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Url
 
+interface TelemetryApiService {
+    @POST("api/v1/telemetry/events/")
+    suspend fun sendTelemetry(@Body body: TelemetryBatchRequest): TelemetryAccepted
+}
+
 interface ApiService {
 
     @POST("api/v1/auth/register/")

@@ -68,6 +68,7 @@ import com.example.runtime.ui.profile.UserProfileScreen
 import com.example.runtime.data.push.NotificationNavigation
 import com.example.runtime.data.push.NotificationTarget
 import com.example.runtime.data.push.Push
+import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.group.GroupInvitesScreen
 import com.example.runtime.ui.calendar.CalendarScreen
 import com.example.runtime.ui.calendar.CalendarViewModel
@@ -175,9 +176,16 @@ fun RunTimeApp() {
     var loginReturnScreen by rememberSaveable { mutableStateOf("route_input") }
     var saveAfterLogin by rememberSaveable { mutableStateOf(false) }
     var loginPrompt by rememberSaveable { mutableStateOf<String?>(null) }
+    var showTelemetryConsentPrompt by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val appScope = rememberCoroutineScope()
     val context = LocalContext.current
+    LaunchedEffect(currentScreen) {
+        if (currentScreen == "route_input" && !Telemetry.hasShownConsentPrompt(context)) {
+            Telemetry.markConsentPromptShown(context)
+            showTelemetryConsentPrompt = true
+        }
+    }
     val notificationsViewModel: NotificationsViewModel = viewModel()
     val calendarViewModel: CalendarViewModel = viewModel()
     val challengeViewModel: ChallengeViewModel = viewModel()
@@ -879,6 +887,24 @@ fun RunTimeApp() {
                         }
                     },
                     onDismiss = { loginPrompt = null }
+                )
+            }
+            if (showTelemetryConsentPrompt) {
+                AlertDialog(
+                    onDismissRequest = { showTelemetryConsentPrompt = false },
+                    title = { Text(stringResource(R.string.telemetry_consent_title)) },
+                    text = { Text(stringResource(R.string.telemetry_consent_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            Telemetry.setEnabled(context, true)
+                            showTelemetryConsentPrompt = false
+                        }) { Text(stringResource(R.string.telemetry_consent_allow)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showTelemetryConsentPrompt = false }) {
+                            Text(stringResource(R.string.telemetry_consent_not_now))
+                        }
+                    },
                 )
             }
         }

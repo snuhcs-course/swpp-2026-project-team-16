@@ -126,5 +126,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "10/minute",
+        "telemetry": "20/minute",
     },
 }

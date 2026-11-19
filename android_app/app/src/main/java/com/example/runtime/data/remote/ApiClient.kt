@@ -34,7 +34,8 @@ class AuthInterceptor(
     private val onUnauthorized: () -> Unit = {},
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = tokenProvider()
+        val isTelemetry = chain.request().url.encodedPath.endsWith("/api/v1/telemetry/events/")
+        val token = if (isTelemetry) null else tokenProvider()
         val request = if (token.isNullOrBlank()) {
             chain.request()
         } else {
@@ -71,7 +72,8 @@ class RedactingLoggingInterceptor : Interceptor {
     private val basicLogger = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BASIC)
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val logger = if (chain.request().url.encodedPath.contains("/auth/")) basicLogger else bodyLogger
+        val path = chain.request().url.encodedPath
+        val logger = if (path.contains("/auth/") || path.endsWith("/api/v1/telemetry/events/")) basicLogger else bodyLogger
         return logger.intercept(chain)
     }
 }
@@ -89,6 +91,26 @@ object ApiClient {
     private const val READ_TIMEOUT_SECONDS = 120L
 
     val api: ApiService by lazy { create(BuildConfig.BASE_URL) }
+    val telemetryApi: TelemetryApiService by lazy { createTelemetry(BuildConfig.BASE_URL) }
+
+    fun createTelemetry(baseUrl: String): TelemetryApiService {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .addInterceptor(LanguageInterceptor())
+            .apply {
+                if (BuildConfig.DEBUG) addInterceptor(RedactingLoggingInterceptor())
+            }
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(TelemetryApiService::class.java)
+    }
 
     fun create(
         baseUrl: String,

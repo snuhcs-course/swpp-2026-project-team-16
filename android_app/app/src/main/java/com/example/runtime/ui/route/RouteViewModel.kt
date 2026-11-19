@@ -17,6 +17,7 @@ import com.example.runtime.data.run.PaceAlertSettings
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
+import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -287,22 +288,25 @@ class RouteViewModel(
             ?.takeIf { it.isFinite() && it > 0 }
             ?.let { (it * 1000).roundToInt() }
         planState = PlanState.Loading
+        val startedAt = Telemetry.startTime()
+        Telemetry.track("pace_plan", "started")
         sessionScope.launch {
             planState = try {
-                applyPlan(
-                    coachRepository.planRun(
+                val plan = coachRepository.planRun(
                         text = text,
                         distanceMeters = distanceMeters,
                         paceMinSeconds = paceMinSeconds,
                         paceMaxSeconds = paceMaxSeconds,
                         alertOnSlow = alertOnSlow,
                         alertOnFast = alertOnFast,
-                    ),
-                )
+                    )
+                applyPlan(plan)
+                Telemetry.track("pace_plan", "succeeded", Telemetry.startTime() - startedAt)
                 PlanState.Idle
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Telemetry.track("pace_plan", "failed", Telemetry.startTime() - startedAt, Telemetry.failureCategory(e))
                 PlanState.Failed(e.toUiText())
             }
         }
@@ -459,14 +463,22 @@ class RouteViewModel(
         field.searchJob = sessionScope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             field.isSearching = true
+            val startedAt = Telemetry.startTime()
+            Telemetry.track("place_search", "started")
 
             try {
                 val places = repository.searchPlaces(query, language)
                 field.suggestions = places
                 field.noResults = places.isEmpty()
+                if (places.isEmpty()) {
+                    Telemetry.track("place_search", "failed", Telemetry.startTime() - startedAt, "no_results")
+                } else {
+                    Telemetry.track("place_search", "succeeded", Telemetry.startTime() - startedAt)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Telemetry.track("place_search", "failed", Telemetry.startTime() - startedAt, Telemetry.failureCategory(e))
                 field.suggestions = emptyList()
                 field.searchError = e.toUiText()
             } finally {
@@ -597,6 +609,8 @@ class RouteViewModel(
 
         if (isGenerating) return
         isGenerating = true
+        val startedAt = Telemetry.startTime()
+        Telemetry.track("route_generation", "started")
 
         sessionScope.launch {
             try {
@@ -614,6 +628,7 @@ class RouteViewModel(
                     preferences = RoutePreference.entries.filter { it in preferences }.map { it.apiValue },
                     preferenceText = preferenceText.trim(),
                 )
+                Telemetry.track("route_generation", "succeeded", Telemetry.startTime() - startedAt)
                 options = generatedData.options
                     .map { GeneratedRouteData(it.temporaryRouteId, it.route) }
                     .ifEmpty { listOf(generatedData) }
@@ -630,6 +645,7 @@ class RouteViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Telemetry.track("route_generation", "failed", Telemetry.startTime() - startedAt, Telemetry.failureCategory(e))
                 Log.e("RouteViewModel", "Route generation failed", e)
                 error = e.toUiText()
                 onFailure()
