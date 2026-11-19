@@ -107,6 +107,15 @@ class PlanTests(SimpleTestCase):
         self.assertIn("언덕 싫어요", prompt["user"])
         self.assertIn("Korean", prompt["system"])
 
+    def test_prompt_does_not_infer_a_run_type_from_pace_or_distance(self):
+        prompt = build_goal_prompt("3km at 6:00/km", RunningStyle(), "en")
+        self.assertIn("Do not infer that a run is easy based only on distance or pace", prompt["system"])
+
+    def test_pace_ranges_can_include_the_two_minute_slider_endpoint(self):
+        plan, error = validate_plan({**RECOVERY_PLAN, "pace_min_s": 120, "pace_max_s": 600})
+        self.assertIsNone(error)
+        self.assertEqual((plan["pace_min_s"], plan["pace_max_s"]), (120, 600))
+
     def test_selected_pace_range_is_kept_and_explicit_sections_get_a_30_second_band(self):
         reply = json.dumps({
             "run_type": "tempo",

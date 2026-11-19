@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
 import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.run.PaceAlertSettings
+import com.example.runtime.data.run.PaceAlertSegment
 import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.data.run.TrailPoint
@@ -67,6 +69,7 @@ import com.naver.maps.map.CameraAnimation
 import com.naver.maps.map.CameraPosition
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.compose.ExperimentalNaverMapApi
+import com.naver.maps.map.compose.ArrowheadPathOverlay
 import com.naver.maps.map.compose.Marker
 import com.naver.maps.map.compose.MarkerState
 import com.naver.maps.map.compose.NaverMap
@@ -83,6 +86,7 @@ fun RunNavigationScreen(
     offRouteTotals: () -> Pair<Int, Long>,
     routeDistanceMeters: Int,
     plan: RunPlan? = null,
+    paceAlertSettings: PaceAlertSettings? = null,
     uphillSections: List<RouteUphillSection> = emptyList(),
     onClose: () -> Unit,
     onRunFinished: (RunResult) -> Unit = {},
@@ -117,11 +121,13 @@ fun RunNavigationScreen(
             RouteVoiceCue.Kind.TURN_APPROACHING -> when (cue.direction) {
                 RouteTurnDirection.LEFT -> R.string.run_voice_turn_approaching_left
                 RouteTurnDirection.RIGHT -> R.string.run_voice_turn_approaching_right
+                RouteTurnDirection.UTURN -> R.string.run_voice_turn_approaching_uturn
                 null -> return@LaunchedEffect
             }
             RouteVoiceCue.Kind.TURN_NOW -> when (cue.direction) {
                 RouteTurnDirection.LEFT -> R.string.run_voice_turn_now_left
                 RouteTurnDirection.RIGHT -> R.string.run_voice_turn_now_right
+                RouteTurnDirection.UTURN -> R.string.run_voice_turn_now_uturn
                 null -> return@LaunchedEffect
             }
         }
@@ -143,16 +149,27 @@ fun RunNavigationScreen(
             permissionError = false
             val startIntent = Intent(context, RunTrackingService::class.java)
                 .setAction(RunTrackingService.ACTION_START)
-            if (plan != null && (plan.alertOnSlow || plan.alertOnFast)) {
+            val alertSettings = paceAlertSettings ?: plan?.takeIf { it.alertOnSlow || it.alertOnFast }?.let {
+                PaceAlertSettings(
+                    paceMinSeconds = it.paceMinSeconds,
+                    paceMaxSeconds = it.paceMaxSeconds,
+                    alertOnSlow = it.alertOnSlow,
+                    alertOnFast = it.alertOnFast,
+                    segments = it.paceSegments.map { segment ->
+                        PaceAlertSegment(segment.startMeters, segment.endMeters, segment.paceMinSeconds, segment.paceMaxSeconds)
+                    },
+                )
+            }
+            if (alertSettings != null) {
                 startIntent
-                    .putExtra(RunTrackingService.EXTRA_PACE_MIN_SECONDS, plan.paceMinSeconds)
-                    .putExtra(RunTrackingService.EXTRA_PACE_MAX_SECONDS, plan.paceMaxSeconds)
-                    .putExtra(RunTrackingService.EXTRA_PACE_ALERT_ON_SLOW, plan.alertOnSlow)
-                    .putExtra(RunTrackingService.EXTRA_PACE_ALERT_ON_FAST, plan.alertOnFast)
-                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_STARTS, plan.paceSegments.map { it.startMeters }.toIntArray())
-                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_ENDS, plan.paceSegments.map { it.endMeters }.toIntArray())
-                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MINS, plan.paceSegments.map { it.paceMinSeconds }.toIntArray())
-                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MAXES, plan.paceSegments.map { it.paceMaxSeconds }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_MIN_SECONDS, alertSettings.paceMinSeconds)
+                    .putExtra(RunTrackingService.EXTRA_PACE_MAX_SECONDS, alertSettings.paceMaxSeconds)
+                    .putExtra(RunTrackingService.EXTRA_PACE_ALERT_ON_SLOW, alertSettings.alertOnSlow)
+                    .putExtra(RunTrackingService.EXTRA_PACE_ALERT_ON_FAST, alertSettings.alertOnFast)
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_STARTS, alertSettings.segments.map { it.startMeters }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_ENDS, alertSettings.segments.map { it.endMeters }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MINS, alertSettings.segments.map { it.paceMinSeconds }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MAXES, alertSettings.segments.map { it.paceMaxSeconds }.toIntArray())
             }
             context.startForegroundService(startIntent)
         } else {
@@ -210,6 +227,7 @@ fun RunNavigationScreen(
                 currentLocation = currentLocation,
                 headingDegrees = metrics.headingDegrees,
                 isOffRoute = isOffRoute,
+                progressMeters = routeProgress.distanceAlongMeters,
                 modifier = Modifier.fillMaxSize(),
             )
             FilledIconButton(
@@ -287,8 +305,11 @@ fun RunNavigationScreen(
                     metrics.locationError -> stringResource(R.string.run_location_unavailable)
                     metrics.latitude == null -> stringResource(R.string.run_waiting_for_gps)
                     nextTurn != null -> stringResource(
-                        if (nextTurn.direction == RouteTurnDirection.LEFT) R.string.run_turn_left
-                        else R.string.run_turn_right,
+                        when (nextTurn.direction) {
+                            RouteTurnDirection.LEFT -> R.string.run_turn_left
+                            RouteTurnDirection.RIGHT -> R.string.run_turn_right
+                            RouteTurnDirection.UTURN -> R.string.run_turn_uturn
+                        },
                         formatDistance((nextTurn.distanceAlongMeters - routeProgress.distanceAlongMeters).roundToInt()),
                     )
                     progress >= NEAR_FINISH_PROGRESS -> stringResource(R.string.run_near_finish)
@@ -487,6 +508,7 @@ private fun RunningRouteMap(
     currentLocation: LatLng?,
     headingDegrees: Double?,
     isOffRoute: Boolean,
+    progressMeters: Double,
     modifier: Modifier = Modifier,
 ) {
     val initialPosition = points.firstOrNull()?.let { LatLng(it.latitude, it.longitude) }
@@ -510,11 +532,34 @@ private fun RunningRouteMap(
     Box(modifier = modifier) {
         NaverMap(cameraPositionState = cameraState, modifier = Modifier.matchParentSize()) {
             if (points.size >= 2) {
-                PathOverlay(
-                    coords = points.map { LatLng(it.latitude, it.longitude) },
-                    width = 7.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                val totalMeters = points.zipWithNext().sumOf { (a, b) ->
+                    distanceBetweenMeters(a.latitude to a.longitude, b.latitude to b.longitude)
+                }
+                val splitAt = progressMeters.coerceIn(0.0, totalMeters)
+                sliceRoute(points, 0.0, splitAt).takeIf { it.size >= 2 }?.let { passed ->
+                    PathOverlay(
+                        coords = passed.map { LatLng(it.latitude, it.longitude) },
+                        width = 7.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                    )
+                }
+                sliceRoute(points, splitAt, totalMeters).takeIf { it.size >= 2 }?.let { remaining ->
+                    PathOverlay(
+                        coords = remaining.map { LatLng(it.latitude, it.longitude) },
+                        width = 7.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                routeDirectionChunks(points, splitAt).forEach { chunk ->
+                    ArrowheadPathOverlay(
+                        coords = chunk.map { LatLng(it.latitude, it.longitude) },
+                        width = 7.dp,
+                        headSizeRatio = 2f,
+                        color = MaterialTheme.colorScheme.primary,
+                        outlineWidth = 0.dp,
+                        outlineColor = Color.Transparent,
+                    )
+                }
                 Marker(state = MarkerState(position = initialPosition), captionText = stringResource(R.string.marker_start))
                 points.lastOrNull()?.let { last ->
                     Marker(

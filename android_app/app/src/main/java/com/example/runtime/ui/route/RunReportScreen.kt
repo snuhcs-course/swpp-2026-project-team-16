@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -84,8 +85,6 @@ fun RunReportScreen(
     onPlanSimilar: () -> Unit = {},
 ) {
     val splits = remember(result, plan) { result.splitPaces(plan) }
-    val runType = RunType.from(plan?.runType)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -102,26 +101,17 @@ fun RunReportScreen(
                 )
             }
             Text(
-                when {
-                    runType != null -> stringResource(R.string.report_title_typed, stringResource(runType.label))
-                    isFree -> stringResource(R.string.report_title_free)
-                    else -> stringResource(R.string.report_title)
-                },
+                if (isFree) stringResource(R.string.report_title_free) else stringResource(R.string.report_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
-            if (plan != null && runType != null) {
+            if (plan != null) {
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Text(
-                        stringResource(
-                            R.string.report_plan_pill,
-                            formatDistance(plan.distanceMeters),
-                            stringResource(runType.label),
-                            plan.paceRangeText(),
-                        ),
+                        stringResource(R.string.report_plan_pill, formatDistance(plan.distanceMeters), plan.paceRangeText()),
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                     )
@@ -134,7 +124,7 @@ fun RunReportScreen(
         if (splits.isNotEmpty()) {
             ReportCard(title = stringResource(R.string.report_pace_chart)) {
                 ChartLegend(showBand = plan != null)
-                PaceChart(splits = splits, plan = plan)
+                PaceChart(splits = splits)
                 Text(
                     stringResource(R.string.report_chart_hint),
                     style = MaterialTheme.typography.labelSmall,
@@ -340,8 +330,8 @@ private fun ChartLegend(showBand: Boolean) {
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(Modifier.size(14.dp, 10.dp)) {
-                drawLine(line, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), strokeWidth = 2.dp.toPx())
+                Canvas(Modifier.size(14.dp, 10.dp)) {
+                    drawCircle(line, radius = 4.dp.toPx(), center = Offset(size.width / 2f, size.height / 2f))
             }
             Spacer(Modifier.width(5.dp))
             Text(stringResource(R.string.report_legend_actual), style = MaterialTheme.typography.labelSmall)
@@ -350,90 +340,55 @@ private fun ChartLegend(showBand: Boolean) {
 }
 
 @Composable
-private fun PaceChart(splits: List<SplitPace>, plan: RunPlan?) {
-    val lineColor = MaterialTheme.colorScheme.primary
-    val bandColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = BAND_ALPHA)
-    val gridColor = MaterialTheme.colorScheme.outlineVariant
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val surface = MaterialTheme.colorScheme.surface
-    val tooltipBackground = MaterialTheme.colorScheme.inverseSurface
-    val tooltipText = MaterialTheme.colorScheme.inverseOnSurface
-    val measurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(fontSize = 11.sp, color = labelColor)
-    val tooltipStyle = TextStyle(fontSize = 12.sp, color = tooltipText, fontWeight = FontWeight.SemiBold)
-    var selected by remember(splits) { mutableStateOf<Int?>(null) }
-    val description = splits.joinToString(", ") { "${it.km}km ${formatPaceClock(it.paceSeconds)}" }
-
-    val values = splits.map { it.paceSeconds } + listOfNotNull(plan?.paceMinSeconds, plan?.paceMaxSeconds)
-    val yMin = (floor((values.min() - 10) / GRID_STEP.toDouble()) * GRID_STEP).toInt()
-    val yMax = (ceil((values.max() + 10) / GRID_STEP.toDouble()) * GRID_STEP).toInt().coerceAtLeast(yMin + GRID_STEP)
-    val step = GRID_STEP * ((yMax - yMin) / GRID_STEP / MAX_GRID_LINES + 1)
-
-    Box(modifier = Modifier.fillMaxWidth().height(200.dp)) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .semantics { contentDescription = description }
-                .pointerInput(splits) {
-                    detectTapGestures { tap ->
-                        val left = LEFT_AXIS.toPx()
-                        val width = size.width - left
-                        val index = splits.indices.minByOrNull { i ->
-                            abs(left + (i + 0.5f) * width / splits.size - tap.x)
-                        }
-                        selected = if (selected == index) null else index
+private fun PaceChart(splits: List<SplitPace>) {
+    val actualColor = MaterialTheme.colorScheme.primary
+    val targetColor = MaterialTheme.colorScheme.primaryContainer
+    val axisColor = MaterialTheme.colorScheme.outlineVariant
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        splits.forEach { split ->
+            val targetMin = split.targetMinSeconds
+            val targetMax = split.targetMaxSeconds
+            val scaleMin = (targetMin ?: split.paceSeconds - 60) - 60
+            val scaleMax = (targetMax ?: split.paceSeconds + 60) + 60
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(58.dp)) {
+                Text(stringResource(R.string.report_split_km, split.km), style = MaterialTheme.typography.labelSmall)
+                Canvas(Modifier.width(42.dp).height(112.dp).semantics {
+                    contentDescription = "${split.km}km ${formatPaceClock(split.paceSeconds)}"
+                }) {
+                    val centerX = size.width / 2f
+                    val top = 5.dp.toPx()
+                    val bottom = size.height - 5.dp.toPx()
+                    fun y(pace: Int): Float = top +
+                        ((pace - scaleMin).toFloat() / (scaleMax - scaleMin).coerceAtLeast(1)) * (bottom - top)
+                    drawLine(axisColor, Offset(centerX, top), Offset(centerX, bottom), strokeWidth = 2.dp.toPx())
+                    if (targetMin != null && targetMax != null) {
+                        val targetTop = y(targetMin)
+                        val targetBottom = y(targetMax)
+                        drawRoundRect(
+                            color = targetColor,
+                            topLeft = Offset(centerX - 10.dp.toPx(), targetTop),
+                            size = Size(20.dp.toPx(), (targetBottom - targetTop).coerceAtLeast(6.dp.toPx())),
+                            cornerRadius = CornerRadius(5.dp.toPx()),
+                        )
                     }
-                },
-        ) {
-            val left = LEFT_AXIS.toPx()
-            val top = 12.dp.toPx()
-            val bottom = size.height - 22.dp.toPx()
-            val width = size.width - left
-            fun x(i: Int) = left + (i + 0.5f) * width / splits.size
-            fun y(pace: Int) = top + (pace - yMin).toFloat() / (yMax - yMin) * (bottom - top)
-
-            var tick = yMin
-            while (tick <= yMax) {
-                drawLine(gridColor, Offset(left, y(tick)), Offset(size.width, y(tick)), strokeWidth = 1.dp.toPx())
-                val text = measurer.measure(formatPaceClock(tick), labelStyle)
-                drawText(text, topLeft = Offset(left - text.size.width - 6.dp.toPx(), y(tick) - text.size.height / 2f))
-                tick += step
-            }
-            plan?.let {
-                drawRoundRect(
-                    bandColor,
-                    topLeft = Offset(left, y(it.paceMinSeconds)),
-                    size = Size(width, y(it.paceMaxSeconds) - y(it.paceMinSeconds)),
-                    cornerRadius = CornerRadius(4.dp.toPx()),
-                )
-            }
-            splits.forEachIndexed { i, split ->
-                val text = measurer.measure("${split.km}km", labelStyle)
-                drawText(text, topLeft = Offset(x(i) - text.size.width / 2f, size.height - text.size.height))
-            }
-            if (splits.size > 1) {
-                val path = Path().apply {
-                    splits.forEachIndexed { i, split ->
-                        if (i == 0) moveTo(x(i), y(split.paceSeconds)) else lineTo(x(i), y(split.paceSeconds))
-                    }
+                    drawCircle(
+                        color = actualColor,
+                        radius = 6.dp.toPx(),
+                        center = Offset(centerX, y(split.paceSeconds).coerceIn(top, bottom)),
+                    )
                 }
-                drawPath(path, lineColor, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            }
-            splits.forEachIndexed { i, split ->
-                val center = Offset(x(i), y(split.paceSeconds))
-                drawCircle(surface, radius = 6.5.dp.toPx(), center = center)
-                drawCircle(lineColor, radius = 4.5.dp.toPx(), center = center)
-            }
-            selected?.let { i ->
-                val split = splits[i]
-                val text = measurer.measure("${split.km}km ${formatPaceClock(split.paceSeconds)} /km", tooltipStyle)
-                val padding = 6.dp.toPx()
-                val boxWidth = text.size.width + padding * 2
-                val boxHeight = text.size.height + padding * 2
-                val boxLeft = (x(i) - boxWidth / 2).coerceIn(0f, size.width - boxWidth)
-                val boxTop = (y(split.paceSeconds) - boxHeight - 10.dp.toPx()).coerceAtLeast(0f)
-                drawRoundRect(tooltipBackground, Offset(boxLeft, boxTop), Size(boxWidth, boxHeight), CornerRadius(8.dp.toPx()))
-                drawText(text, topLeft = Offset(boxLeft + padding, boxTop + padding))
+                Text(formatPaceClock(split.paceSeconds), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                if (targetMin != null && targetMax != null) {
+                    Text(
+                        stringResource(R.string.report_split_target_range, formatPaceClock(targetMin), formatPaceClock(targetMax)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
             }
         }
     }
@@ -441,8 +396,6 @@ private fun PaceChart(splits: List<SplitPace>, plan: RunPlan?) {
 
 @Composable
 private fun SplitList(splits: List<SplitPace>) {
-    val fastest = splits.minOf { it.paceSeconds }
-    val slowest = splits.maxOf { it.paceSeconds }
     Column {
         splits.forEach { split ->
             Row(
@@ -457,12 +410,17 @@ private fun SplitList(splits: List<SplitPace>) {
                     modifier = Modifier.width(52.dp),
                 )
                 Text(formatPaceClock(split.paceSeconds), fontWeight = FontWeight.SemiBold, modifier = Modifier.width(44.dp))
-                val relative = if (slowest == fastest) 1f else 0.35f + 0.65f * (slowest - split.paceSeconds) / (slowest - fastest).toFloat()
-                LinearProgressIndicator(
-                    progress = { relative },
-                    modifier = Modifier.weight(1f).height(6.dp),
-                    drawStopIndicator = {},
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    val targetMin = split.targetMinSeconds
+                    val targetMax = split.targetMaxSeconds
+                    if (targetMin != null && targetMax != null) {
+                        Text(
+                            stringResource(R.string.report_split_target_range, formatPaceClock(targetMin), formatPaceClock(targetMax)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 split.status?.let { SplitStatusPill(it, split.diffSeconds) }
             }
         }

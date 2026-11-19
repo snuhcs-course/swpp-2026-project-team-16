@@ -18,14 +18,26 @@ class PaceAlertControllerTest {
     }
 
     @Test
-    fun emitsOnlyOneWarningUntilTheNextKilometer() {
+    fun emitsEachWarningTypeOnlyOnceUntilTheNextKilometer() {
         val controller = PaceAlertController(confirmDurationMs = 0L)
         controller.configure(PaceAlertSettings(330, 390, alertOnSlow = true, alertOnFast = true))
         val slowSpeed = 1000.0 / 420.0
 
         assertEquals(PaceAlert.TOO_SLOW, controller.update(2100.0, slowSpeed, 1_000L, isPaused = false))
-        assertNull(controller.update(2400.0, 1000.0 / 300.0, 2_000L, isPaused = false))
-        assertEquals(PaceAlert.TOO_SLOW, controller.update(3000.0, slowSpeed, 3_000L, isPaused = false))
+        val fastSpeed = 1000.0 / 300.0
+        assertEquals(PaceAlert.TOO_FAST, controller.update(2400.0, fastSpeed, 2_000L, isPaused = false))
+        assertNull(controller.update(2600.0, slowSpeed, 3_000L, isPaused = false))
+        assertNull(controller.update(2800.0, fastSpeed, 4_000L, isPaused = false))
+        assertEquals(PaceAlert.TOO_SLOW, controller.update(3000.0, slowSpeed, 5_000L, isPaused = false))
+    }
+
+    @Test
+    fun slowWarningRequiresAtLeastThreeKmhMovement() {
+        val controller = PaceAlertController(confirmDurationMs = 0L)
+        controller.configure(PaceAlertSettings(330, 390, alertOnSlow = true, alertOnFast = false))
+
+        assertNull(controller.update(2100.0, 2.9 / 3.6, 1_000L, isPaused = false))
+        assertEquals(PaceAlert.TOO_SLOW, controller.update(2200.0, 3.0 / 3.6, 2_000L, isPaused = false))
     }
 
     @Test

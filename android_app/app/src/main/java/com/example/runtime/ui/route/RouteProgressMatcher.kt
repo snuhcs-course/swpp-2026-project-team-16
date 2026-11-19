@@ -11,7 +11,7 @@ data class RouteProgress(
     val isOffRoute: Boolean = false,
 )
 
-enum class RouteTurnDirection { LEFT, RIGHT }
+enum class RouteTurnDirection { LEFT, RIGHT, UTURN }
 
 data class RouteTurn(
     val distanceAlongMeters: Double,
@@ -51,7 +51,11 @@ class RouteTurnGuide(points: List<RouteCoordinate>) {
             if (kotlin.math.abs(headingChange) >= TURN_ANGLE_THRESHOLD_DEGREES) {
                 val candidate = RouteTurn(
                     distanceAlongMeters = distance,
-                    direction = if (headingChange > 0) RouteTurnDirection.RIGHT else RouteTurnDirection.LEFT,
+                    direction = when {
+                        kotlin.math.abs(headingChange) >= UTURN_ANGLE_THRESHOLD_DEGREES -> RouteTurnDirection.UTURN
+                        headingChange > 0 -> RouteTurnDirection.RIGHT
+                        else -> RouteTurnDirection.LEFT
+                    },
                 )
                 val previous = candidates.lastOrNull()
                 if (previous != null && candidate.distanceAlongMeters - previous.distanceAlongMeters < TURN_MERGE_DISTANCE_METERS) {
@@ -121,6 +125,7 @@ class RouteTurnGuide(points: List<RouteCoordinate>) {
         private const val LOOK_AROUND_METERS = 12.0
         private const val TURN_SCAN_INTERVAL_METERS = 5.0
         private const val TURN_ANGLE_THRESHOLD_DEGREES = 50.0
+        private const val UTURN_ANGLE_THRESHOLD_DEGREES = 150.0
         private const val TURN_MERGE_DISTANCE_METERS = 30.0
         private const val MIN_TURN_NOTICE_METERS = 8.0
     }
@@ -144,7 +149,12 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
     private var isOffRoute = false
     private var farSinceMs: Long? = null
 
-    fun update(latitude: Double, longitude: Double, timeMs: Long = 0L): RouteProgress {
+    fun update(
+        latitude: Double,
+        longitude: Double,
+        timeMs: Long = 0L,
+        accuracyMeters: Double? = null,
+    ): RouteProgress {
         if (points.size < 2 || routeLengthMeters <= 0.0) {
             return RouteProgress(0.0, Double.POSITIVE_INFINITY, routeLengthMeters)
         }
@@ -156,17 +166,33 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
             // Search the whole course so the old forward-only window cannot keep
             // the guidance stuck in the off-route state.
             closestMatch(latitude, longitude, 0.0, routeLengthMeters)
+        } else if (nearby.distanceFromRoute.isInfinite()) {
+            closestMatch(latitude, longitude, 0.0, routeLengthMeters)
         } else {
             nearby
         }
 
+        val accuracyReliable = accuracyMeters == null ||
+            (accuracyMeters.isFinite() && accuracyMeters <= MAX_OFF_ROUTE_ACCURACY_METERS)
+        if (!accuracyReliable) {
+            farSinceMs = null
+            return RouteProgress(progressMeters, match.distanceFromRoute, routeLengthMeters, isOffRoute)
+        }
+
+        // GPS accuracy is an estimate, so a fix can land outside the route even
+        // while the runner is still on it. Widen both thresholds when the fix is
+        // less precise instead of treating every measured offset as real drift.
+        val estimatedAccuracy = accuracyMeters?.coerceAtLeast(0.0) ?: 0.0
+        val offRouteThreshold = max(OFF_ROUTE_DISTANCE_METERS, estimatedAccuracy * ACCURACY_MARGIN_MULTIPLIER)
+        val rejoinThreshold = max(REJOIN_DISTANCE_METERS, estimatedAccuracy)
+
         if (isOffRoute) {
-            if (match.distanceFromRoute <= REJOIN_DISTANCE_METERS) {
+            if (match.distanceFromRoute <= rejoinThreshold) {
                 isOffRoute = false
                 farSinceMs = null
                 progressMeters = match.along
             }
-        } else if (match.distanceFromRoute > OFF_ROUTE_DISTANCE_METERS) {
+        } else if (match.distanceFromRoute > offRouteThreshold) {
             val since = farSinceMs ?: timeMs.also { farSinceMs = it }
             if (timeMs - since >= OFF_ROUTE_CONFIRM_MS) isOffRoute = true
         } else {
@@ -233,5 +259,70 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
         const val OFF_ROUTE_DISTANCE_METERS = 40.0
         const val REJOIN_DISTANCE_METERS = 25.0
         const val OFF_ROUTE_CONFIRM_MS = 4_000L
+        const val MAX_OFF_ROUTE_ACCURACY_METERS = 60.0
+        private const val ACCURACY_MARGIN_MULTIPLIER = 1.5
     }
 }
+
+internal fun sliceRoute(
+    points: List<RouteCoordinate>,
+    startMeters: Double,
+    endMeters: Double,
+): List<RouteCoordinate> {
+    if (points.size < 2) return emptyList()
+    val cumulative = buildList {
+        add(0.0)
+        for (index in 0 until points.lastIndex) {
+            add(last() + distanceBetweenMeters(
+                points[index].latitude to points[index].longitude,
+                points[index + 1].latitude to points[index + 1].longitude,
+            ))
+        }
+    }
+    val start = startMeters.coerceIn(0.0, cumulative.last())
+    val end = endMeters.coerceIn(start, cumulative.last())
+    if (end - start < 0.1) return emptyList()
+
+    fun pointAt(distance: Double): RouteCoordinate {
+        val segment = (0 until cumulative.lastIndex).firstOrNull { cumulative[it + 1] >= distance }
+            ?: cumulative.lastIndex - 1
+        val segmentLength = cumulative[segment + 1] - cumulative[segment]
+        val fraction = if (segmentLength <= 0.0) 0.0 else ((distance - cumulative[segment]) / segmentLength).coerceIn(0.0, 1.0)
+        val a = points[segment]
+        val b = points[segment + 1]
+        return RouteCoordinate(
+            latitude = a.latitude + (b.latitude - a.latitude) * fraction,
+            longitude = a.longitude + (b.longitude - a.longitude) * fraction,
+        )
+    }
+
+    return buildList {
+        add(pointAt(start))
+        for (index in 1 until points.lastIndex) {
+            if (cumulative[index] > start && cumulative[index] < end) add(points[index])
+        }
+        add(pointAt(end))
+    }.distinctConsecutivePoints()
+}
+
+internal fun routeDirectionChunks(
+    points: List<RouteCoordinate>,
+    startMeters: Double,
+    chunkLengthMeters: Double = 180.0,
+): List<List<RouteCoordinate>> {
+    if (points.size < 2 || chunkLengthMeters <= 0.0) return emptyList()
+    val total = points.zipWithNext().sumOf { (a, b) ->
+        distanceBetweenMeters(a.latitude to a.longitude, b.latitude to b.longitude)
+    }
+    if (total <= startMeters) return emptyList()
+    val chunks = mutableListOf<List<RouteCoordinate>>()
+    var start = startMeters.coerceAtLeast(0.0)
+    while (start < total) {
+        val end = min(total, start + chunkLengthMeters)
+        sliceRoute(points, start, end).takeIf { it.size >= 2 }?.let(chunks::add)
+        start = end
+    }
+    return chunks
+}
+
+

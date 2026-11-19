@@ -61,7 +61,7 @@ internal class RunAutoPauseController(
     companion object {
         const val LOW_SPEED_KMH = 0.5
         const val HIGH_SPEED_KMH = 1.0
-        const val PAUSE_AFTER_MS = 3_000L
+        const val PAUSE_AFTER_MS = 2_000L
         const val RESUME_AFTER_MS = 2_000L
     }
 }

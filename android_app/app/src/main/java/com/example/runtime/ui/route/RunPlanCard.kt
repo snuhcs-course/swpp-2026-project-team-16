@@ -53,9 +53,6 @@ fun RunPlanCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             extraRows()
-            RunType.from(plan.runType)?.let { type ->
-                PlanRow(stringResource(R.string.plan_run_type), stringResource(type.label))
-            }
             PlanRow(stringResource(R.string.plan_distance), formatDistance(plan.distanceMeters))
             PlanRow(stringResource(R.string.plan_target_pace), stringResource(R.string.pace_range_per_km, plan.paceRangeText()))
             if (plan.alertOnSlow || plan.alertOnFast) {
@@ -109,9 +106,6 @@ fun RunPlanCard(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-            }
-            if (plan.intensity.isNotBlank()) {
-                PlanRow(stringResource(R.string.plan_intensity), plan.intensity)
             }
             if (plan.routePreferences.isNotEmpty()) {
                 val labels = plan.routePreferences.mapNotNull { value ->
@@ -220,7 +214,7 @@ private fun parseKm(value: String): Int? = value.trim().toDoubleOrNull()
 private fun parsePace(value: String): Int? {
     val match = Regex("^(\\d{1,2}):([0-5]\\d)$").matchEntire(value.trim()) ?: return null
     val seconds = match.groupValues[1].toInt() * 60 + match.groupValues[2].toInt()
-    return seconds.takeIf { it in 180..900 }
+    return seconds.takeIf { it in 120..900 }
 }
 
 @Composable

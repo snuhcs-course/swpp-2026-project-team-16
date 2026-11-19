@@ -55,6 +55,45 @@ class RouteProgressMatcherTest {
     }
 
     @Test
+    fun usesWholeRouteWhenRunnerMovesBeyondTheNormalLookAheadWindow() {
+        val matcher = RouteProgressMatcher(
+            listOf(RouteCoordinate(37.0, 127.0), RouteCoordinate(37.0, 127.005)),
+        )
+
+        val result = matcher.update(37.0, 127.0045, timeMs = 1_000L, accuracyMeters = 5.0)
+
+        assertFalse(result.isOffRoute)
+        assertTrue(result.distanceAlongMeters > 390.0)
+        assertEquals(0.0, result.distanceFromRouteMeters, 1.0)
+    }
+
+    @Test
+    fun ignoresPoorAccuracyFixesForOffRouteStateChanges() {
+        val matcher = RouteProgressMatcher(
+            listOf(RouteCoordinate(37.0, 127.0), RouteCoordinate(37.0, 127.005)),
+        )
+
+        matcher.update(37.0, 127.001, 0L, accuracyMeters = 5.0)
+        val result = matcher.update(37.001, 127.001, 10_000L, accuracyMeters = 40.0)
+
+        assertFalse(result.isOffRoute)
+    }
+
+    @Test
+    fun allowsForGpsAccuracyBeforeMarkingRunnerOffRoute() {
+        val matcher = RouteProgressMatcher(
+            listOf(RouteCoordinate(37.0, 127.0), RouteCoordinate(37.0, 127.005)),
+        )
+
+        matcher.update(37.0, 127.001, timeMs = 0L, accuracyMeters = 5.0)
+        // This fix is about 50 m from the route, but the phone reports 40 m
+        // accuracy. The offset can still be explained by location uncertainty.
+        val result = matcher.update(37.00045, 127.001, timeMs = 10_000L, accuracyMeters = 40.0)
+
+        assertFalse(result.isOffRoute)
+    }
+
+    @Test
     fun flagsOffRouteOnlyAfterStayingAwayLongEnough() {
         val matcher = RouteProgressMatcher(
             listOf(
@@ -148,6 +187,41 @@ class RouteProgressMatcherTest {
         assertTrue(guide.turns.isNotEmpty())
         assertEquals(RouteTurnDirection.RIGHT, nextTurn?.direction)
         assertTrue(nextTurn!!.distanceAlongMeters in 70.0..140.0)
+    }
+
+    @Test
+    fun identifiesAUturnFromTheGeneratedCourseGeometry() {
+        val guide = RouteTurnGuide(
+            listOf(
+                RouteCoordinate(37.0, 127.0),
+                RouteCoordinate(37.001, 127.0),
+                RouteCoordinate(37.0, 127.00001),
+            ),
+        )
+
+        assertTrue(guide.turns.any { it.direction == RouteTurnDirection.UTURN })
+    }
+
+    @Test
+    fun splitsTheRouteAtTheRunnerProgressForMapRendering() {
+        val route = listOf(
+            RouteCoordinate(37.0, 127.0),
+            RouteCoordinate(37.0, 127.002),
+        )
+        val passed = sliceRoute(route, 0.0, 100.0)
+        val remaining = sliceRoute(route, 100.0, 220.0)
+
+        assertEquals(127.0, passed.first().longitude, 0.000001)
+        assertEquals(passed.last().longitude, remaining.first().longitude, 0.000001)
+        assertEquals(
+            100.0,
+            distanceBetweenMeters(
+                route.first().latitude to route.first().longitude,
+                passed.last().latitude to passed.last().longitude,
+            ),
+            1.0,
+        )
+        assertTrue(routeDirectionChunks(route, 100.0).isNotEmpty())
     }
 
     @Test

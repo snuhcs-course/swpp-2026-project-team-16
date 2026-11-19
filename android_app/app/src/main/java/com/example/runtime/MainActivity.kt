@@ -423,7 +423,15 @@ fun RunTimeApp() {
                                     "route_input" -> RouteInputScreen(
                                         routeViewModel = routeViewModel,
                                         onStartFree = {
-                                            openRun(RunTarget(lines = emptyList(), distanceMeters = 0, isFree = true), returnTo = "route_input")
+                                            openRun(
+                                                RunTarget(
+                                                    lines = emptyList(),
+                                                    distanceMeters = 0,
+                                                    isFree = true,
+                                                    paceAlertSettings = routeViewModel.paceAlertSettingsForFreeRun(),
+                                                ),
+                                                returnTo = "route_input",
+                                            )
                                         },
                                         onGenerate = {
                                             if (!authViewModel.isLoggedIn && authViewModel.isGuestTrialUsed) {
@@ -487,6 +495,7 @@ fun RunTimeApp() {
                                                 routeDistanceMeters = target.distanceMeters,
                                                 plan = target.plan,
                                                 uphillSections = target.uphillSections,
+                                                paceAlertSettings = target.paceAlertSettings,
                                                 onClose = { currentScreen = runReturnScreen },
                                                 onRunFinished = { runResult ->
                                                     runViewModel.finish(runResult, authViewModel.isLoggedIn)

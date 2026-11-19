@@ -13,6 +13,7 @@ import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.remote.PaceSegment
 import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.run.PaceAlertSettings
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
@@ -81,6 +82,8 @@ sealed interface PlanState {
 const val MAX_GOAL_TEXT_LENGTH = 200
 private const val DEFAULT_PACE_MIN_SECONDS = 330
 private const val DEFAULT_PACE_MAX_SECONDS = 390
+private const val MIN_PACE_SECONDS = 120
+private const val MAX_PACE_SECONDS = 600
 
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
@@ -241,10 +244,10 @@ class RouteViewModel(
     }
 
     fun updatePaceRange(range: ClosedFloatingPointRange<Float>) {
-        val min = (range.start / 5f).roundToInt() * 5
-        val max = (range.endInclusive / 5f).roundToInt() * 5
-        paceMinSeconds = min.coerceIn(180, 870)
-        paceMaxSeconds = max.coerceIn(paceMinSeconds + 30, 900)
+        val min = (range.start / 10f).roundToInt() * 10
+        val max = (range.endInclusive / 10f).roundToInt() * 10
+        paceMinSeconds = min.coerceIn(MIN_PACE_SECONDS, MAX_PACE_SECONDS - 10)
+        paceMaxSeconds = max.coerceIn(paceMinSeconds + 10, MAX_PACE_SECONDS)
         updatePlanSettings()
     }
 
@@ -256,6 +259,16 @@ class RouteViewModel(
     fun onAlertOnFastChange(enabled: Boolean) {
         alertOnFast = enabled
         updatePlanSettings()
+    }
+
+    fun paceAlertSettingsForFreeRun(): PaceAlertSettings? {
+        if (!paceMakerEnabled || (!alertOnSlow && !alertOnFast)) return null
+        return PaceAlertSettings(
+            paceMinSeconds = paceMinSeconds,
+            paceMaxSeconds = paceMaxSeconds,
+            alertOnSlow = alertOnSlow,
+            alertOnFast = alertOnFast,
+        )
     }
 
     private fun updatePlanSettings() {
@@ -320,8 +333,8 @@ class RouteViewModel(
         if (
             segment.startMeters < 0 || segment.endMeters <= segment.startMeters
             || segment.endMeters > plan.distanceMeters
-            || segment.paceMinSeconds !in 180..900
-            || segment.paceMaxSeconds !in segment.paceMinSeconds..900
+            || segment.paceMinSeconds !in MIN_PACE_SECONDS..MAX_PACE_SECONDS
+            || segment.paceMaxSeconds !in segment.paceMinSeconds..MAX_PACE_SECONDS
         ) return false
         val segments = plan.paceSegments.toMutableList()
         if (index !in segments.indices) return false

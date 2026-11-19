@@ -17,6 +17,7 @@ import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.run.RunMetrics
 import com.example.runtime.data.run.RunTrackingState
+import com.example.runtime.data.run.PaceAlertSettings
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -32,6 +33,7 @@ data class RunTarget(
     val plan: RunPlan? = null,
     val isFree: Boolean = false,
     val uphillSections: List<RouteUphillSection> = emptyList(),
+    val paceAlertSettings: PaceAlertSettings? = null,
 )
 
 sealed interface RunRecordState {
@@ -108,7 +110,7 @@ class RunViewModel(
         if (latitude != null && longitude != null && (latitude != lastLatitude || longitude != lastLongitude)) {
             lastLatitude = latitude
             lastLongitude = longitude
-            routeProgress = progressMatcher.update(latitude, longitude, clock())
+            routeProgress = progressMatcher.update(latitude, longitude, clock(), metrics.accuracyMeters)
         }
         val offRoute = metrics.isTracking && !metrics.isPaused && latitude != null && longitude != null &&
             routeProgress.isOffRoute
