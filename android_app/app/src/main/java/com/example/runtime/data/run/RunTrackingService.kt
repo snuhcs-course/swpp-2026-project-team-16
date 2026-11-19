@@ -1,6 +1,7 @@
 package com.example.runtime.data.run
 
 import android.Manifest
+import android.content.Context
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -21,6 +22,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.runtime.MainActivity
@@ -35,6 +37,8 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.Locale
+import kotlin.math.roundToInt
 
 data class RunMetrics(
     val isTracking: Boolean = false,
@@ -64,18 +68,20 @@ object RunTrackingState {
 
     private val mutableSplitTimes = MutableStateFlow<List<Long>>(emptyList())
     val splitTimes: StateFlow<List<Long>> = mutableSplitTimes.asStateFlow()
+    private val splitTracker = RunSplitTracker()
 
     internal fun resetTrail() {
         mutableTrail.value = emptyList()
         mutableSplitTimes.value = emptyList()
+        splitTracker.reset()
     }
 
-    internal fun recordSplits(distanceMeters: Double, elapsedSeconds: Long) {
-        val completed = (distanceMeters / SPLIT_METERS).toInt()
-        val current = mutableSplitTimes.value
-        if (completed > current.size) {
-            mutableSplitTimes.value = current + List(completed - current.size) { elapsedSeconds }
+    internal fun recordSplits(distanceMeters: Double, elapsedSeconds: Long): List<RunSplitMilestone> {
+        val milestones = splitTracker.update(distanceMeters, elapsedSeconds)
+        if (milestones.isNotEmpty()) {
+            mutableSplitTimes.value = mutableSplitTimes.value + milestones.map { it.elapsedSeconds }
         }
+        return milestones
     }
 
     internal fun appendTrail(latitude: Double, longitude: Double) {
@@ -91,7 +97,6 @@ object RunTrackingState {
     }
 
     private const val MIN_TRAIL_SPACING_METERS = 3.0
-    private const val SPLIT_METERS = 1000.0
 }
 
 class RunTrackingService : Service() {
@@ -109,6 +114,11 @@ class RunTrackingService : Service() {
     private var isAutoPaused = false
     private val isPaused: Boolean get() = isManuallyPaused || isAutoPaused
     private val autoPauseController = RunAutoPauseController()
+    private val paceAlertController = PaceAlertController()
+    private var textToSpeech: TextToSpeech? = null
+    private var textToSpeechReady = false
+    private var pendingPaceAlert: PaceAlert? = null
+    private val pendingNavigationCues = ArrayDeque<String>()
     private var lastSpeedLocation: Location? = null
     private var latestLocation: Location? = null
     private var headingDegrees: Double? = null
@@ -155,17 +165,20 @@ class RunTrackingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startRun()
+            ACTION_START -> startRun(intent)
             ACTION_PAUSE -> pauseRun()
             ACTION_RESUME -> resumeRun()
             ACTION_STOP -> stopRun()
+            ACTION_SPEAK_NAVIGATION -> intent?.let(::speakNavigationCue)
             else -> stopSelf(startId)
         }
         return START_NOT_STICKY
     }
 
-    private fun startRun() {
+    private fun startRun(intent: Intent) {
         if (RunTrackingState.metrics.value.isTracking) return
+
+        configurePaceAlerts(intent)
 
         elapsedBeforeResumeMs = 0L
         resumedAtMs = SystemClock.elapsedRealtime()
@@ -366,6 +379,7 @@ class RunTrackingService : Service() {
         isManuallyPaused = false
         isAutoPaused = false
         autoPauseController.reset()
+        paceAlertController.reset()
         removeLocationUpdates()
         stopSensors()
         handler.removeCallbacks(ticker)
@@ -386,7 +400,20 @@ class RunTrackingService : Service() {
         }
         val elapsedMs = elapsedBeforeResumeMs +
             if (isTracking && !isPaused) SystemClock.elapsedRealtime() - resumedAtMs else 0L
-        if (isTracking) RunTrackingState.recordSplits(fusion.distanceMeters, elapsedMs / 1000L)
+        if (isTracking) {
+            RunTrackingState.recordSplits(fusion.distanceMeters, elapsedMs / 1000L)
+                .lastOrNull()
+                ?.let(::speakKilometerSplit)
+        }
+        val speedMetersPerSecond = if (isPaused) 0.0 else fusion.speedMps(SystemClock.elapsedRealtime())
+        if (isTracking) {
+            paceAlertController.update(
+                distanceMeters = fusion.distanceMeters,
+                speedMetersPerSecond = speedMetersPerSecond,
+                nowMs = SystemClock.elapsedRealtime(),
+                isPaused = isPaused,
+            )?.let(::speakPaceAlert)
+        }
         RunTrackingState.update(
             RunMetrics(
                 isTracking = isTracking,
@@ -394,7 +421,7 @@ class RunTrackingService : Service() {
                 isAutoPaused = isAutoPaused,
                 distanceMeters = fusion.distanceMeters,
                 elapsedSeconds = elapsedMs / 1000L,
-                speedMetersPerSecond = if (isPaused) 0.0 else fusion.speedMps(SystemClock.elapsedRealtime()),
+                speedMetersPerSecond = speedMetersPerSecond,
                 latitude = location?.latitude ?: fusion.latitude ?: RunTrackingState.metrics.value.latitude,
                 longitude = location?.longitude ?: fusion.longitude ?: RunTrackingState.metrics.value.longitude,
                 headingDegrees = headingDegrees,
@@ -431,6 +458,110 @@ class RunTrackingService : Service() {
     private fun updateNotification() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.notify(NOTIFICATION_ID, buildNotification())
+    }
+
+    private fun configurePaceAlerts(intent: Intent) {
+        val alertOnSlow = intent.getBooleanExtra(EXTRA_PACE_ALERT_ON_SLOW, false)
+        val alertOnFast = intent.getBooleanExtra(EXTRA_PACE_ALERT_ON_FAST, false)
+        val paceMin = intent.getIntExtra(EXTRA_PACE_MIN_SECONDS, -1)
+        val paceMax = intent.getIntExtra(EXTRA_PACE_MAX_SECONDS, -1)
+        if ((!alertOnSlow && !alertOnFast) || paceMin !in 180..900 || paceMax !in paceMin..900) {
+            paceAlertController.configure(null)
+            return
+        }
+
+        val starts = intent.getIntArrayExtra(EXTRA_PACE_SEGMENT_STARTS) ?: intArrayOf()
+        val ends = intent.getIntArrayExtra(EXTRA_PACE_SEGMENT_ENDS) ?: intArrayOf()
+        val mins = intent.getIntArrayExtra(EXTRA_PACE_SEGMENT_MINS) ?: intArrayOf()
+        val maxes = intent.getIntArrayExtra(EXTRA_PACE_SEGMENT_MAXES) ?: intArrayOf()
+        val count = minOf(starts.size, ends.size, mins.size, maxes.size)
+        val segments = (0 until count).mapNotNull { index ->
+            val start = starts[index]
+            val end = ends[index]
+            val min = mins[index]
+            val max = maxes[index]
+            if (start < 0 || end <= start || min !in 180..900 || max !in min..900) null
+            else PaceAlertSegment(start, end, min, max)
+        }
+        paceAlertController.configure(
+            PaceAlertSettings(
+                paceMinSeconds = paceMin,
+                paceMaxSeconds = paceMax,
+                alertOnSlow = alertOnSlow,
+                alertOnFast = alertOnFast,
+                segments = segments,
+            ),
+        )
+        ensureTextToSpeech()
+    }
+
+    private fun ensureTextToSpeech() {
+        if (textToSpeech != null) return
+        textToSpeech = TextToSpeech(this) { status ->
+            if (status != TextToSpeech.SUCCESS) return@TextToSpeech
+            val locale = resources.configuration.locales[0] ?: Locale.getDefault()
+            textToSpeech?.language = locale
+            textToSpeechReady = true
+            while (pendingNavigationCues.isNotEmpty()) {
+                speakQueuedMessage(pendingNavigationCues.removeFirst())
+            }
+            pendingPaceAlert?.let { alert ->
+                pendingPaceAlert = null
+                speakPaceAlert(alert)
+            }
+        }
+    }
+
+    private fun speakPaceAlert(alert: PaceAlert) {
+        if (!textToSpeechReady) {
+            pendingPaceAlert = alert
+            return
+        }
+        val message = getString(
+            if (alert == PaceAlert.TOO_SLOW) R.string.run_pace_alert_slow else R.string.run_pace_alert_fast,
+        )
+        textToSpeech?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "pace-alert-${SystemClock.elapsedRealtime()}")
+    }
+
+    private fun speakNavigationCue(intent: Intent) {
+        val message = intent.getStringExtra(EXTRA_NAVIGATION_TEXT) ?: run {
+            val messageId = intent.getIntExtra(EXTRA_NAVIGATION_MESSAGE_ID, 0)
+            if (messageId == 0) return
+            val distanceMeters = intent.getIntExtra(EXTRA_NAVIGATION_DISTANCE_METERS, -1).takeIf { it >= 0 }
+            if (distanceMeters == null) getString(messageId) else getString(messageId, distanceMeters)
+        }
+        speakNavigationMessage(message)
+    }
+
+    private fun speakKilometerSplit(milestone: RunSplitMilestone) {
+        val elapsed = milestone.elapsedSeconds
+        val hours = elapsed / 3600
+        val minutes = elapsed % 3600 / 60
+        val seconds = elapsed % 60
+        val duration = if (hours > 0) {
+            getString(R.string.run_voice_duration_hours, hours, minutes, seconds)
+        } else {
+            getString(R.string.run_voice_duration_minutes, minutes, seconds)
+        }
+        val pacePerKilometer = (elapsed.toDouble() / milestone.kilometer).roundToInt()
+        val paceMinutes = pacePerKilometer / 60
+        val paceSeconds = pacePerKilometer % 60
+        val pace = getString(R.string.run_voice_pace, paceMinutes, paceSeconds)
+        val message = getString(R.string.run_voice_kilometer_summary, milestone.kilometer, milestone.kilometer, duration, pace)
+        speakNavigationMessage(message)
+    }
+
+    private fun speakNavigationMessage(message: String) {
+        if (!textToSpeechReady) {
+            pendingNavigationCues.addLast(message)
+            ensureTextToSpeech()
+            return
+        }
+        speakQueuedMessage(message)
+    }
+
+    private fun speakQueuedMessage(message: String) {
+        textToSpeech?.speak(message, TextToSpeech.QUEUE_ADD, null, "run-cue-${SystemClock.elapsedRealtime()}")
     }
 
     private fun buildNotification(): Notification {
@@ -478,6 +609,8 @@ class RunTrackingService : Service() {
         removeLocationUpdates()
         stopSensors()
         handler.removeCallbacks(ticker)
+        textToSpeech?.shutdown()
+        textToSpeech = null
         super.onDestroy()
     }
 
@@ -488,6 +621,37 @@ class RunTrackingService : Service() {
         const val ACTION_PAUSE = "com.example.runtime.run.PAUSE"
         const val ACTION_RESUME = "com.example.runtime.run.RESUME"
         const val ACTION_STOP = "com.example.runtime.run.STOP"
+        const val ACTION_SPEAK_NAVIGATION = "com.example.runtime.run.SPEAK_NAVIGATION"
+
+        const val EXTRA_NAVIGATION_MESSAGE_ID = "com.example.runtime.run.NAVIGATION_MESSAGE_ID"
+        const val EXTRA_NAVIGATION_DISTANCE_METERS = "com.example.runtime.run.NAVIGATION_DISTANCE_METERS"
+        const val EXTRA_NAVIGATION_TEXT = "com.example.runtime.run.NAVIGATION_TEXT"
+
+        const val EXTRA_PACE_MIN_SECONDS = "com.example.runtime.run.PACE_MIN_SECONDS"
+        const val EXTRA_PACE_MAX_SECONDS = "com.example.runtime.run.PACE_MAX_SECONDS"
+        const val EXTRA_PACE_ALERT_ON_SLOW = "com.example.runtime.run.PACE_ALERT_ON_SLOW"
+        const val EXTRA_PACE_ALERT_ON_FAST = "com.example.runtime.run.PACE_ALERT_ON_FAST"
+        const val EXTRA_PACE_SEGMENT_STARTS = "com.example.runtime.run.PACE_SEGMENT_STARTS"
+        const val EXTRA_PACE_SEGMENT_ENDS = "com.example.runtime.run.PACE_SEGMENT_ENDS"
+        const val EXTRA_PACE_SEGMENT_MINS = "com.example.runtime.run.PACE_SEGMENT_MINS"
+        const val EXTRA_PACE_SEGMENT_MAXES = "com.example.runtime.run.PACE_SEGMENT_MAXES"
+
+        fun speakNavigationCue(context: Context, messageId: Int, distanceMeters: Int? = null) {
+            context.startService(
+                Intent(context, RunTrackingService::class.java)
+                    .setAction(ACTION_SPEAK_NAVIGATION)
+                    .putExtra(EXTRA_NAVIGATION_MESSAGE_ID, messageId)
+                    .putExtra(EXTRA_NAVIGATION_DISTANCE_METERS, distanceMeters ?: -1),
+            )
+        }
+
+        fun speakNavigationText(context: Context, message: String) {
+            context.startService(
+                Intent(context, RunTrackingService::class.java)
+                    .setAction(ACTION_SPEAK_NAVIGATION)
+                    .putExtra(EXTRA_NAVIGATION_TEXT, message),
+            )
+        }
 
         private const val NOTIFICATION_CHANNEL_ID = "run_tracking"
         private const val NOTIFICATION_ID = 4102

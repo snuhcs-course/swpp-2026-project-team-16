@@ -31,6 +31,7 @@ data class RunTarget(
     val groupId: Int? = null,
     val plan: RunPlan? = null,
     val isFree: Boolean = false,
+    val uphillSections: List<RouteUphillSection> = emptyList(),
 )
 
 sealed interface RunRecordState {
@@ -254,7 +255,7 @@ class RunViewModel(
 
     fun useGuide(lines: List<GeoJsonLineString>, distanceMeters: Int) {
         val current = target ?: return
-        target = current.copy(lines = lines, distanceMeters = distanceMeters)
+        target = current.copy(lines = lines, distanceMeters = distanceMeters, uphillSections = emptyList())
         setRoute(lines)
     }
 

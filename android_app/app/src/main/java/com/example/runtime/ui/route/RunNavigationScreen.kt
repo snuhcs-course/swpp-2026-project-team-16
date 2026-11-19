@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.runtime.R
+import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.data.run.TrailPoint
@@ -81,6 +82,8 @@ fun RunNavigationScreen(
     isOffRoute: Boolean,
     offRouteTotals: () -> Pair<Int, Long>,
     routeDistanceMeters: Int,
+    plan: RunPlan? = null,
+    uphillSections: List<RouteUphillSection> = emptyList(),
     onClose: () -> Unit,
     onRunFinished: (RunResult) -> Unit = {},
     isFree: Boolean = false,
@@ -92,10 +95,44 @@ fun RunNavigationScreen(
     val trail by RunTrackingState.trail.collectAsState()
     val splitTimes by RunTrackingState.splitTimes.collectAsState()
     val turnGuide = remember(routePoints) { RouteTurnGuide(routePoints) }
+    val voiceGuide = remember(routePoints) { RouteVoiceGuide(turnGuide.turns, turnGuide.routeLengthMeters) }
+    val uphillVoiceGuide = remember(uphillSections) { UphillVoiceGuide(uphillSections) }
     var showFinishConfirmation by remember { mutableStateOf(false) }
     var permissionError by remember { mutableStateOf(false) }
     var showReturnDialog by remember { mutableStateOf(false) }
     val hasRoute = routePoints.size >= 2
+
+    LaunchedEffect(routeProgress.distanceAlongMeters, metrics.isTracking, metrics.isPaused, isOffRoute) {
+        val cue = voiceGuide.update(
+            progressMeters = routeProgress.distanceAlongMeters,
+            isTracking = metrics.isTracking,
+            isPaused = metrics.isPaused,
+            isOffRoute = isOffRoute,
+        ) ?: return@LaunchedEffect
+        val messageId = when (cue.kind) {
+            RouteVoiceCue.Kind.START -> R.string.run_voice_started
+            RouteVoiceCue.Kind.OFF_ROUTE -> R.string.run_voice_off_route
+            RouteVoiceCue.Kind.REJOINED -> R.string.run_voice_rejoined
+            RouteVoiceCue.Kind.ARRIVED -> R.string.run_voice_arrived
+            RouteVoiceCue.Kind.TURN_APPROACHING -> when (cue.direction) {
+                RouteTurnDirection.LEFT -> R.string.run_voice_turn_approaching_left
+                RouteTurnDirection.RIGHT -> R.string.run_voice_turn_approaching_right
+                null -> return@LaunchedEffect
+            }
+            RouteVoiceCue.Kind.TURN_NOW -> when (cue.direction) {
+                RouteTurnDirection.LEFT -> R.string.run_voice_turn_now_left
+                RouteTurnDirection.RIGHT -> R.string.run_voice_turn_now_right
+                null -> return@LaunchedEffect
+            }
+        }
+        RunTrackingService.speakNavigationCue(context, messageId, cue.distanceMeters)
+    }
+
+    LaunchedEffect(routeProgress.distanceAlongMeters, metrics.isTracking, metrics.isPaused, isOffRoute) {
+        if (!metrics.isTracking || metrics.isPaused || isOffRoute) return@LaunchedEffect
+        val distanceToUphill = uphillVoiceGuide.update(routeProgress.distanceAlongMeters) ?: return@LaunchedEffect
+        RunTrackingService.speakNavigationCue(context, R.string.run_voice_uphill_approaching, distanceToUphill)
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -104,9 +141,20 @@ fun RunNavigationScreen(
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
             permissionError = false
-            context.startForegroundService(
-                Intent(context, RunTrackingService::class.java).setAction(RunTrackingService.ACTION_START),
-            )
+            val startIntent = Intent(context, RunTrackingService::class.java)
+                .setAction(RunTrackingService.ACTION_START)
+            if (plan != null && (plan.alertOnSlow || plan.alertOnFast)) {
+                startIntent
+                    .putExtra(RunTrackingService.EXTRA_PACE_MIN_SECONDS, plan.paceMinSeconds)
+                    .putExtra(RunTrackingService.EXTRA_PACE_MAX_SECONDS, plan.paceMaxSeconds)
+                    .putExtra(RunTrackingService.EXTRA_PACE_ALERT_ON_SLOW, plan.alertOnSlow)
+                    .putExtra(RunTrackingService.EXTRA_PACE_ALERT_ON_FAST, plan.alertOnFast)
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_STARTS, plan.paceSegments.map { it.startMeters }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_ENDS, plan.paceSegments.map { it.endMeters }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MINS, plan.paceSegments.map { it.paceMinSeconds }.toIntArray())
+                    .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MAXES, plan.paceSegments.map { it.paceMaxSeconds }.toIntArray())
+            }
+            context.startForegroundService(startIntent)
         } else {
             permissionError = true
         }

@@ -266,12 +266,27 @@ data class RunPlan(
     val intensity: String = "",
     @SerialName("route_preferences") val routePreferences: List<String> = emptyList(),
     val summary: String = "",
+    @SerialName("alert_on_slow") val alertOnSlow: Boolean = false,
+    @SerialName("alert_on_fast") val alertOnFast: Boolean = false,
+    @SerialName("pace_segments") val paceSegments: List<PaceSegment> = emptyList(),
+)
+
+@Serializable
+data class PaceSegment(
+    @SerialName("start_m") val startMeters: Int,
+    @SerialName("end_m") val endMeters: Int,
+    @SerialName("pace_min_s") val paceMinSeconds: Int,
+    @SerialName("pace_max_s") val paceMaxSeconds: Int,
 )
 
 @Serializable
 data class RunPlanRequest(
     val text: String,
     @SerialName("distance_m") val distanceMeters: Int? = null,
+    @SerialName("pace_min_s") val paceMinSeconds: Int? = null,
+    @SerialName("pace_max_s") val paceMaxSeconds: Int? = null,
+    @SerialName("alert_on_slow") val alertOnSlow: Boolean = false,
+    @SerialName("alert_on_fast") val alertOnFast: Boolean = false,
 )
 
 @Serializable

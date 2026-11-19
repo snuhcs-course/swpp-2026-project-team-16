@@ -26,11 +26,14 @@ class RouteViewModelPlanTest {
     @Test
     fun requestPlan_sendsTheGoalAndCurrentDistanceAndAppliesThePlan() {
         viewModel.distanceInput = "3"
+        viewModel.onPaceMakerEnabledChange(true)
         viewModel.onGoalTextChange("  천천히 회복 러닝  ")
+        viewModel.updatePaceRange(360f..420f)
+        viewModel.onAlertOnSlowChange(true)
 
         viewModel.requestPlan()
 
-        assertEquals(RunPlanRequest("천천히 회복 러닝", 3000), api.requests.single())
+        assertEquals(RunPlanRequest("천천히 회복 러닝", 3000, 360, 420, true, false), api.requests.single())
         assertEquals(PLAN, viewModel.runPlan)
         assertEquals("5.5", viewModel.distanceInput)
         assertTrue(RoutePreference.FLAT in viewModel.preferences)
@@ -51,6 +54,7 @@ class RouteViewModelPlanTest {
     fun requestPlan_failureKeepsTheOldInputs() {
         api.fail = true
         viewModel.distanceInput = "3"
+        viewModel.onPaceMakerEnabledChange(true)
         viewModel.onGoalTextChange("천천히")
 
         viewModel.requestPlan()
@@ -71,6 +75,22 @@ class RouteViewModelPlanTest {
         viewModel.reset()
         assertNull(viewModel.runPlan)
         assertEquals("", viewModel.goalText)
+    }
+
+    @Test
+    fun addsASectionInTheFirstOpenPartOfThePlan() {
+        viewModel.applyPlan(
+            PLAN.copy(
+                distanceMeters = 5000,
+                paceSegments = listOf(com.example.runtime.data.remote.PaceSegment(1000, 2000, 330, 390)),
+            ),
+        )
+
+        assertTrue(viewModel.addPaceSegment())
+        assertEquals(
+            listOf(0 to 1000, 1000 to 2000),
+            viewModel.runPlan?.paceSegments?.map { it.startMeters to it.endMeters },
+        )
     }
 
     private class PlanApi : FakeApiService() {

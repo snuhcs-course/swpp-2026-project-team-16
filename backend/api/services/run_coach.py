@@ -1,4 +1,5 @@
 import json
+import math
 import re
 from dataclasses import asdict, dataclass, field
 
@@ -23,6 +24,7 @@ MAX_COMMENT_LENGTH = 300
 MAX_REASON_LENGTH = 300
 MIN_PARTIAL_SPLIT_M = 200
 MAX_SPLITS = 60
+MAX_PACE_SEGMENTS = 12
 LLM_TIMEOUT_SECONDS = 10
 
 PACE_OFFSETS = {
@@ -71,6 +73,8 @@ def _int_or_none(value):
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, (int, float)):
+        if isinstance(value, float) and not math.isfinite(value):
+            return None
         return int(round(value))
     return None
 
@@ -152,9 +156,87 @@ def _route_preferences_for(run_type, style, requested=()):
     return preferences
 
 
-def build_plan(run_type, distance_m, style, language, explicit_pace_s=None, route_preferences=(), intensity="", summary=""):
+def _pace_segments_from_goal(value, distance_m):
+    if value is None:
+        return []
+    if not isinstance(value, list) or len(value) > MAX_PACE_SEGMENTS:
+        raise ValueError("invalid pace segments")
+
+    segments = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError("invalid pace segment")
+        start_km = item.get("start_km")
+        end_km = item.get("end_km")
+        pace_s = _int_or_none(item.get("pace_s"))
+        if (
+            isinstance(start_km, bool) or not isinstance(start_km, (int, float))
+            or isinstance(end_km, bool) or not isinstance(end_km, (int, float))
+            or not math.isfinite(start_km) or not math.isfinite(end_km)
+            or start_km < 0 or end_km > distance_m / 1000
+            or pace_s is None or not MIN_PACE_S <= pace_s <= MAX_PACE_S
+        ):
+            raise ValueError("invalid pace segment values")
+
+        start_m = int(round(start_km * 1000))
+        end_m = int(round(end_km * 1000))
+        if start_m < 0 or end_m <= start_m or end_m > distance_m:
+            raise ValueError("pace segment is outside the selected distance")
+        segments.append({
+            "start_m": start_m,
+            "end_m": end_m,
+            "pace_min_s": max(MIN_PACE_S, pace_s - 30),
+            "pace_max_s": min(MAX_PACE_S, pace_s + 30),
+        })
+
+    segments.sort(key=lambda segment: segment["start_m"])
+    if any(left["end_m"] > right["start_m"] for left, right in zip(segments, segments[1:])):
+        raise ValueError("pace segments overlap")
+    return segments
+
+
+def _validate_pace_segments(value, distance_m):
+    if value is None:
+        return [], None
+    if not isinstance(value, list) or len(value) > MAX_PACE_SEGMENTS:
+        return None, f"pace_segments must be a list of at most {MAX_PACE_SEGMENTS} items."
+
+    segments = []
+    for item in value:
+        if not isinstance(item, dict):
+            return None, "Each pace segment must be an object."
+        start_m = _int_or_none(item.get("start_m"))
+        end_m = _int_or_none(item.get("end_m"))
+        pace_min = _int_or_none(item.get("pace_min_s"))
+        pace_max = _int_or_none(item.get("pace_max_s"))
+        if (
+            start_m is None or end_m is None or pace_min is None or pace_max is None
+            or start_m < 0 or end_m <= start_m or end_m > distance_m
+            or not MIN_PACE_S <= pace_min <= pace_max <= MAX_PACE_S
+        ):
+            return None, "A pace segment has invalid distance or pace values."
+        segments.append({
+            "start_m": start_m,
+            "end_m": end_m,
+            "pace_min_s": pace_min,
+            "pace_max_s": pace_max,
+        })
+
+    segments.sort(key=lambda segment: segment["start_m"])
+    if any(left["end_m"] > right["start_m"] for left, right in zip(segments, segments[1:])):
+        return None, "Pace segments must not overlap."
+    return segments, None
+
+
+def build_plan(
+    run_type, distance_m, style, language, explicit_pace_s=None, route_preferences=(), intensity="", summary="",
+    pace_min_s=None, pace_max_s=None, alert_on_slow=False, alert_on_fast=False, pace_segments=(),
+):
     language = _language(language)
-    low, high = pace_range(run_type, style, explicit_pace_s)
+    if pace_min_s is not None and pace_max_s is not None:
+        low, high = pace_min_s, pace_max_s
+    else:
+        low, high = pace_range(run_type, style, explicit_pace_s)
     return {
         "run_type": run_type,
         "distance_m": distance_m,
@@ -163,6 +245,9 @@ def build_plan(run_type, distance_m, style, language, explicit_pace_s=None, rout
         "intensity": (intensity or INTENSITY_NAMES[language][run_type])[:MAX_INTENSITY_LENGTH],
         "route_preferences": _route_preferences_for(run_type, style, route_preferences),
         "summary": summary[:MAX_SUMMARY_LENGTH],
+        "alert_on_slow": bool(alert_on_slow),
+        "alert_on_fast": bool(alert_on_fast),
+        "pace_segments": list(pace_segments),
     }
 
 
@@ -184,6 +269,11 @@ def validate_plan(data):
     preferences = data.get("route_preferences") or []
     if not isinstance(preferences, list):
         return None, "plan.route_preferences must be a list."
+    if not isinstance(data.get("alert_on_slow", False), bool) or not isinstance(data.get("alert_on_fast", False), bool):
+        return None, "Plan alert settings must be booleans."
+    pace_segments, error = _validate_pace_segments(data.get("pace_segments", []), distance_m)
+    if error:
+        return None, error
     return {
         "run_type": run_type,
         "distance_m": distance_m,
@@ -192,6 +282,9 @@ def validate_plan(data):
         "intensity": str(data.get("intensity") or "")[:MAX_INTENSITY_LENGTH],
         "route_preferences": [p for p in preferences if p in ROUTE_PREFERENCES],
         "summary": str(data.get("summary") or "")[:MAX_SUMMARY_LENGTH],
+        "alert_on_slow": data.get("alert_on_slow", False),
+        "alert_on_fast": data.get("alert_on_fast", False),
+        "pace_segments": pace_segments,
     }, None
 
 
@@ -215,18 +308,22 @@ GOAL_SYSTEM_PROMPT = (
     f'- "run_type": one of {", ".join(RUN_TYPES)}\n'
     '- "distance_km": number, or null if the runner did not say\n'
     '- "explicit_pace_s": seconds per km if the runner named a pace (e.g. "6분 페이스" is 360), otherwise null\n'
+    '- "pace_segments": an array of explicitly described pace sections; each item has "start_km", "end_km", and "pace_s"\n'
     f'- "route_preferences": a list from {", ".join(ROUTE_PREFERENCES)}, empty if not mentioned\n'
     '- "intensity": a short description of the effort, under 30 characters\n'
     '- "summary": one sentence explaining the plan, under 120 characters\n'
     "Rules:\n"
     "- Tired legs, heavy legs, or a hard workout yesterday usually mean recovery.\n"
     "- If a selected total distance is provided, use that exact total in distance_km; shorter distances in the request may describe intervals.\n"
+    "- Convert clear section requests into non-overlapping pace_segments within the selected total distance.\n"
+    "- Do not create a segment for a pace the runner did not specify. For a named pace, use the exact seconds per km.\n"
+    "- Treat the selected total distance as fixed. For 'last 1 km' or similar, calculate the section from the selected total.\n"
     "- Do not invent a pace. Leave explicit_pace_s null unless the runner wrote one.\n"
     "- Write intensity and summary in {language}, with no markdown."
 )
 
 
-def build_goal_prompt(text, style, language, default_distance_m=None):
+def build_goal_prompt(text, style, language, default_distance_m=None, pace_min_s=None, pace_max_s=None):
     request_lines = [f"Today's request: {text}"]
     if default_distance_m is not None:
         request_lines = [
@@ -234,6 +331,8 @@ def build_goal_prompt(text, style, language, default_distance_m=None):
             "Distances mentioned for sections or intervals are parts of this total, not a replacement for it.",
             *request_lines,
         ]
+    if pace_min_s is not None and pace_max_s is not None:
+        request_lines.insert(0, f"Selected target pace range: {format_pace(pace_min_s)}-{format_pace(pace_max_s)} per km. Keep it unchanged.")
     return {
         "system": GOAL_SYSTEM_PROMPT.replace("{language}", _reply_language(language)),
         "user": "\n".join(["Runner profile:", *_style_lines(style), "", *request_lines]),
@@ -266,17 +365,24 @@ def _keyword_run_type(text):
     return "easy"
 
 
-def fallback_plan(text, style, default_distance_m, language):
+def fallback_plan(text, style, default_distance_m, language, pace_min_s=None, pace_max_s=None, alert_on_slow=False, alert_on_fast=False):
     run_type = _keyword_run_type(text)
     distance_m = default_distance_m or _distance_from_text(text) or DEFAULT_DISTANCE_M
-    return build_plan(run_type, distance_m, style, language)
+    return build_plan(
+        run_type, distance_m, style, language,
+        pace_min_s=pace_min_s, pace_max_s=pace_max_s,
+        alert_on_slow=alert_on_slow, alert_on_fast=alert_on_fast,
+    )
 
 
-def plan_from_goal(text, style, default_distance_m=None, language=DEFAULT_LANGUAGE, llm=None):
+def plan_from_goal(
+    text, style, default_distance_m=None, language=DEFAULT_LANGUAGE, llm=None,
+    pace_min_s=None, pace_max_s=None, alert_on_slow=False, alert_on_fast=False,
+):
     language = _language(language)
     llm = llm or (lambda prompt: generate_text(prompt, timeout=LLM_TIMEOUT_SECONDS, retries=0))
     try:
-        data = _json_object(llm(build_goal_prompt(text, style, language, default_distance_m)))
+        data = _json_object(llm(build_goal_prompt(text, style, language, default_distance_m, pace_min_s, pace_max_s)))
         run_type = data.get("run_type")
         if run_type not in RUN_TYPES:
             raise ValueError("unknown run type")
@@ -291,9 +397,13 @@ def plan_from_goal(text, style, default_distance_m=None, language=DEFAULT_LANGUA
         preferences = data.get("route_preferences") if isinstance(data.get("route_preferences"), list) else []
         intensity = data.get("intensity") if isinstance(data.get("intensity"), str) else ""
         summary = data.get("summary") if isinstance(data.get("summary"), str) else ""
-        return build_plan(run_type, distance_m, style, language, explicit, preferences, intensity.strip(), summary.strip())
+        pace_segments = _pace_segments_from_goal(data.get("pace_segments", []), distance_m)
+        return build_plan(
+            run_type, distance_m, style, language, explicit, preferences, intensity.strip(), summary.strip(),
+            pace_min_s, pace_max_s, alert_on_slow, alert_on_fast, pace_segments,
+        )
     except (LLMError, ValueError):
-        return fallback_plan(text, style, default_distance_m, language)
+        return fallback_plan(text, style, default_distance_m, language, pace_min_s, pace_max_s, alert_on_slow, alert_on_fast)
 
 
 def validate_splits(value):
@@ -322,16 +432,29 @@ def split_paces(splits, distance_m, duration_s):
 
 def report_facts(plan, splits, distance_m, duration_s, off_route_count=0, off_route_seconds=0):
     rows = split_paces(splits, distance_m, duration_s)
+    distance_before_split = 0
     for row in rows:
+        midpoint = distance_before_split + row["distance_m"] // 2
+        distance_before_split += row["distance_m"]
         if plan is None:
             row["status"] = None
             row["diff_s"] = 0
-        elif row["pace_s"] < plan["pace_min_s"]:
+            continue
+        segment = next(
+            (
+                item for item in plan.get("pace_segments") or []
+                if item["start_m"] <= midpoint < item["end_m"]
+            ),
+            None,
+        )
+        pace_min = segment["pace_min_s"] if segment else plan["pace_min_s"]
+        pace_max = segment["pace_max_s"] if segment else plan["pace_max_s"]
+        if row["pace_s"] < pace_min:
             row["status"] = "fast"
-            row["diff_s"] = plan["pace_min_s"] - row["pace_s"]
-        elif row["pace_s"] > plan["pace_max_s"]:
+            row["diff_s"] = pace_min - row["pace_s"]
+        elif row["pace_s"] > pace_max:
             row["status"] = "slow"
-            row["diff_s"] = row["pace_s"] - plan["pace_max_s"]
+            row["diff_s"] = row["pace_s"] - pace_max
         else:
             row["status"] = "in_range"
             row["diff_s"] = 0
@@ -360,11 +483,17 @@ COMMENT_SYSTEM_PROMPT = (
 def _plan_lines(plan, language):
     if plan is None:
         return ["- no plan was set"]
-    return [
+    lines = [
         f"- run type: {RUN_TYPE_NAMES[language][plan['run_type']]}",
         f"- distance: {plan['distance_m'] / 1000:g} km",
         f"- target pace: {format_pace(plan['pace_min_s'])}-{format_pace(plan['pace_max_s'])} /km",
     ]
+    for segment in plan.get("pace_segments") or []:
+        lines.append(
+            f"- km {segment['start_m'] / 1000:g}-{segment['end_m'] / 1000:g}: "
+            f"{format_pace(segment['pace_min_s'])}-{format_pace(segment['pace_max_s'])} /km"
+        )
+    return lines
 
 
 def _fact_lines(facts):

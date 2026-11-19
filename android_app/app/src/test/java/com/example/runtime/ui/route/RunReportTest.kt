@@ -1,6 +1,7 @@
 package com.example.runtime.ui.route
 
 import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.remote.PaceSegment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -27,6 +28,25 @@ class RunReportTest {
             splits.map { it.status },
         )
         assertEquals(listOf(0, 0, 9, 17, 4), splits.map { it.diffSeconds })
+    }
+
+    @Test
+    fun comparesSplitsWithTheEditedPaceForTheirSection() {
+        val planWithSections = plan.copy(
+            paceSegments = listOf(
+                PaceSegment(0, 2000, 330, 390),
+                PaceSegment(2000, 3000, 300, 360),
+            ),
+        )
+        val result = RunResult(5000, 1875, splitTimes = listOf(375, 750, 1125, 1500, 1875))
+
+        val splits = result.splitPaces(planWithSections)
+
+        assertEquals(
+            listOf(SplitStatus.IN_RANGE, SplitStatus.IN_RANGE, SplitStatus.SLOW, SplitStatus.IN_RANGE, SplitStatus.IN_RANGE),
+            splits.map { it.status },
+        )
+        assertEquals(15, splits[2].diffSeconds)
     }
 
     @Test

@@ -149,4 +149,53 @@ class RouteProgressMatcherTest {
         assertEquals(RouteTurnDirection.RIGHT, nextTurn?.direction)
         assertTrue(nextTurn!!.distanceAlongMeters in 70.0..140.0)
     }
+
+    @Test
+    fun voiceGuideAnnouncesTurnAroundOneHundredMetersAndAgainNearTheTurnOnlyOnce() {
+        val turn = RouteTurn(200.0, RouteTurnDirection.LEFT)
+        val guide = RouteVoiceGuide(listOf(turn), routeLengthMeters = 500.0)
+
+        assertEquals(RouteVoiceCue.Kind.START, guide.update(0.0, true, false, false)?.kind)
+        val approach = guide.update(100.0, true, false, false)
+        assertEquals(RouteVoiceCue.Kind.TURN_APPROACHING, approach?.kind)
+        assertEquals(RouteTurnDirection.LEFT, approach?.direction)
+        assertEquals(100, approach?.distanceMeters)
+        assertEquals(RouteVoiceCue.Kind.TURN_NOW, guide.update(185.0, true, false, false)?.kind)
+        assertEquals(null, guide.update(190.0, true, false, false))
+        assertEquals(null, guide.update(205.0, true, false, false))
+    }
+
+    @Test
+    fun voiceGuideAnnouncesLeavingAndRejoiningTheRouteAndArrival() {
+        val guide = RouteVoiceGuide(emptyList(), routeLengthMeters = 500.0)
+
+        guide.update(0.0, true, false, false)
+        assertEquals(RouteVoiceCue.Kind.OFF_ROUTE, guide.update(20.0, true, false, true)?.kind)
+        assertEquals(null, guide.update(30.0, true, false, true))
+        assertEquals(RouteVoiceCue.Kind.REJOINED, guide.update(40.0, true, false, false)?.kind)
+        assertEquals(RouteVoiceCue.Kind.ARRIVED, guide.update(490.0, true, false, false)?.kind)
+        assertEquals(null, guide.update(495.0, true, false, false))
+    }
+
+    @Test
+    fun voiceGuideDoesNotGiveRouteInstructionsDuringFreeTracking() {
+        val guide = RouteVoiceGuide(emptyList(), routeLengthMeters = 0.0)
+
+        assertEquals(null, guide.update(0.0, true, false, false))
+    }
+
+    @Test
+    fun uphillGuideWarnsWithinTwoHundredMetersOnlyOncePerSection() {
+        val guide = UphillVoiceGuide(
+            listOf(
+                RouteUphillSection(500, 1000),
+                RouteUphillSection(1800, 2300),
+            ),
+        )
+
+        assertEquals(null, guide.update(250.0))
+        assertEquals(200, guide.update(300.0))
+        assertEquals(null, guide.update(350.0))
+        assertEquals(200, guide.update(1600.0))
+    }
 }

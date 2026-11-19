@@ -31,6 +31,8 @@ class RouteTurnGuide(points: List<RouteCoordinate>) {
         }
     }
 
+    val routeLengthMeters: Double get() = cumulative.lastOrNull() ?: 0.0
+
     val turns: List<RouteTurn> = findTurns()
 
     fun nextTurn(progressMeters: Double): RouteTurn? =
