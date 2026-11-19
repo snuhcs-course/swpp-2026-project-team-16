@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.runtime.R
 import com.example.runtime.data.remote.GeoJsonLineString
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.RunPlan
@@ -84,12 +85,10 @@ class RunViewModel(
     private var offRouteCount = 0
     private var offRouteMillis = 0L
     private var offRouteSince: Long? = null
+    private var voiceGuide = RouteVoiceGuide(emptyList(), 0.0)
+    private var uphillVoiceGuide = UphillVoiceGuide(emptyList())
 
-    init {
-        viewModelScope.launch {
-            RunTrackingState.metrics.collect(::onMetrics)
-        }
-    }
+    var speakCue: (messageId: Int, distanceMeters: Int?) -> Unit = { _, _ -> }
 
     val isRunActive: Boolean
         get() = target != null && result == null && RunTrackingState.metrics.value.isTracking
@@ -103,6 +102,9 @@ class RunViewModel(
         progressMatcher = RouteProgressMatcher(routePoints)
         lastLatitude = null
         lastLongitude = null
+        val turnGuide = RouteTurnGuide(routePoints)
+        voiceGuide = RouteVoiceGuide(turnGuide.turns, turnGuide.routeLengthMeters)
+        uphillVoiceGuide = UphillVoiceGuide(target?.uphillSections.orEmpty())
     }
 
     private fun onMetrics(metrics: RunMetrics) {
@@ -115,16 +117,49 @@ class RunViewModel(
         }
         val offRoute = metrics.isTracking && !metrics.isPaused && latitude != null && longitude != null &&
             routeProgress.isOffRoute
-        if (offRoute == isOffRoute) return
-        val now = clock()
-        if (offRoute) {
-            offRouteCount += 1
-            offRouteSince = now
-        } else {
-            offRouteSince?.let { offRouteMillis += now - it }
-            offRouteSince = null
+        if (offRoute != isOffRoute) {
+            val now = clock()
+            if (offRoute) {
+                offRouteCount += 1
+                offRouteSince = now
+            } else {
+                offRouteSince?.let { offRouteMillis += now - it }
+                offRouteSince = null
+            }
+            isOffRoute = offRoute
         }
-        isOffRoute = offRoute
+        if (target != null && result == null) announce(metrics)
+    }
+
+    private fun announce(metrics: RunMetrics) {
+        val progress = routeProgress.distanceAlongMeters
+        voiceGuide.update(progress, metrics.isTracking, metrics.isPaused, isOffRoute)
+            ?.messageId()
+            ?.let { (messageId, distance) -> speakCue(messageId, distance) }
+        if (!metrics.isTracking || metrics.isPaused || isOffRoute) return
+        uphillVoiceGuide.update(progress)?.let { speakCue(R.string.run_voice_uphill_approaching, it) }
+    }
+
+    private fun RouteVoiceCue.messageId(): Pair<Int, Int?>? {
+        val messageId = when (kind) {
+            RouteVoiceCue.Kind.START -> R.string.run_voice_started
+            RouteVoiceCue.Kind.OFF_ROUTE -> R.string.run_voice_off_route
+            RouteVoiceCue.Kind.REJOINED -> R.string.run_voice_rejoined
+            RouteVoiceCue.Kind.ARRIVED -> R.string.run_voice_arrived
+            RouteVoiceCue.Kind.TURN_APPROACHING -> when (direction) {
+                RouteTurnDirection.LEFT -> R.string.run_voice_turn_approaching_left
+                RouteTurnDirection.RIGHT -> R.string.run_voice_turn_approaching_right
+                RouteTurnDirection.UTURN -> R.string.run_voice_turn_approaching_uturn
+                null -> return null
+            }
+            RouteVoiceCue.Kind.TURN_NOW -> when (direction) {
+                RouteTurnDirection.LEFT -> R.string.run_voice_turn_now_left
+                RouteTurnDirection.RIGHT -> R.string.run_voice_turn_now_right
+                RouteTurnDirection.UTURN -> R.string.run_voice_turn_now_uturn
+                null -> return null
+            }
+        }
+        return messageId to distanceMeters
     }
 
     fun offRouteTotals(): Pair<Int, Long> {
@@ -318,6 +353,12 @@ class RunViewModel(
             } catch (e: Exception) {
                 shareState = ShareState.Failed(e.toUiText())
             }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            RunTrackingState.metrics.collect(::onMetrics)
         }
     }
 }

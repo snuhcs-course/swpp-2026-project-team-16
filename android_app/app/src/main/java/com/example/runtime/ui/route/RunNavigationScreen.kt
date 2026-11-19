@@ -88,7 +88,6 @@ fun RunNavigationScreen(
     routeDistanceMeters: Int,
     plan: RunPlan? = null,
     paceAlertSettings: PaceAlertSettings? = null,
-    uphillSections: List<RouteUphillSection> = emptyList(),
     onClose: () -> Unit,
     onRunFinished: (RunResult) -> Unit = {},
     isFree: Boolean = false,
@@ -100,46 +99,10 @@ fun RunNavigationScreen(
     val trail by RunTrackingState.trail.collectAsState()
     val splitTimes by RunTrackingState.splitTimes.collectAsState()
     val turnGuide = remember(routePoints) { RouteTurnGuide(routePoints) }
-    val voiceGuide = remember(routePoints) { RouteVoiceGuide(turnGuide.turns, turnGuide.routeLengthMeters) }
-    val uphillVoiceGuide = remember(uphillSections) { UphillVoiceGuide(uphillSections) }
     var showFinishConfirmation by remember { mutableStateOf(false) }
     var permissionError by remember { mutableStateOf(false) }
     var showReturnDialog by remember { mutableStateOf(false) }
     val hasRoute = routePoints.size >= 2
-
-    LaunchedEffect(routeProgress.distanceAlongMeters, metrics.isTracking, metrics.isPaused, isOffRoute) {
-        val cue = voiceGuide.update(
-            progressMeters = routeProgress.distanceAlongMeters,
-            isTracking = metrics.isTracking,
-            isPaused = metrics.isPaused,
-            isOffRoute = isOffRoute,
-        ) ?: return@LaunchedEffect
-        val messageId = when (cue.kind) {
-            RouteVoiceCue.Kind.START -> R.string.run_voice_started
-            RouteVoiceCue.Kind.OFF_ROUTE -> R.string.run_voice_off_route
-            RouteVoiceCue.Kind.REJOINED -> R.string.run_voice_rejoined
-            RouteVoiceCue.Kind.ARRIVED -> R.string.run_voice_arrived
-            RouteVoiceCue.Kind.TURN_APPROACHING -> when (cue.direction) {
-                RouteTurnDirection.LEFT -> R.string.run_voice_turn_approaching_left
-                RouteTurnDirection.RIGHT -> R.string.run_voice_turn_approaching_right
-                RouteTurnDirection.UTURN -> R.string.run_voice_turn_approaching_uturn
-                null -> return@LaunchedEffect
-            }
-            RouteVoiceCue.Kind.TURN_NOW -> when (cue.direction) {
-                RouteTurnDirection.LEFT -> R.string.run_voice_turn_now_left
-                RouteTurnDirection.RIGHT -> R.string.run_voice_turn_now_right
-                RouteTurnDirection.UTURN -> R.string.run_voice_turn_now_uturn
-                null -> return@LaunchedEffect
-            }
-        }
-        RunTrackingService.speakNavigationCue(context, messageId, cue.distanceMeters)
-    }
-
-    LaunchedEffect(routeProgress.distanceAlongMeters, metrics.isTracking, metrics.isPaused, isOffRoute) {
-        if (!metrics.isTracking || metrics.isPaused || isOffRoute) return@LaunchedEffect
-        val distanceToUphill = uphillVoiceGuide.update(routeProgress.distanceAlongMeters) ?: return@LaunchedEffect
-        RunTrackingService.speakNavigationCue(context, R.string.run_voice_uphill_approaching, distanceToUphill)
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),

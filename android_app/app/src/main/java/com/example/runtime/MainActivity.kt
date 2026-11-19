@@ -92,6 +92,7 @@ import com.example.runtime.ui.route.RunTarget
 import com.example.runtime.ui.route.RunOngoingBar
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.ui.route.RunViewModel
+import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.ui.splash.SplashScreen
 import com.example.runtime.ui.theme.RunTimeTheme
 import com.example.runtime.ui.theme.ThemeMode
@@ -152,6 +153,12 @@ fun RunTimeApp() {
     val routeViewModel: RouteViewModel = viewModel()
     val myPageViewModel: MyPageViewModel = viewModel()
     val runViewModel: RunViewModel = viewModel()
+    val appContext = LocalContext.current.applicationContext
+    remember(runViewModel) {
+        runViewModel.speakCue = { messageId, distanceMeters ->
+            RunTrackingService.speakNavigationCue(appContext, messageId, distanceMeters)
+        }
+    }
     val runningStyleViewModel: RunningStyleViewModel = viewModel()
     val userProfileViewModel: UserProfileViewModel = viewModel()
     val profileStack = remember { mutableStateListOf<String>() }
@@ -502,7 +509,6 @@ fun RunTimeApp() {
                                                 offRouteTotals = runViewModel::offRouteTotals,
                                                 routeDistanceMeters = target.distanceMeters,
                                                 plan = target.plan,
-                                                uphillSections = target.uphillSections,
                                                 paceAlertSettings = target.paceAlertSettings,
                                                 onClose = { currentScreen = runReturnScreen },
                                                 onRunFinished = { runResult ->
