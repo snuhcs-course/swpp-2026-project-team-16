@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -176,7 +177,7 @@ fun RouteInputScreen(routeViewModel: RouteViewModel, onGenerate: () -> Unit, onS
                     )
                 }
                 Spacer(modifier = Modifier.height(Spacing.m))
-                RunGoalSection(routeViewModel)
+                PaceMakerSection(routeViewModel)
                 Spacer(modifier = Modifier.height(Spacing.m))
                 Text(stringResource(R.string.label_preferences), style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -294,57 +295,127 @@ private fun MapPickBar(target: PickTarget, onTargetChange: (PickTarget) -> Unit,
 }
 
 @Composable
-private fun RunGoalSection(routeViewModel: RouteViewModel) {
-    Text(stringResource(R.string.goal_title), style = MaterialTheme.typography.titleMedium)
-    Text(
-        stringResource(R.string.goal_hint),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.height(Spacing.s))
-    OutlinedTextField(
-        value = routeViewModel.goalText,
-        onValueChange = routeViewModel::onGoalTextChange,
-        placeholder = { Text(stringResource(R.string.goal_placeholder)) },
-        minLines = 2,
-        maxLines = 4,
-        keyboardOptions = doneKeyboardOptions(),
-        keyboardActions = hideKeyboardActions(),
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
-    )
-    Spacer(modifier = Modifier.height(Spacing.s))
-    val loading = routeViewModel.planState == PlanState.Loading
-    OutlinedButton(
-        onClick = routeViewModel::requestPlan,
-        enabled = routeViewModel.goalText.isNotBlank() && !loading,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        if (loading) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(Spacing.s))
-        }
-        Text(stringResource(if (routeViewModel.runPlan == null) R.string.goal_make_plan else R.string.goal_remake_plan))
-    }
-    (routeViewModel.planState as? PlanState.Failed)?.let {
-        Spacer(modifier = Modifier.height(Spacing.xs))
-        Text(it.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-    }
-    routeViewModel.runPlan?.let { plan ->
-        Spacer(modifier = Modifier.height(Spacing.s))
-        RunPlanCard(
-            plan = plan,
-            title = stringResource(R.string.goal_plan_title),
-            footer = {
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+private fun PaceMakerSection(routeViewModel: RouteViewModel) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = routeViewModel.paceMakerEnabled,
+                onCheckedChange = routeViewModel::onPaceMakerEnabledChange,
+            )
+            Column {
+                Text(stringResource(R.string.pace_maker_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(R.string.goal_plan_applied),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    stringResource(R.string.pace_maker_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(onClick = routeViewModel::clearPlan, contentPadding = PaddingValues(0.dp)) {
-                    Text(stringResource(R.string.goal_clear_plan))
-                }
             }
+        }
+        if (!routeViewModel.paceMakerEnabled) return@Column
+
+        Spacer(modifier = Modifier.height(Spacing.s))
+        Text(stringResource(R.string.pace_maker_range), style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(
+                R.string.pace_range_per_km,
+                "${formatPaceClock(routeViewModel.paceMinSeconds)}–${formatPaceClock(routeViewModel.paceMaxSeconds)}",
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
         )
+        RangeSlider(
+            value = routeViewModel.paceMinSeconds.toFloat()..routeViewModel.paceMaxSeconds.toFloat(),
+            onValueChange = routeViewModel::updatePaceRange,
+            valueRange = 180f..900f,
+            steps = 143,
+        )
+        Text(
+            stringResource(R.string.pace_maker_range_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(Spacing.s))
+        Text(stringResource(R.string.pace_maker_alerts), style = MaterialTheme.typography.titleSmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(routeViewModel.alertOnSlow, routeViewModel::onAlertOnSlowChange)
+                Text(stringResource(R.string.pace_maker_alert_slow), style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(routeViewModel.alertOnFast, routeViewModel::onAlertOnFastChange)
+                Text(stringResource(R.string.pace_maker_alert_fast), style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = !routeViewModel.alertOnSlow && !routeViewModel.alertOnFast,
+                    onCheckedChange = { if (it) {
+                        routeViewModel.onAlertOnSlowChange(false)
+                        routeViewModel.onAlertOnFastChange(false)
+                    } },
+                )
+                Text(stringResource(R.string.pace_maker_alert_none), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        Spacer(modifier = Modifier.height(Spacing.s))
+        var goalFocused by remember { mutableStateOf(false) }
+        OutlinedTextField(
+            value = routeViewModel.goalText,
+            onValueChange = routeViewModel::onGoalTextChange,
+            label = { Text(stringResource(R.string.pace_maker_segments_label)) },
+            placeholder = if (!goalFocused && routeViewModel.goalText.isEmpty()) {
+                { Text(stringResource(R.string.pace_maker_segments_placeholder)) }
+            } else null,
+            supportingText = {
+                Text(
+                    "${routeViewModel.goalText.length}/$MAX_GOAL_TEXT_LENGTH",
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            minLines = 2,
+            maxLines = 4,
+            keyboardOptions = doneKeyboardOptions(),
+            keyboardActions = hideKeyboardActions(),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().onFocusChanged { goalFocused = it.isFocused },
+        )
+        Spacer(modifier = Modifier.height(Spacing.s))
+        val loading = routeViewModel.planState == PlanState.Loading
+        OutlinedButton(
+            onClick = routeViewModel::requestPlan,
+            enabled = routeViewModel.goalText.isNotBlank() && !loading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(Spacing.s))
+            }
+            Text(stringResource(if (routeViewModel.runPlan == null) R.string.goal_make_plan else R.string.goal_remake_plan))
+        }
+        (routeViewModel.planState as? PlanState.Failed)?.let {
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(it.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        routeViewModel.runPlan?.let { plan ->
+            Spacer(modifier = Modifier.height(Spacing.s))
+            RunPlanCard(
+                plan = plan,
+                title = stringResource(R.string.goal_plan_title),
+                onUpdatePaceSegment = routeViewModel::updatePaceSegment,
+                onRemovePaceSegment = routeViewModel::removePaceSegment,
+                onAddPaceSegment = routeViewModel::addPaceSegment,
+                footer = {
+                    Text(
+                        stringResource(R.string.goal_plan_applied),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = routeViewModel::clearPlan, contentPadding = PaddingValues(0.dp)) {
+                        Text(stringResource(R.string.goal_clear_plan))
+                    }
+                },
+            )
+        }
     }
 }

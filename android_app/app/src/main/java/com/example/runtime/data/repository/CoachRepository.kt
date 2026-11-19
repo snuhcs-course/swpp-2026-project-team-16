@@ -9,8 +9,23 @@ import com.example.runtime.data.remote.RunningStyle
 
 class CoachRepository(private val api: ApiService = ApiClient.api) {
 
-    suspend fun planRun(text: String, distanceMeters: Int?): RunPlan =
-        api.planRun(RunPlanRequest(text, distanceMeters)).requireData()
+    suspend fun planRun(
+        text: String,
+        distanceMeters: Int?,
+        paceMinSeconds: Int,
+        paceMaxSeconds: Int,
+        alertOnSlow: Boolean,
+        alertOnFast: Boolean,
+    ): RunPlan = api.planRun(
+        RunPlanRequest(
+            text = text,
+            distanceMeters = distanceMeters,
+            paceMinSeconds = paceMinSeconds,
+            paceMaxSeconds = paceMaxSeconds,
+            alertOnSlow = alertOnSlow,
+            alertOnFast = alertOnFast,
+        ),
+    ).requireData()
 
     suspend fun runReport(runId: Int): RunReport = api.runReport(runId).requireData()
 

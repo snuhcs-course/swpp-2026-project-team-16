@@ -11,6 +11,7 @@ import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.remote.PaceSegment
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
@@ -78,6 +79,8 @@ sealed interface PlanState {
 }
 
 const val MAX_GOAL_TEXT_LENGTH = 200
+private const val DEFAULT_PACE_MIN_SECONDS = 330
+private const val DEFAULT_PACE_MAX_SECONDS = 390
 
 class RouteViewModel(
     private val repository: RouteRepository = RouteRepository(),
@@ -96,6 +99,16 @@ class RouteViewModel(
     var preferenceText by mutableStateOf("")
         private set
     var goalText by mutableStateOf("")
+        private set
+    var paceMakerEnabled by mutableStateOf(false)
+        private set
+    var paceMinSeconds by mutableStateOf(DEFAULT_PACE_MIN_SECONDS)
+        private set
+    var paceMaxSeconds by mutableStateOf(DEFAULT_PACE_MAX_SECONDS)
+        private set
+    var alertOnSlow by mutableStateOf(false)
+        private set
+    var alertOnFast by mutableStateOf(false)
         private set
     var runPlan by mutableStateOf<RunPlan?>(null)
         private set
@@ -135,6 +148,8 @@ class RouteViewModel(
 
     var routeSlopeSegments by mutableStateOf<List<RouteSlopeSegment>>(emptyList())
         private set
+    var uphillSections by mutableStateOf<List<RouteUphillSection>>(emptyList())
+        private set
     var steepSectionSummary by mutableStateOf("")
         private set
     var elevationLoadState by mutableStateOf(ElevationLoadState.Error)
@@ -168,6 +183,11 @@ class RouteViewModel(
         preferences = emptySet()
         preferenceText = ""
         goalText = ""
+        paceMakerEnabled = false
+        paceMinSeconds = DEFAULT_PACE_MIN_SECONDS
+        paceMaxSeconds = DEFAULT_PACE_MAX_SECONDS
+        alertOnSlow = false
+        alertOnFast = false
         runPlan = null
         planState = PlanState.Idle
         error = null
@@ -182,6 +202,7 @@ class RouteViewModel(
         elevations = emptyList()
         slopes = emptyList()
         routeSlopeSegments = emptyList()
+        uphillSections = emptyList()
         steepSectionSummary = ""
         elevationLoadState = ElevationLoadState.Error
         pendingStart = null
@@ -207,16 +228,64 @@ class RouteViewModel(
         if (planState is PlanState.Failed) planState = PlanState.Idle
     }
 
+    fun onPaceMakerEnabledChange(enabled: Boolean) {
+        paceMakerEnabled = enabled
+        if (!enabled) {
+            alertOnSlow = false
+            alertOnFast = false
+            runPlan = null
+            planState = PlanState.Idle
+        } else {
+            updatePlanSettings()
+        }
+    }
+
+    fun updatePaceRange(range: ClosedFloatingPointRange<Float>) {
+        val min = (range.start / 5f).roundToInt() * 5
+        val max = (range.endInclusive / 5f).roundToInt() * 5
+        paceMinSeconds = min.coerceIn(180, 870)
+        paceMaxSeconds = max.coerceIn(paceMinSeconds + 30, 900)
+        updatePlanSettings()
+    }
+
+    fun onAlertOnSlowChange(enabled: Boolean) {
+        alertOnSlow = enabled
+        updatePlanSettings()
+    }
+
+    fun onAlertOnFastChange(enabled: Boolean) {
+        alertOnFast = enabled
+        updatePlanSettings()
+    }
+
+    private fun updatePlanSettings() {
+        runPlan = runPlan?.copy(
+            paceMinSeconds = paceMinSeconds,
+            paceMaxSeconds = paceMaxSeconds,
+            alertOnSlow = alertOnSlow,
+            alertOnFast = alertOnFast,
+        )
+    }
+
     fun requestPlan() {
         val text = goalText.trim()
-        if (text.isEmpty() || planState == PlanState.Loading) return
+        if (!paceMakerEnabled || text.isEmpty() || planState == PlanState.Loading) return
         val distanceMeters = distanceInput.trim().toDoubleOrNull()
             ?.takeIf { it.isFinite() && it > 0 }
             ?.let { (it * 1000).roundToInt() }
         planState = PlanState.Loading
         sessionScope.launch {
             planState = try {
-                applyPlan(coachRepository.planRun(text, distanceMeters))
+                applyPlan(
+                    coachRepository.planRun(
+                        text = text,
+                        distanceMeters = distanceMeters,
+                        paceMinSeconds = paceMinSeconds,
+                        paceMaxSeconds = paceMaxSeconds,
+                        alertOnSlow = alertOnSlow,
+                        alertOnFast = alertOnFast,
+                    ),
+                )
                 PlanState.Idle
             } catch (e: CancellationException) {
                 throw e
@@ -228,6 +297,11 @@ class RouteViewModel(
 
     fun applyPlan(plan: RunPlan) {
         if (guidance == RunGuidance.FREE) guidance = RunGuidance.ROUTE
+        paceMakerEnabled = true
+        paceMinSeconds = plan.paceMinSeconds
+        paceMaxSeconds = plan.paceMaxSeconds
+        alertOnSlow = plan.alertOnSlow
+        alertOnFast = plan.alertOnFast
         runPlan = plan
         distanceInput = formatKilometers(plan.distanceMeters)
         plan.routePreferences
@@ -239,6 +313,49 @@ class RouteViewModel(
     fun clearPlan() {
         runPlan = null
         planState = PlanState.Idle
+    }
+
+    fun updatePaceSegment(index: Int, segment: PaceSegment): Boolean {
+        val plan = runPlan ?: return false
+        if (
+            segment.startMeters < 0 || segment.endMeters <= segment.startMeters
+            || segment.endMeters > plan.distanceMeters
+            || segment.paceMinSeconds !in 180..900
+            || segment.paceMaxSeconds !in segment.paceMinSeconds..900
+        ) return false
+        val segments = plan.paceSegments.toMutableList()
+        if (index !in segments.indices) return false
+        val previous = segments.getOrNull(index - 1)
+        val next = segments.getOrNull(index + 1)
+        if (previous != null && previous.endMeters > segment.startMeters) return false
+        if (next != null && segment.endMeters > next.startMeters) return false
+        segments[index] = segment
+        runPlan = plan.copy(paceSegments = segments)
+        return true
+    }
+
+    fun removePaceSegment(index: Int) {
+        val plan = runPlan ?: return
+        if (index !in plan.paceSegments.indices) return
+        runPlan = plan.copy(paceSegments = plan.paceSegments.toMutableList().also { it.removeAt(index) })
+    }
+
+    fun addPaceSegment(): Boolean {
+        val plan = runPlan ?: return false
+        if (plan.paceSegments.size >= 12) return false
+        val ordered = plan.paceSegments.sortedBy { it.startMeters }
+        var start = 0
+        for (segment in ordered) {
+            if (segment.startMeters - start >= 200) break
+            start = maxOf(start, segment.endMeters)
+        }
+        if (plan.distanceMeters - start < 200) return false
+        val end = minOf(start + 1000, plan.distanceMeters)
+        runPlan = plan.copy(
+            paceSegments = (ordered + PaceSegment(start, end, paceMinSeconds, paceMaxSeconds))
+                .sortedBy { it.startMeters },
+        )
+        return true
     }
 
     private fun formatKilometers(meters: Int): String {
@@ -430,6 +547,29 @@ class RouteViewModel(
             return false
         }
 
+        if (paceMakerEnabled) {
+            val selectedSegments = runPlan?.paceSegments.orEmpty()
+            if (selectedSegments.any { it.endMeters > meters }) {
+                error = UiText.Resource(R.string.goal_segment_exceeds_distance)
+                return false
+            }
+            runPlan = (runPlan ?: RunPlan(
+                runType = "easy",
+                distanceMeters = meters,
+                paceMinSeconds = paceMinSeconds,
+                paceMaxSeconds = paceMaxSeconds,
+            )).copy(
+                distanceMeters = meters,
+                paceMinSeconds = paceMinSeconds,
+                paceMaxSeconds = paceMaxSeconds,
+                routePreferences = RoutePreference.entries.filter { it in preferences }.map { it.apiValue },
+                alertOnSlow = alertOnSlow,
+                alertOnFast = alertOnFast,
+            )
+        } else {
+            runPlan = null
+        }
+
         error = null
         pendingStart = start
         pendingEnd = end
@@ -499,6 +639,7 @@ class RouteViewModel(
         elevations = emptyList()
         slopes = emptyList()
         routeSlopeSegments = emptyList()
+        uphillSections = emptyList()
         steepSectionSummary = ""
         elevationLoadState = ElevationLoadState.Loading
         val language = pendingLanguage
@@ -564,6 +705,7 @@ class RouteViewModel(
             )
 
             slopes = calculatedSlopes
+            uphillSections = findSteepSections(calculatedSlopes, segmentDistances)
 
             val routeGeometrySegments =
                 splitRouteGeometryAtIntervals(coordinates, SAMPLE_INTERVAL_METERS)
@@ -603,6 +745,7 @@ class RouteViewModel(
         elevations = emptyList()
         slopes = emptyList()
         routeSlopeSegments = emptyList()
+        uphillSections = emptyList()
         steepSectionSummary = noElevationMessage(language)
         elevationLoadState = ElevationLoadState.Error
     }
@@ -611,6 +754,36 @@ class RouteViewModel(
      5% 이상 오르막 경사구간 찾기
      250m 단위로, 경사 구간이 2개 이상 연속되면 상세 위치 요약
      */
+    private fun findSteepSections(
+        slopes: List<Double>,
+        segmentDistances: List<Double>,
+    ): List<RouteUphillSection> {
+        val sections = mutableListOf<RouteUphillSection>()
+        var totalDistance = 0.0
+        var index = 0
+        while (index < slopes.size) {
+            if (slopes[index] >= STEEP_SLOPE_THRESHOLD) {
+                val start = totalDistance
+                var length = 0.0
+                var count = 0
+                while (index < slopes.size && slopes[index] >= STEEP_SLOPE_THRESHOLD) {
+                    val segmentDistance = segmentDistances.getOrElse(index) { 0.0 }.coerceAtLeast(0.0)
+                    length += segmentDistance
+                    totalDistance += segmentDistance
+                    count++
+                    index++
+                }
+                if (count >= MIN_CONSECUTIVE_STEEP_SEGMENTS) {
+                    sections += RouteUphillSection(start.roundToInt(), (start + length).roundToInt())
+                }
+            } else {
+                totalDistance += segmentDistances.getOrElse(index) { 0.0 }.coerceAtLeast(0.0)
+                index++
+            }
+        }
+        return sections
+    }
+
     private fun summarizeSteepSections(
         slopes: List<Double>,
         segmentDistances: List<Double>,

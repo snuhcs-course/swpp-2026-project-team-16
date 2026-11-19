@@ -452,7 +452,8 @@ fun RunTimeApp() {
                                                         routeId = routeViewModel.savedRouteId(generated.temporaryRouteId),
                                                         temporaryRouteId = generated.temporaryRouteId,
                                                         startName = routeViewModel.pendingStart?.name.orEmpty(),
-                                                        plan = routeViewModel.runPlan
+                                                        plan = routeViewModel.runPlan,
+                                                        uphillSections = routeViewModel.uphillSections,
                                                     ),
                                                     returnTo = "route_result"
                                                 )
@@ -484,6 +485,8 @@ fun RunTimeApp() {
                                                 isOffRoute = runViewModel.isOffRoute,
                                                 offRouteTotals = runViewModel::offRouteTotals,
                                                 routeDistanceMeters = target.distanceMeters,
+                                                plan = target.plan,
+                                                uphillSections = target.uphillSections,
                                                 onClose = { currentScreen = runReturnScreen },
                                                 onRunFinished = { runResult ->
                                                     runViewModel.finish(runResult, authViewModel.isLoggedIn)

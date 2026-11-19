@@ -107,6 +107,39 @@ class PlanTests(SimpleTestCase):
         self.assertIn("언덕 싫어요", prompt["user"])
         self.assertIn("Korean", prompt["system"])
 
+    def test_selected_pace_range_is_kept_and_explicit_sections_get_a_30_second_band(self):
+        reply = json.dumps({
+            "run_type": "tempo",
+            "distance_km": 1,
+            "explicit_pace_s": 360,
+            "pace_segments": [
+                {"start_km": 0, "end_km": 2, "pace_s": 360},
+                {"start_km": 2, "end_km": 3, "pace_s": 330},
+            ],
+            "route_preferences": [],
+            "intensity": "꾸준히",
+            "summary": "마지막 1km에서 페이스를 올려요.",
+        })
+        plan = plan_from_goal(
+            "6:00 페이스로 달리다가 마지막 1km는 5:30으로 올리고 싶어",
+            RunningStyle(),
+            3000,
+            "ko",
+            llm=lambda _: reply,
+            pace_min_s=350,
+            pace_max_s=390,
+            alert_on_slow=True,
+        )
+
+        self.assertEqual(plan["distance_m"], 3000)
+        self.assertEqual((plan["pace_min_s"], plan["pace_max_s"]), (350, 390))
+        self.assertTrue(plan["alert_on_slow"])
+        self.assertFalse(plan["alert_on_fast"])
+        self.assertEqual(plan["pace_segments"], [
+            {"start_m": 0, "end_m": 2000, "pace_min_s": 330, "pace_max_s": 390},
+            {"start_m": 2000, "end_m": 3000, "pace_min_s": 300, "pace_max_s": 360},
+        ])
+
     def test_selected_distance_is_total_and_overrides_section_distance_from_llm(self):
         prompt = build_goal_prompt("마지막 1km는 빠르게", RunningStyle(), "ko", 3000)
         self.assertIn("Selected total distance: 3 km", prompt["user"])
@@ -121,6 +154,25 @@ class PlanTests(SimpleTestCase):
         self.assertEqual(validate_plan(RECOVERY_PLAN)[0]["run_type"], "recovery")
         self.assertIsNotNone(validate_plan({**RECOVERY_PLAN, "run_type": "sprint"})[1])
         self.assertIsNotNone(validate_plan({**RECOVERY_PLAN, "pace_min_s": 500})[1])
+
+    def test_validate_plan_keeps_alerts_and_segments_and_rejects_overlaps(self):
+        plan = {
+            **RECOVERY_PLAN,
+            "alert_on_slow": True,
+            "alert_on_fast": False,
+            "pace_segments": [
+                {"start_m": 0, "end_m": 2000, "pace_min_s": 330, "pace_max_s": 390},
+                {"start_m": 2000, "end_m": 3000, "pace_min_s": 300, "pace_max_s": 360},
+            ],
+        }
+        valid, error = validate_plan(plan)
+        self.assertIsNone(error)
+        self.assertTrue(valid["alert_on_slow"])
+        self.assertEqual(valid["pace_segments"], plan["pace_segments"])
+        self.assertIsNotNone(validate_plan({
+            **plan,
+            "pace_segments": [plan["pace_segments"][0], {**plan["pace_segments"][1], "start_m": 1500}],
+        })[1])
 
 
 class ReportTests(SimpleTestCase):
@@ -138,6 +190,22 @@ class ReportTests(SimpleTestCase):
         self.assertEqual([row["diff_s"] for row in facts["splits"]], [0, 0, 9, 17, 4])
         self.assertEqual(facts["in_range_count"], 2)
         self.assertEqual(facts["average_pace_s"], 374)
+
+    def test_custom_pace_sections_override_the_overall_range_for_report_splits(self):
+        plan = {
+            **RECOVERY_PLAN,
+            "pace_segments": [
+                {"start_m": 0, "end_m": 2000, "pace_min_s": 330, "pace_max_s": 390},
+                {"start_m": 2000, "end_m": 3000, "pace_min_s": 300, "pace_max_s": 360},
+            ],
+        }
+
+        facts = report_facts(plan, [375, 375, 375, 375, 375], 5000, 1875)
+
+        self.assertEqual([row["status"] for row in facts["splits"]], [
+            "in_range", "in_range", "slow", "in_range", "in_range",
+        ])
+        self.assertEqual(facts["splits"][2]["diff_s"], 15)
 
     def test_comment_falls_back_with_real_numbers(self):
         facts = report_facts(RECOVERY_PLAN, [392, 381, 366, 358, 371], 5000, 1868)
@@ -202,6 +270,21 @@ class RunCoachApiTests(APITestCase):
         self.assertEqual(response.data["data"]["run_type"], "recovery")
         self.assertEqual(response.data["data"]["distance_m"], 5000)
         self.assertEqual(self.client.post("/api/v1/runs/plan/", {"text": " "}, format="json").status_code, 400)
+
+    @mock.patch("api.services.run_coach.generate_text", side_effect=LLMError("down"))
+    def test_plan_api_keeps_selected_pace_range_and_alert_settings_on_llm_fallback(self, _):
+        response = self.client.post("/api/v1/runs/plan/", {
+            "text": "회복 러닝",
+            "distance_m": 3000,
+            "pace_min_s": 350,
+            "pace_max_s": 390,
+            "alert_on_slow": True,
+            "alert_on_fast": False,
+        }, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual((response.data["data"]["pace_min_s"], response.data["data"]["pace_max_s"]), (350, 390))
+        self.assertTrue(response.data["data"]["alert_on_slow"])
+        self.assertFalse(response.data["data"]["alert_on_fast"])
 
     def test_run_is_recorded_with_plan_and_splits(self):
         self.log_in()

@@ -58,11 +58,17 @@ fun RunResult.splitPaces(plan: RunPlan?): List<SplitPace> {
             (remainingSeconds * SPLIT_METERS.toDouble() / remainingMeters).roundToInt(),
         )
     }
+    var distanceBeforeSplit = 0
     return rows.map { (km, meters, pace) ->
+        val midpoint = distanceBeforeSplit + meters / 2
+        distanceBeforeSplit += meters
+        val segment = plan?.paceSegments?.firstOrNull { midpoint >= it.startMeters && midpoint < it.endMeters }
+        val targetMin = segment?.paceMinSeconds ?: plan?.paceMinSeconds
+        val targetMax = segment?.paceMaxSeconds ?: plan?.paceMaxSeconds
         val (status, diff) = when {
             plan == null -> null to 0
-            pace < plan.paceMinSeconds -> SplitStatus.FAST to plan.paceMinSeconds - pace
-            pace > plan.paceMaxSeconds -> SplitStatus.SLOW to pace - plan.paceMaxSeconds
+            targetMin != null && pace < targetMin -> SplitStatus.FAST to targetMin - pace
+            targetMax != null && pace > targetMax -> SplitStatus.SLOW to pace - targetMax
             else -> SplitStatus.IN_RANGE to 0
         }
         SplitPace(km, meters, pace, status, diff)

@@ -10,6 +10,8 @@ from api.services.language import request_language
 from api.services.run_coach import (
     MAX_DISTANCE_M,
     MAX_GOAL_TEXT_LENGTH,
+    MAX_PACE_S,
+    MIN_PACE_S,
     RunningStyle,
     generate_comment,
     plan_from_goal,
@@ -65,7 +67,30 @@ def run_plan(request):
     distance_m = request.data.get("distance_m")
     if isinstance(distance_m, bool) or not isinstance(distance_m, int) or not 0 < distance_m <= MAX_DISTANCE_M:
         distance_m = None
-    plan = plan_from_goal(text.strip(), user_style(request.user), distance_m, request_language(request))
+    pace_min_s = request.data.get("pace_min_s")
+    pace_max_s = request.data.get("pace_max_s")
+    if (pace_min_s is None) != (pace_max_s is None):
+        return _error("Provide both pace_min_s and pace_max_s.", status.HTTP_400_BAD_REQUEST)
+    if pace_min_s is not None and (
+        isinstance(pace_min_s, bool) or not isinstance(pace_min_s, int)
+        or isinstance(pace_max_s, bool) or not isinstance(pace_max_s, int)
+        or not MIN_PACE_S <= pace_min_s <= pace_max_s <= MAX_PACE_S
+    ):
+        return _error("The target pace range is invalid.", status.HTTP_400_BAD_REQUEST)
+    alert_on_slow = request.data.get("alert_on_slow", False)
+    alert_on_fast = request.data.get("alert_on_fast", False)
+    if not isinstance(alert_on_slow, bool) or not isinstance(alert_on_fast, bool):
+        return _error("Pace alert settings must be booleans.", status.HTTP_400_BAD_REQUEST)
+    plan = plan_from_goal(
+        text.strip(),
+        user_style(request.user),
+        distance_m,
+        request_language(request),
+        pace_min_s=pace_min_s,
+        pace_max_s=pace_max_s,
+        alert_on_slow=alert_on_slow,
+        alert_on_fast=alert_on_fast,
+    )
     return Response({"status": "success", "data": plan}, status=status.HTTP_200_OK)
 
 
