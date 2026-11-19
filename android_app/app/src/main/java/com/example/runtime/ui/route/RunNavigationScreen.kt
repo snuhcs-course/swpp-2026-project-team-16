@@ -60,6 +60,7 @@ import com.example.runtime.data.run.PaceAlertSettings
 import com.example.runtime.data.run.PaceAlertSegment
 import com.example.runtime.data.run.RunTrackingService
 import com.example.runtime.data.run.RunTrackingState
+import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.data.run.TrailPoint
 import com.example.runtime.ui.common.formatDistance
 import com.example.runtime.ui.common.formatDuration
@@ -172,8 +173,10 @@ fun RunNavigationScreen(
                     .putExtra(RunTrackingService.EXTRA_PACE_SEGMENT_MAXES, alertSettings.segments.map { it.paceMaxSeconds }.toIntArray())
             }
             context.startForegroundService(startIntent)
+            Telemetry.track("run_session", "started")
         } else {
             permissionError = true
+            Telemetry.track("run_session", "failed", failureCategory = "permission")
         }
     }
 

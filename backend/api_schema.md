@@ -23,6 +23,27 @@ Error responses use this shape:
 
 Note: `GET /api/v1/routes/saved/` is the only endpoint that returns a bare JSON array without `status`/`data`.
 
+## Optional product telemetry
+
+`POST /api/v1/telemetry/events/` accepts a batch of up to 25 opted-in app events. Events are not associated with a user, even when the app has an active login token. Standard web server access logs may still contain connection metadata such as IP addresses. Only the fields below are accepted; unknown keys are rejected.
+
+```json
+{
+  "events": [
+    {
+      "event_name": "route_generation",
+      "outcome": "succeeded",
+      "duration_ms": 2400,
+      "app_version": "1.0"
+    }
+  ]
+}
+```
+
+Allowed event names: `route_generation`, `place_search`, `authentication`, `pace_plan`, `run_session`, `run_report`, `app_crash`. Outcomes depend on the event type: operations use `started`, `succeeded`, `failed`; runs use `started`, `completed`, or `failed`; crash signals use `crashed`. Optional `failure_category` is one of `network`, `server`, `validation`, `no_results`, `permission`, or `unknown` and is accepted only on failed/crashed events. `duration_ms` is limited to 0–600000 and `app_version` to 32 simple characters. Request bodies are limited to 16 KB; a valid batch returns `202` with `{"accepted": <count>}`. The endpoint is rate-limited to 20 requests per minute.
+
+The payload intentionally has no account/device identifier, coordinates, search query, written plan, credentials, exception text, or stack trace. The app sends nothing until the user opts in under Settings. Staff can view aggregate outcomes and latency at `/telemetry/dashboard/`; records should be purged after 90 days with `python manage.py purge_telemetry_events --days 90`.
+
 ---
 
 # GeoJSON Format

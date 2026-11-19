@@ -124,6 +124,49 @@ class SharedRoute(models.Model):
         ordering = ["-shared_at", "-id"]
 
 
+class TelemetryEvent(models.Model):
+    """A privacy-limited app event. No user, device, location, or free-text fields."""
+
+    EVENT_NAMES = [
+        ("route_generation", "Route generation"),
+        ("place_search", "Place search"),
+        ("authentication", "Authentication"),
+        ("pace_plan", "Pace plan"),
+        ("run_session", "Run session"),
+        ("run_report", "Run report"),
+        ("app_crash", "App crash"),
+    ]
+    OUTCOMES = [
+        ("started", "Started"),
+        ("succeeded", "Succeeded"),
+        ("failed", "Failed"),
+        ("completed", "Completed"),
+        ("crashed", "Crashed"),
+    ]
+    FAILURE_CATEGORIES = [
+        ("network", "Network"),
+        ("server", "Server"),
+        ("validation", "Validation"),
+        ("no_results", "No results"),
+        ("permission", "Permission"),
+        ("unknown", "Unknown"),
+    ]
+
+    event_name = models.CharField(max_length=32, choices=EVENT_NAMES, db_index=True)
+    outcome = models.CharField(max_length=16, choices=OUTCOMES, db_index=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    failure_category = models.CharField(max_length=16, choices=FAILURE_CATEGORIES, blank=True, default="")
+    app_version = models.CharField(max_length=32)
+    received_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-received_at"]
+        indexes = [models.Index(fields=["event_name", "received_at"], name="telemetry_name_date_idx")]
+
+    def __str__(self):
+        return f"{self.event_name}: {self.outcome} ({self.received_at:%Y-%m-%d})"
+
+
 class RouteReview(models.Model):
     shared_route = models.ForeignKey(SharedRoute, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="route_reviews")

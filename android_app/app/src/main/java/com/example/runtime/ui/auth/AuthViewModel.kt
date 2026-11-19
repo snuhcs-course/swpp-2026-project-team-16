@@ -11,6 +11,7 @@ import com.example.runtime.R
 import com.example.runtime.data.auth.GuestTrialStorage
 import com.example.runtime.data.auth.TokenStorage
 import com.example.runtime.data.repository.AuthRepository
+import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -117,15 +118,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         if (uiState.isLoading) return
         uiState = AuthUiState(isLoading = true)
+        val startedAt = Telemetry.startTime()
+        Telemetry.track("authentication", "started")
         viewModelScope.launch {
             try {
                 request()
+                Telemetry.track("authentication", "succeeded", Telemetry.startTime() - startedAt)
                 uiState = AuthUiState()
                 isLoggedIn = true
                 onSuccess()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Telemetry.track("authentication", "failed", Telemetry.startTime() - startedAt, Telemetry.failureCategory(e))
                 uiState = AuthUiState(error = e.toUiText())
             }
         }

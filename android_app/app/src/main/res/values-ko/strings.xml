@@ -578,6 +578,14 @@
     <string name="settings_phone_off">휴대폰에서 이 앱의 알림이 꺼져 있어요. 켜야 푸시 알림을 받을 수 있어요.</string>
     <string name="settings_open_phone_settings">휴대폰 알림 설정 열기</string>
     <string name="settings_all_notifications">모든 알림</string>
+    <string name="settings_telemetry">선택적 사용 통계</string>
+    <string name="settings_telemetry_hint">코스 생성, 장소 검색, 페이스 계획, 러닝, 리포트 개선을 위해 이벤트 건수를 사용합니다. 이벤트는 계정과 연결하지 않습니다. 정확한 위치, 검색어, 작성한 계획은 수집하지 않습니다. 동의한 경우에만 대기열에 저장하고 전송하며, 언제든 동의를 끌 수 있습니다. 끄면 미전송 데이터는 삭제됩니다. 단, 서버의 일반 접속 로그에는 IP 주소 같은 네트워크 정보가 남을 수 있습니다.</string>
+    <string name="settings_telemetry_consent">사용 통계 공유</string>
+    <string name="settings_telemetry_consent_hint">작업 결과, 앱 버전, 처리 시간을 포함합니다. 오류 문구나 스택 추적은 보내지 않습니다.</string>
+    <string name="telemetry_consent_title">RunTime 개선에 참여할까요?</string>
+    <string name="telemetry_consent_message">허용하면 코스 생성, 장소 검색, 로그인, 페이스 계획, 러닝, 리포트의 이벤트 건수와 처리 시간을 전송합니다. 계정 정보, 정확한 위치, 검색어, 작성한 계획, 크래시 내용은 보내지 않습니다. 이 선택은 설정에서 나중에 바꿀 수 있습니다. 단, 서버의 일반 접속 로그에는 IP 주소 같은 네트워크 정보가 남을 수 있습니다.</string>
+    <string name="telemetry_consent_allow">허용</string>
+    <string name="telemetry_consent_not_now">나중에</string>
     <string name="settings_account">계정</string>
     <string name="settings_delete_account">계정 탈퇴</string>
     <string name="delete_account_title">계정을 탈퇴할까요?</string>

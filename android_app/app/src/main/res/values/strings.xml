@@ -590,6 +590,14 @@
     <string name="settings_phone_off">Notifications for this app are off on your phone. Turn them on to get push notifications.</string>
     <string name="settings_open_phone_settings">Open phone notification settings</string>
     <string name="settings_all_notifications">All notifications</string>
+    <string name="settings_telemetry">Optional usage telemetry</string>
+    <string name="settings_telemetry_hint">We use event counts to improve route creation, place search, pace plans, runs, and reports. Events are not linked to your account. We do not collect exact location, search text, or written plans. Events are queued and sent only after you opt in. You can turn this off any time; unsent events are deleted. Standard server connection logs may still include network details such as your IP address.</string>
+    <string name="settings_telemetry_consent">Share usage telemetry</string>
+    <string name="settings_telemetry_consent_hint">Includes task outcomes, app version, and operation time. Crash reports contain no stack trace or error text.</string>
+    <string name="telemetry_consent_title">Help improve RunTime?</string>
+    <string name="telemetry_consent_message">If you allow it, RunTime will send event counts and operation times for route creation, place search, sign-in, pace plans, runs, and reports. It will not send your account, exact location, search text, written plans, or crash details. You can change this choice later in Settings. Standard server logs may include network details such as your IP address.</string>
+    <string name="telemetry_consent_allow">Allow</string>
+    <string name="telemetry_consent_not_now">Not now</string>
     <string name="settings_account">Account</string>
     <string name="settings_delete_account">Delete account</string>
     <string name="delete_account_title">Delete your account?</string>

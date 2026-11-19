@@ -18,6 +18,7 @@ import com.example.runtime.data.remote.Place
 import com.example.runtime.data.run.RunMetrics
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.data.run.PaceAlertSettings
+import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
@@ -215,6 +216,7 @@ class RunViewModel(
 
     fun finish(result: RunResult, isLoggedIn: Boolean) {
         this.result = result
+        Telemetry.track("run_session", "completed")
         if (isLoggedIn) recordRun(result)
     }
 
@@ -284,12 +286,17 @@ class RunViewModel(
         val runId = savedRunId ?: return
         if (reportState == ReportState.Loading || reportState is ReportState.Loaded) return
         reportState = ReportState.Loading
+        val startedAt = Telemetry.startTime()
+        Telemetry.track("run_report", "started")
         viewModelScope.launch {
             reportState = try {
-                ReportState.Loaded(coachRepository.runReport(runId))
+                val loaded = coachRepository.runReport(runId)
+                Telemetry.track("run_report", "succeeded", Telemetry.startTime() - startedAt)
+                ReportState.Loaded(loaded)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Telemetry.track("run_report", "failed", Telemetry.startTime() - startedAt, Telemetry.failureCategory(e))
                 ReportState.Failed
             }
         }
