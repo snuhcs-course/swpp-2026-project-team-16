@@ -5,9 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.example.runtime.R
 import com.example.runtime.data.remote.EmptyResponseException
+import com.example.runtime.data.remote.NoConnectivityException
 import com.example.runtime.data.remote.serverMessage
 import retrofit2.HttpException
 import java.io.IOException
+import java.net.UnknownHostException
 
 sealed interface UiText {
     data class Resource(@StringRes val id: Int, val args: List<Any> = emptyList()) : UiText
@@ -80,6 +82,7 @@ private fun serverText(message: String): UiText =
 fun Throwable.toUiText(): UiText = when (this) {
     is HttpException -> serverMessage()?.let(::serverText)
         ?: UiText.Resource(R.string.error_request_failed, listOf(code()))
+    is NoConnectivityException, is UnknownHostException -> UiText.Resource(R.string.error_offline)
     is IOException -> UiText.Resource(R.string.error_network)
     is EmptyResponseException -> serverMessage?.let(::serverText)
         ?: UiText.Resource(R.string.error_empty_response)

@@ -98,6 +98,7 @@ object ApiClient {
             .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .addInterceptor(ConnectivityInterceptor())
             .addInterceptor(LanguageInterceptor())
             .apply {
                 if (BuildConfig.DEBUG) addInterceptor(RedactingLoggingInterceptor())
@@ -121,6 +122,7 @@ object ApiClient {
             .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .addInterceptor(ConnectivityInterceptor())
             .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
             .addInterceptor(LanguageInterceptor())
             .apply {
