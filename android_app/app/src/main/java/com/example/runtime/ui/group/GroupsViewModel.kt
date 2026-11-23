@@ -236,7 +236,7 @@ class GroupsViewModel(
     }
 
     fun create(
-        routeId: Int,
+        routeId: Int?,
         title: String,
         description: String,
         capacity: Int,
@@ -246,8 +246,16 @@ class GroupsViewModel(
         password: String = "",
         onCreated: (Int) -> Unit,
     ) {
+        if (createState == GroupActionState.Working) return
         val trimmedTitle = title.trim()
-        if (trimmedTitle.isEmpty() || createState == GroupActionState.Working) return
+        if (routeId == null) {
+            createState = GroupActionState.Failed(UiText.Resource(R.string.error_group_route_required))
+            return
+        }
+        if (trimmedTitle.isEmpty()) {
+            createState = GroupActionState.Failed(UiText.Resource(R.string.error_group_title_required))
+            return
+        }
         if (isPrivate && !isValidGroupPassword(password)) {
             createState = GroupActionState.Failed(UiText.Resource(R.string.error_group_password))
             return

@@ -150,6 +150,26 @@ class GroupsViewModelTest {
     }
 
     @Test
+    fun create_explainsAMissingRoute() {
+        val meet = Instant.parse("2026-11-05T07:00:00Z")
+
+        viewModel.create(null, "Morning", "", 4, meet, meet.minusSeconds(60)) {}
+
+        assertTrue(api.created.isEmpty())
+        assertEquals(GroupActionState.Failed(UiText.Resource(R.string.error_group_route_required)), viewModel.createState)
+    }
+
+    @Test
+    fun create_explainsAMissingTitle() {
+        val meet = Instant.parse("2026-11-05T07:00:00Z")
+
+        viewModel.create(10, "   ", "", 4, meet, meet.minusSeconds(60)) {}
+
+        assertTrue(api.created.isEmpty())
+        assertEquals(GroupActionState.Failed(UiText.Resource(R.string.error_group_title_required)), viewModel.createState)
+    }
+
+    @Test
     fun create_rejectsADeadlineAfterTheRun() {
         val meet = Instant.parse("2026-11-05T07:00:00Z")
 

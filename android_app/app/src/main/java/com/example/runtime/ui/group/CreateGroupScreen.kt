@@ -61,6 +61,9 @@ fun CreateGroupScreen(
     LaunchedEffect(Unit) {
         groupsViewModel.resetCreate()
     }
+    LaunchedEffect(route, title, meetAt, deadline, isPrivate, password) {
+        if (groupsViewModel.createState is GroupActionState.Failed) groupsViewModel.resetCreate()
+    }
     BackHandler(onBack = onBack)
 
     Column(modifier = Modifier.fillMaxSize().imePadding()) {
@@ -182,19 +185,22 @@ fun CreateGroupScreen(
                     modifier = Modifier.padding(top = Spacing.xs)
                 )
             }
-            (groupsViewModel.createState as? GroupActionState.Failed)?.let {
-                Spacer(modifier = Modifier.height(Spacing.s))
-                Text(it.message.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            }
             Spacer(modifier = Modifier.height(Spacing.l))
+        }
+        (groupsViewModel.createState as? GroupActionState.Failed)?.let {
+            Text(
+                it.message.asString(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth().padding(start = Spacing.m, end = Spacing.m, top = Spacing.s)
+            )
         }
         AccentButton(
             text = stringResource(if (isCreating) R.string.creating else R.string.action_create_group),
             icon = R.drawable.ic_groups,
             onClick = {
-                val selected = route ?: return@AccentButton
                 groupsViewModel.create(
-                    routeId = selected.routeId,
+                    routeId = route?.routeId,
                     title = title,
                     description = description,
                     capacity = capacity,
@@ -205,8 +211,7 @@ fun CreateGroupScreen(
                     onCreated = onCreated
                 )
             },
-            enabled = route != null && title.isNotBlank() && deadline <= meetAt && !isCreating &&
-                (!isPrivate || isValidGroupPassword(password)),
+            enabled = !isCreating,
             modifier = Modifier.fillMaxWidth().padding(Spacing.m)
         )
     }

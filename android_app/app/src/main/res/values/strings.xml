@@ -277,6 +277,8 @@
     <string name="group_capacity_hint">Including you. The group closes when it\'s full.</string>
     <string name="label_group_meet_at">Run starts</string>
     <string name="label_group_deadline">Join by</string>
+    <string name="error_group_route_required">Choose a route for the group.</string>
+    <string name="error_group_title_required">Enter a group name.</string>
     <string name="error_group_deadline_after_run">The join deadline must be before the run starts.</string>
     <string name="error_group_deadline_past">The join deadline must be in the future.</string>
     <string name="error_group_not_found">This group no longer exists.</string>
