@@ -272,6 +272,8 @@
     <string name="group_capacity_hint">나를 포함한 인원이에요. 정원이 차면 모집이 마감돼요.</string>
     <string name="label_group_meet_at">달리는 시간</string>
     <string name="label_group_deadline">참여 마감</string>
+    <string name="error_group_route_required">모임에서 달릴 경로를 선택해 주세요.</string>
+    <string name="error_group_title_required">모임 이름을 입력해 주세요.</string>
     <string name="error_group_deadline_after_run">참여 마감은 달리는 시간보다 앞서야 해요.</string>
     <string name="error_group_deadline_past">참여 마감은 지금 이후여야 해요.</string>
     <string name="error_group_not_found">삭제된 모임이에요.</string>
