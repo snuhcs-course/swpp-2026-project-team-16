@@ -31,7 +31,7 @@ fun SignUpScreen(
 
     BackHandler(onBack = ::goToLogIn)
 
-    AuthLayout(title = stringResource(R.string.title_sign_up), error = uiState.error) {
+    AuthLayout(title = stringResource(R.string.title_sign_up)) {
         AuthTextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.label_name))
         Spacer(modifier = Modifier.height(Spacing.m))
         AuthTextField(
@@ -64,6 +64,7 @@ fun SignUpScreen(
         PrimaryAuthButton(
             text = stringResource(R.string.action_sign_up),
             isLoading = uiState.isLoading,
+            error = uiState.error,
             onClick = { authViewModel.register(name, email, password, passwordConfirm, onSignUpSuccess, nickname) }
         )
         OrDivider()
