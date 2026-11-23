@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -217,16 +218,12 @@ private fun GoalRing(label: String, doneMeters: Int, goalMeters: Int, modifier: 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(112.dp)) {
             CircularProgressIndicator(
-                progress = { 1f },
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                strokeWidth = 10.dp,
-                modifier = Modifier.fillMaxSize(),
-            )
-            CircularProgressIndicator(
                 progress = { fraction },
                 color = Lime,
                 strokeWidth = 10.dp,
-                trackColor = androidx.compose.ui.graphics.Color.Transparent,
+                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                strokeCap = StrokeCap.Round,
+                gapSize = 0.dp,
                 modifier = Modifier.fillMaxSize(),
             )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
