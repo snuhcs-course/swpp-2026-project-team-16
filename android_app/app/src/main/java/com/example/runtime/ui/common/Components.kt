@@ -78,11 +78,12 @@ fun AccentButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     @DrawableRes icon: Int? = null,
+    colors: ButtonColors = accentButtonColors(),
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        colors = accentButtonColors(),
+        colors = colors,
         shape = MaterialTheme.shapes.medium,
         modifier = modifier.height(52.dp)
     ) {

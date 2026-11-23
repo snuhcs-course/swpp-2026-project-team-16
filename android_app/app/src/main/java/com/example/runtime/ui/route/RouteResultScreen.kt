@@ -36,6 +36,7 @@ import androidx.compose.ui.util.lerp
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.ui.common.AccentButton
+import com.example.runtime.ui.common.accentButtonColors
 import com.example.runtime.ui.common.GlassSurface
 import com.example.runtime.ui.common.LocalAppMessages
 import com.example.runtime.ui.common.StatItem
@@ -46,6 +47,7 @@ import com.example.runtime.ui.common.glassBorderColor
 import com.example.runtime.ui.common.glassColor
 import com.example.runtime.ui.common.placeholder
 import com.example.runtime.ui.community.ShareRouteDialog
+import com.example.runtime.ui.theme.LocalDarkTheme
 import com.example.runtime.ui.theme.Spacing
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
@@ -228,6 +230,16 @@ fun RouteResultScreen(
                         icon = if (saveState == SaveState.Saved) R.drawable.ic_bookmark_added else R.drawable.ic_bookmark,
                         onClick = onSave,
                         enabled = saveState == SaveState.Idle || saveState is SaveState.Failed,
+                        colors = if (LocalDarkTheme.current) {
+                            ButtonDefaults.buttonColors(
+                                containerColor = glassColor(),
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                disabledContainerColor = glassColor(),
+                                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        } else {
+                            accentButtonColors()
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }
