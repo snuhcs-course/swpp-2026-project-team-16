@@ -1,6 +1,7 @@
 package com.example.runtime.ui.common
 
 import com.example.runtime.R
+import com.example.runtime.data.remote.NoConnectivityException
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -8,6 +9,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
+import java.net.UnknownHostException
 
 class ServerMessageTest {
 
@@ -42,7 +44,13 @@ class ServerMessageTest {
 
     @Test
     fun mapsNetworkErrors() {
-        assertEquals(UiText.Resource(R.string.error_network), IOException("offline").toUiText())
+        assertEquals(UiText.Resource(R.string.error_network), IOException("timeout").toUiText())
+    }
+
+    @Test
+    fun mapsOfflineErrors() {
+        assertEquals(UiText.Resource(R.string.error_offline), NoConnectivityException().toUiText())
+        assertEquals(UiText.Resource(R.string.error_offline), UnknownHostException("example.com").toUiText())
     }
 
     private fun httpError(code: Int, message: String) = HttpException(
