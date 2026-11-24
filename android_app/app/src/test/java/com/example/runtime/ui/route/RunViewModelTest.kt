@@ -41,7 +41,7 @@ class RunViewModelTest {
 
     private val api = RunApi()
     private var now = 0L
-    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api), clock = { now }) }
+    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api), clock = { now }, retryDelayMs = 0) }
     private val straightRoute = listOf(GeoJsonLineString(listOf(listOf(126.95, 37.46), listOf(126.96, 37.46))))
 
     @After
@@ -368,6 +368,30 @@ class RunViewModelTest {
     }
 
     @Test
+    fun makeReturnRoute_retriesDroppedConnections() {
+        api.generateFailures = 2
+        viewModel.start(RunTarget(emptyList(), 0, isFree = true))
+
+        viewModel.makeReturnRoute(RouteCoordinate(37.51, 127.0), RouteCoordinate(37.5, 127.0), 2000, "ko")
+
+        assertEquals(3, api.generateRequests.size)
+        assertEquals(1, viewModel.target?.lines?.size)
+        assertNull(viewModel.returnRouteError)
+    }
+
+    @Test
+    fun makeReturnRoute_showsAnErrorAfterTheRetries() {
+        api.generateFailures = 3
+        viewModel.start(RunTarget(emptyList(), 0, isFree = true))
+
+        viewModel.makeReturnRoute(RouteCoordinate(37.51, 127.0), RouteCoordinate(37.5, 127.0), 2000, "ko")
+
+        assertEquals(3, api.generateRequests.size)
+        assertEquals(UiText.Resource(R.string.error_network), viewModel.returnRouteError)
+        assertFalse(viewModel.isMakingReturnRoute)
+    }
+
+    @Test
     fun saveFreeRoute_savesTheRecordedRoute() {
         viewModel.start(RunTarget(emptyList(), 0, isFree = true))
         viewModel.finish(RunResult(2010, 700, path = listOf(listOf(127.0, 37.5), listOf(127.0, 37.51))), isLoggedIn = true)
@@ -395,8 +419,14 @@ class RunViewModelTest {
         val generateRequests = mutableListOf<GenerateRouteRequest>()
         val savedRouteIds = mutableListOf<Int>()
 
+        var generateFailures = 0
+
         override suspend fun generateRoute(body: GenerateRouteRequest): ApiResponse<GeneratedRouteData> {
             generateRequests += body
+            if (generateFailures > 0) {
+                generateFailures--
+                throw IOException("unexpected end of stream")
+            }
             return ApiResponse(
                 status = "success",
                 data = GeneratedRouteData(
