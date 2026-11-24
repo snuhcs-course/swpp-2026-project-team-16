@@ -12,6 +12,7 @@ from api.views.board import _post_data, _visible_posts
 from api.views.community import _shared_route_data, _shared_routes
 from api.views.groups import _group_data, _groups
 from api.views.profile import get_profile
+from api.activity import log_activity
 
 
 User = get_user_model()
@@ -115,8 +116,11 @@ def user_follow(request, username):
             created = False
         if created:
             notify(target, "follow", actor=request.user)
+            log_activity(request.user, "followed", username=target.username)
     else:
-        Follow.objects.filter(follower=request.user, followee=target).delete()
+        deleted, _ = Follow.objects.filter(follower=request.user, followee=target).delete()
+        if deleted:
+            log_activity(request.user, "unfollowed", username=target.username)
     return Response({"status": "success", "data": _follow_state(target, request.user)}, status=status.HTTP_200_OK)
 
 

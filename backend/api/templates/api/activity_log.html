@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity Log</title>
+<style>
+body { font-family: -apple-system, system-ui, sans-serif; margin: 24px; color: #1c1e1c; background: #f7f7f4; }
+h1 { margin: 0 0 4px; font-size: 22px; }
+.muted { color: #6b6f69; font-size: 13px; }
+form { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+input, select, button { font: inherit; padding: 6px 10px; border: 1px solid #c9ccc5; border-radius: 6px; background: #fff; }
+button { background: #1c1e1c; color: #fff; border-color: #1c1e1c; cursor: pointer; }
+.layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+.users a { display: flex; justify-content: space-between; padding: 4px 6px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; }
+.users a:hover, .users a.on { background: #e6eadf; }
+table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #ecede8; vertical-align: top; }
+th { background: #efefea; font-weight: 600; }
+td.time { white-space: nowrap; color: #6b6f69; }
+details summary { cursor: pointer; }
+pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; background: #f4f4f0; padding: 8px; border-radius: 4px; }
+.pager { margin: 12px 0; display: flex; gap: 12px; }
+@media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Activity Log</h1>
+<div class="muted">{{ total }} entries · staff only · times in server time zone</div>
+
+<form method="get">
+  <input name="user" value="{{ username }}" placeholder="username or guest">
+  <select name="action">
+    <option value="">All actions</option>
+    {% for key, label in actions %}
+    <option value="{{ key }}" {% if key == action %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filter</button>
+  {% if username or action %}<a href="?" class="muted">Clear</a>{% endif %}
+</form>
+
+<div class="layout">
+  <nav class="users">
+    <div class="muted">Recently active users</div>
+    {% for user in users %}
+    <a href="?user={{ user.user__username|urlencode }}" class="{% if user.user__username == username %}on{% endif %}">
+      <span>{{ user.user__username }}</span><span class="muted">{{ user.count }}</span>
+    </a>
+    {% empty %}
+    <div class="muted">No activity yet.</div>
+    {% endfor %}
+    <a href="?user=guest" class="{% if username == 'guest' %}on{% endif %}"><span>guest</span></a>
+  </nav>
+
+  <div>
+    <table>
+      <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td class="time">{{ row.time|date:"Y-m-d H:i:s" }}</td>
+          <td>{{ row.user }}</td>
+          <td>{{ row.action }}</td>
+          <td><details><summary>{{ row.summary|default:"—" }}</summary><pre>{{ row.details }}</pre></details></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="muted">No matching activity.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="pager">
+      {% if page.has_previous %}<a href="?user={{ username|urlencode }}&action={{ action }}&page={{ page.previous_page_number }}">← Newer</a>{% endif %}
+      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?user={{ username|urlencode }}&action={{ action }}&page={{ page.next_page_number }}">Older →</a>{% endif %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -66,6 +66,23 @@ After applying migrations, staff can view aggregate task outcomes and latency at
 python manage.py purge_telemetry_events --days 90
 ```
 
+## Activity log
+
+The server keeps a per-account activity log in `ActivityLog`, separate from telemetry. It records these events:
+
+- Sign-ups and log-ins.
+- Generated routes: start, destination, requested and actual distance, and preferences.
+- Saved and shared routes.
+- Finished runs: distance, time, average pace and speed, splits, and the route's endpoints.
+- Run ratings and route reviews.
+- Posts and comments.
+- Group creation, joins, leaves, and messages.
+- Follows and unfollows.
+
+Free-run endpoints come from the saved route, which trims the first and last 200 m of the path. Routes generated without logging in are stored with no user. Entries are deleted with the account. The app explains this in Settings and on the sign-up screen.
+
+Staff can browse the log by user and action at `/activity/`. It is also read-only in the Django admin.
+
 The app's custom crash signal captures uncaught Android app crashes without a stack trace or exception message. It does not capture ANRs or native process crashes; use Android vitals/Play Console for those signals.
 
 ## API Documentation

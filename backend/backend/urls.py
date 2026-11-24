@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import auth, board, challenges, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social, telemetry, weather
+from api.views import activity, auth, board, challenges, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social, telemetry, weather
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     # Staff-only aggregate usage dashboard.
     path("telemetry/dashboard/", telemetry.telemetry_dashboard, name="telemetry_dashboard"),
+    path("activity/", activity.activity_dashboard, name="activity_dashboard"),
     path("api/v1/auth/register/", auth.register_user, name="register_user"),
     path("api/v1/auth/login/", auth.login_user, name="login_user"),
     path("api/v1/auth/google/", auth.google_login, name="google_login"),

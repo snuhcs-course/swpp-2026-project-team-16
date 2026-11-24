@@ -15,6 +15,7 @@ from api.models import Follow, GroupInvite, GroupMember, GroupMessage, Route, Ru
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
 from api.services.notifications import notify
+from api.activity import log_activity
 
 
 User = get_user_model()
@@ -277,6 +278,7 @@ def groups_list(request):
             **fields,
         )
         GroupMember.objects.create(group=group, user=request.user)
+    log_activity(request.user, "group_created", group_id=group.id, title=group.title, route_id=route.id, meet_at=group.meet_at.isoformat(), capacity=group.capacity, is_private=group.is_private)
     return Response(
         {"status": "success", "data": _group_data(_groups().get(id=group.id), request.user, now, detail=True, language=request_language(request))},
         status=status.HTTP_201_CREATED,
@@ -332,6 +334,7 @@ def group_membership(request, group_id):
                     return _error("The password is incorrect.", status.HTTP_403_FORBIDDEN)
             GroupMember.objects.create(group=group, user=request.user)
             group.invites.filter(invitee=request.user).delete()
+            log_activity(request.user, "group_joined", group_id=group.id, title=group.title, invited=invite is not None)
             code = status.HTTP_201_CREATED
         else:
             if membership is None:
@@ -341,6 +344,7 @@ def group_membership(request, group_id):
             if now >= group.meet_at:
                 return _error("You can't leave after the run has started.", status.HTTP_400_BAD_REQUEST)
             membership.delete()
+            log_activity(request.user, "group_left", group_id=group.id, title=group.title)
             code = status.HTTP_200_OK
 
     group = _groups().get(id=group.id)
@@ -387,6 +391,7 @@ def group_messages(request, group_id):
     if not isinstance(text, str) or not text.strip() or len(text.strip()) > MAX_MESSAGE_LENGTH:
         return _error(f"Message must be 1 to {MAX_MESSAGE_LENGTH} characters.", status.HTTP_400_BAD_REQUEST)
     message = GroupMessage.objects.create(group=group, user=request.user, text=text.strip())
+    log_activity(request.user, "group_message", group_id=group.id, message_id=message.id, text=message.text)
     for member in group.members.exclude(user=request.user).select_related("user"):
         notify(member.user, "group_message", actor=request.user, group=group, text=message.text)
     return Response(
