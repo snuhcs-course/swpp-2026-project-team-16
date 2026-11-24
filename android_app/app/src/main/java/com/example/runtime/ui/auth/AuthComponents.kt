@@ -2,6 +2,8 @@ package com.example.runtime.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -30,7 +33,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun AuthLayout(
     title: String,
-    error: UiText?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -48,10 +50,6 @@ fun AuthLayout(
             Text(title, style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(Spacing.l))
             content()
-            error?.let {
-                Spacer(modifier = Modifier.height(Spacing.m))
-                Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            }
         }
         Box(modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.s)) {
             PreferenceButtons()
@@ -125,7 +123,25 @@ fun PasswordField(value: String, onValueChange: (String) -> Unit, label: String)
 }
 
 @Composable
-fun PrimaryAuthButton(text: String, isLoading: Boolean, onClick: () -> Unit) {
+fun AuthError(error: UiText?) {
+    if (error == null) return
+    val requester = remember { BringIntoViewRequester() }
+    LaunchedEffect(error) { requester.bringIntoView() }
+    Text(
+        error.asString(),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(requester)
+            .padding(bottom = Spacing.s)
+    )
+}
+
+@Composable
+fun PrimaryAuthButton(text: String, isLoading: Boolean, error: UiText? = null, onClick: () -> Unit) {
+    AuthError(error)
     Button(
         onClick = onClick,
         enabled = !isLoading,

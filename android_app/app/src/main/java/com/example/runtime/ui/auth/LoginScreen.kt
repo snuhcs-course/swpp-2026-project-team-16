@@ -29,7 +29,7 @@ fun LoginScreen(
 
     BackHandler(onBack = ::leave)
 
-    AuthLayout(title = stringResource(R.string.title_log_in), error = uiState.error) {
+    AuthLayout(title = stringResource(R.string.title_log_in)) {
         AuthTextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.label_name))
         Spacer(modifier = Modifier.height(Spacing.m))
         PasswordField(value = password, onValueChange = { password = it }, label = stringResource(R.string.label_password))
@@ -37,6 +37,7 @@ fun LoginScreen(
         PrimaryAuthButton(
             text = stringResource(R.string.action_log_in),
             isLoading = uiState.isLoading,
+            error = uiState.error,
             onClick = { authViewModel.login(name, password, onLoginSuccess) }
         )
         OrDivider()
