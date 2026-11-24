@@ -149,6 +149,54 @@ class RouteProgressMatcherTest {
     }
 
     @Test
+    fun rejoiningALoopNearTheFinishDoesNotRestartFromTheStart() {
+        val matcher = RouteProgressMatcher(
+            listOf(
+                RouteCoordinate(37.0, 127.0),
+                RouteCoordinate(37.0, 127.001),
+                RouteCoordinate(37.001, 127.001),
+                RouteCoordinate(37.001, 127.0),
+                RouteCoordinate(37.0, 127.0),
+            ),
+        )
+        listOf(
+            37.0 to 127.0005,
+            37.0 to 127.001,
+            37.0005 to 127.001,
+            37.001 to 127.001,
+            37.001 to 127.0005,
+            37.001 to 127.0,
+            37.0005 to 127.0,
+        ).forEachIndexed { index, (latitude, longitude) ->
+            matcher.update(latitude, longitude, index * 1_000L)
+        }
+        matcher.update(37.0005, 126.999, 10_000L)
+        assertTrue(matcher.update(37.0005, 126.999, 16_000L).isOffRoute)
+
+        val rejoined = matcher.update(37.00002, 127.00008, 20_000L)
+
+        assertFalse(rejoined.isOffRoute)
+        assertTrue(rejoined.distanceAlongMeters > rejoined.routeLengthMeters - 20.0)
+    }
+
+    @Test
+    fun continuesFromTheCurrentPositionAfterALocationGap() {
+        val matcher = RouteProgressMatcher(
+            listOf(
+                RouteCoordinate(37.0, 127.0),
+                RouteCoordinate(37.0, 127.002),
+                RouteCoordinate(37.0, 127.006),
+            ),
+        )
+        matcher.update(37.0, 127.0001, 0L)
+
+        val afterGap = matcher.update(37.0, 127.004, 60_000L)
+
+        assertFalse(afterGap.isOffRoute)
+        assertTrue(afterGap.distanceAlongMeters > 340.0)
+    }
+
+    @Test
     fun resumesGuidanceWhenRejoiningBehindTheLastMatchedPoint() {
         val matcher = RouteProgressMatcher(
             listOf(
