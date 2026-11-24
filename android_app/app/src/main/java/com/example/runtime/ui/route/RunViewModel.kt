@@ -7,7 +7,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
+import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonLineString
+import com.example.runtime.data.remote.NoConnectivityException
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunReport
@@ -23,7 +25,9 @@ import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 data class RunTarget(
     val lines: List<GeoJsonLineString>,
@@ -70,6 +74,7 @@ class RunViewModel(
     private val coachRepository: CoachRepository = CoachRepository(),
     private val routeRepository: RouteRepository = RouteRepository(),
     private val clock: () -> Long = SystemClock::elapsedRealtime,
+    private val retryDelayMs: Long = RETURN_ROUTE_RETRY_DELAY_MS,
 ) : ViewModel() {
 
     var routePoints by mutableStateOf<List<RouteCoordinate>>(emptyList())
@@ -178,12 +183,7 @@ class RunViewModel(
         returnRouteError = null
         viewModelScope.launch {
             try {
-                val generated = routeRepository.generate(
-                    startingPoint = Place("", "", GeoJsonPoint.of(from.longitude, from.latitude)),
-                    endPoint = Place("", "", GeoJsonPoint.of(to.longitude, to.latitude)),
-                    distanceMeters = distanceMeters,
-                    language = language,
-                )
+                val generated = generateReturnRoute(from, to, distanceMeters, language)
                 useGuide(generated.route.route, generated.route.distance)
             } catch (e: CancellationException) {
                 throw e
@@ -193,6 +193,32 @@ class RunViewModel(
                 isMakingReturnRoute = false
             }
         }
+    }
+
+    private suspend fun generateReturnRoute(
+        from: RouteCoordinate,
+        to: RouteCoordinate,
+        distanceMeters: Int,
+        language: String,
+    ): GeneratedRouteData {
+        val request = suspend {
+            routeRepository.generate(
+                startingPoint = Place("", "", GeoJsonPoint.of(from.longitude, from.latitude)),
+                endPoint = Place("", "", GeoJsonPoint.of(to.longitude, to.latitude)),
+                distanceMeters = distanceMeters,
+                language = language,
+            )
+        }
+        repeat(RETURN_ROUTE_RETRIES) {
+            try {
+                return request()
+            } catch (e: NoConnectivityException) {
+                throw e
+            } catch (e: IOException) {
+                delay(retryDelayMs)
+            }
+        }
+        return request()
     }
 
     var target by mutableStateOf<RunTarget?>(null)
@@ -362,3 +388,6 @@ class RunViewModel(
         }
     }
 }
+
+private const val RETURN_ROUTE_RETRIES = 2
+private const val RETURN_ROUTE_RETRY_DELAY_MS = 1_500L
