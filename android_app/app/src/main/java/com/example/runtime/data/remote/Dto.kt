@@ -290,6 +290,27 @@ data class RunPlanRequest(
 )
 
 @Serializable
+data class LiveRunCoachRequest(
+    @SerialName("completed_km") val completedKilometer: Int,
+    @SerialName("distance_m") val distanceMeters: Int,
+    @SerialName("elapsed_s") val elapsedSeconds: Long,
+    @SerialName("split_paces_s") val splitPacesSeconds: List<Int>,
+    val plan: RunPlan? = null,
+    @SerialName("next_target_pace_min_s") val nextTargetPaceMinSeconds: Int? = null,
+    @SerialName("next_target_pace_max_s") val nextTargetPaceMaxSeconds: Int? = null,
+    @SerialName("upcoming_hills") val upcomingHills: List<LiveRunCoachHill> = emptyList(),
+)
+
+@Serializable
+data class LiveRunCoachHill(
+    @SerialName("distance_ahead_m") val distanceAheadMeters: Int,
+    @SerialName("length_m") val lengthMeters: Int,
+)
+
+@Serializable
+data class LiveRunCoachResponse(val message: String)
+
+@Serializable
 data class RunningStyle(
     val purpose: String? = null,
     @SerialName("run_types") val runTypes: List<String> = emptyList(),

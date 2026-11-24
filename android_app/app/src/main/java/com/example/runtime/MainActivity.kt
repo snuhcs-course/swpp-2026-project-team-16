@@ -158,6 +158,9 @@ fun RunTimeApp() {
         runViewModel.speakCue = { messageId, distanceMeters ->
             RunTrackingService.speakNavigationCue(appContext, messageId, distanceMeters)
         }
+        runViewModel.speakCoachCue = { message ->
+            RunTrackingService.speakNavigationText(appContext, message)
+        }
     }
     val runningStyleViewModel: RunningStyleViewModel = viewModel()
     val userProfileViewModel: UserProfileViewModel = viewModel()

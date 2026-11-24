@@ -107,6 +107,9 @@ interface ApiService {
     @POST("api/v1/runs/plan/")
     suspend fun planRun(@Body body: RunPlanRequest): ApiResponse<RunPlan>
 
+    @POST("api/v1/runs/live-coaching/")
+    suspend fun liveRunCoaching(@Body body: LiveRunCoachRequest): ApiResponse<LiveRunCoachResponse>
+
     @GET("api/v1/runs/{runId}/report/")
     suspend fun runReport(@Path("runId") runId: Int): ApiResponse<RunReport>
 
