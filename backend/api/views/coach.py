@@ -2,8 +2,9 @@ from datetime import timedelta
 
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from api.models import RouteRun
 from api.services.language import request_language
@@ -19,11 +20,17 @@ from api.services.run_coach import (
     report_facts,
     validate_running_style,
 )
+from api.services.live_run_coach import generate_live_coaching, validate_live_coach_request
+from api.route_algorithm.llm import LLMError
 from api.views.profile import get_profile
 
 
 RECENT_RUN_DAYS = 14
 MAX_RECENT_RUNS = 10
+
+
+class LiveRunCoachThrottle(ScopedRateThrottle):
+    scope = "live_coach"
 
 
 def _error(message, code):
@@ -92,6 +99,19 @@ def run_plan(request):
         alert_on_fast=alert_on_fast,
     )
     return Response({"status": "success", "data": plan}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@throttle_classes([LiveRunCoachThrottle])
+def live_run_coaching(request):
+    context, error = validate_live_coach_request(request.data)
+    if error:
+        return _error(error, status.HTTP_400_BAD_REQUEST)
+    try:
+        message = generate_live_coaching(context, request_language(request))
+    except LLMError:
+        return _error("Live coaching is temporarily unavailable.", status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response({"status": "success", "data": {"message": message}}, status=status.HTTP_200_OK)
 
 
 def _recent_runs(run):

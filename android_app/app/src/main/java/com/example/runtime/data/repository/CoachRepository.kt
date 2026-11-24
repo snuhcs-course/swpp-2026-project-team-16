@@ -6,6 +6,8 @@ import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunPlanRequest
 import com.example.runtime.data.remote.RunReport
 import com.example.runtime.data.remote.RunningStyle
+import com.example.runtime.data.remote.LiveRunCoachRequest
+import com.example.runtime.data.remote.LiveRunCoachResponse
 
 class CoachRepository(private val api: ApiService = ApiClient.api) {
 
@@ -28,6 +30,9 @@ class CoachRepository(private val api: ApiService = ApiClient.api) {
     ).requireData()
 
     suspend fun runReport(runId: Int): RunReport = api.runReport(runId).requireData()
+
+    suspend fun liveRunCoaching(request: LiveRunCoachRequest): LiveRunCoachResponse =
+        api.liveRunCoaching(request).requireData()
 
     suspend fun runningStyle(): RunningStyle = api.runningStyle().requireData()
 

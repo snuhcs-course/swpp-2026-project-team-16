@@ -43,6 +43,8 @@ import com.example.runtime.data.remote.UserProfile
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunPlanRequest
 import com.example.runtime.data.remote.RunReport
+import com.example.runtime.data.remote.LiveRunCoachRequest
+import com.example.runtime.data.remote.LiveRunCoachResponse
 import com.example.runtime.data.remote.RunningStyle
 import com.example.runtime.data.remote.BoardComment
 import com.example.runtime.data.remote.BoardPost
@@ -88,6 +90,7 @@ open class FakeApiService : ApiService {
     override suspend fun runs(): ApiResponse<List<RunHistoryItem>> = unexpected()
     override suspend fun planRun(body: RunPlanRequest): ApiResponse<RunPlan> = unexpected()
     override suspend fun runReport(runId: Int): ApiResponse<RunReport> = unexpected()
+    override suspend fun liveRunCoaching(body: LiveRunCoachRequest): ApiResponse<LiveRunCoachResponse> = unexpected()
     override suspend fun runningStyle(): ApiResponse<RunningStyle> = unexpected()
     override suspend fun deleteAccount(body: DeleteAccountRequest): ApiResponse<Unit> = unexpected()
     override suspend fun notifications(): ApiResponse<NotificationPage> = unexpected()

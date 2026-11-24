@@ -126,6 +126,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "10/minute",
+        "live_coach": "12/minute",
         "telemetry": "20/minute",
     },
 }

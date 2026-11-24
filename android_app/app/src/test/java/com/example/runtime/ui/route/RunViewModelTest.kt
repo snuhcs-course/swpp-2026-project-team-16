@@ -12,6 +12,8 @@ import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.NextRunRecommendation
 import com.example.runtime.data.remote.RateRunRequest
 import com.example.runtime.data.remote.RunPlan
+import com.example.runtime.data.remote.LiveRunCoachRequest
+import com.example.runtime.data.remote.LiveRunCoachResponse
 import com.example.runtime.data.remote.RunRating
 import com.example.runtime.data.remote.RunRecord
 import com.example.runtime.data.remote.RunReport
@@ -47,6 +49,7 @@ class RunViewModelTest {
     @After
     fun resetTracking() {
         RunTrackingState.update(RunMetrics())
+        RunTrackingState.resetTrail()
     }
 
     private fun runAt(latitude: Double, longitude: Double, timeMs: Long, isPaused: Boolean = false) {
@@ -98,6 +101,48 @@ class RunViewModelTest {
         }
 
         assertEquals(listOf(R.string.run_voice_started), spoken)
+    }
+
+    @Test
+    fun kilometerMilestoneRequestsCoachingOnceWithSplitsPlanAndNearbyHill() {
+        val spoken = mutableListOf<String>()
+        viewModel.speakCoachCue = { spoken += it }
+        val plan = PLAN.copy(
+            distanceMeters = 5000,
+            paceSegments = listOf(
+                com.example.runtime.data.remote.PaceSegment(0, 1000, 360, 390),
+                com.example.runtime.data.remote.PaceSegment(1000, 5000, 370, 400),
+            ),
+        )
+        viewModel.start(
+            RunTarget(
+                straightRoute,
+                5000,
+                plan = plan,
+                uphillSections = listOf(RouteUphillSection(1150, 1450)),
+            ),
+        )
+        RunTrackingState.recordSplits(1000.0, 360L)
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 1000.0, elapsedSeconds = 360L))
+
+        assertEquals(1, api.liveCoachRequests.size)
+        assertEquals(listOf(360), api.liveCoachRequests.single().splitPacesSeconds)
+        assertEquals(370, api.liveCoachRequests.single().nextTargetPaceMinSeconds)
+        assertEquals(150, api.liveCoachRequests.single().upcomingHills.single().distanceAheadMeters)
+        assertEquals(listOf("다음 구간도 차분하게 이어가세요."), spoken)
+
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 1010.0, elapsedSeconds = 365L))
+        assertEquals(1, api.liveCoachRequests.size)
+    }
+
+    @Test
+    fun kilometerCoachingIsSkippedAfterTheRunFinishes() {
+        viewModel.start(RunTarget(straightRoute, 3000, plan = PLAN))
+        viewModel.finish(RunResult(1000, 360, splitTimes = listOf(360)), isLoggedIn = false)
+        RunTrackingState.recordSplits(1000.0, 360L)
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 1000.0, elapsedSeconds = 360L))
+
+        assertTrue(api.liveCoachRequests.isEmpty())
     }
 
     @Test
@@ -406,6 +451,7 @@ class RunViewModelTest {
         var failRun = false
         var failShare = false
         val runs = mutableListOf<RecordRunRequest>()
+        val liveCoachRequests = mutableListOf<LiveRunCoachRequest>()
         val shares = mutableListOf<ShareRouteRequest>()
 
         override suspend fun recordRun(body: RecordRunRequest): ApiResponse<RunRecord> {
@@ -457,6 +503,11 @@ class RunViewModelTest {
             reportRequests += runId
             if (failReport) throw IOException("offline")
             return ApiResponse(status = "success", data = REPORT)
+        }
+
+        override suspend fun liveRunCoaching(body: LiveRunCoachRequest): ApiResponse<LiveRunCoachResponse> {
+            liveCoachRequests += body
+            return ApiResponse(status = "success", data = LiveRunCoachResponse("다음 구간도 차분하게 이어가세요."))
         }
 
         override suspend fun shareRoute(body: ShareRouteRequest): ApiResponse<SharedRoute> {
