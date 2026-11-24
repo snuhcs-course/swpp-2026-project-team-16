@@ -159,32 +159,29 @@ class RouteProgressMatcher(points: List<RouteCoordinate>) {
             return RouteProgress(0.0, Double.POSITIVE_INFINITY, routeLengthMeters)
         }
 
+        val accuracyReliable = accuracyMeters == null ||
+            (accuracyMeters.isFinite() && accuracyMeters <= MAX_OFF_ROUTE_ACCURACY_METERS)
+        val estimatedAccuracy = accuracyMeters?.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0
+        val offRouteThreshold = max(OFF_ROUTE_DISTANCE_METERS, estimatedAccuracy * ACCURACY_MARGIN_MULTIPLIER)
+        val rejoinThreshold = max(REJOIN_DISTANCE_METERS, estimatedAccuracy)
+
         val minDistance = max(0.0, progressMeters - BACKTRACK_WINDOW_METERS)
         val nearby = closestMatch(latitude, longitude, minDistance, min(routeLengthMeters, progressMeters + LOOKAHEAD_WINDOW_METERS))
-        val match = if (isOffRoute) {
-            // Once off route, the runner may rejoin behind the last matched point.
-            // Search the whole course so the old forward-only window cannot keep
-            // the guidance stuck in the off-route state.
-            closestMatch(latitude, longitude, 0.0, routeLengthMeters)
-        } else if (nearby.distanceFromRoute.isInfinite()) {
-            closestMatch(latitude, longitude, 0.0, routeLengthMeters)
+        val ahead = if (isOffRoute || nearby.distanceFromRoute > rejoinThreshold) {
+            closestMatch(latitude, longitude, minDistance, routeLengthMeters)
         } else {
             nearby
         }
+        val match = when {
+            ahead.distanceFromRoute <= rejoinThreshold -> ahead
+            isOffRoute || nearby.distanceFromRoute.isInfinite() -> closestMatch(latitude, longitude, 0.0, routeLengthMeters)
+            else -> nearby
+        }
 
-        val accuracyReliable = accuracyMeters == null ||
-            (accuracyMeters.isFinite() && accuracyMeters <= MAX_OFF_ROUTE_ACCURACY_METERS)
         if (!accuracyReliable) {
             farSinceMs = null
             return RouteProgress(progressMeters, match.distanceFromRoute, routeLengthMeters, isOffRoute)
         }
-
-        // GPS accuracy is an estimate, so a fix can land outside the route even
-        // while the runner is still on it. Widen both thresholds when the fix is
-        // less precise instead of treating every measured offset as real drift.
-        val estimatedAccuracy = accuracyMeters?.coerceAtLeast(0.0) ?: 0.0
-        val offRouteThreshold = max(OFF_ROUTE_DISTANCE_METERS, estimatedAccuracy * ACCURACY_MARGIN_MULTIPLIER)
-        val rejoinThreshold = max(REJOIN_DISTANCE_METERS, estimatedAccuracy)
 
         if (isOffRoute) {
             if (match.distanceFromRoute <= rejoinThreshold) {
