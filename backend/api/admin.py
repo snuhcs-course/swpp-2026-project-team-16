@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TelemetryEvent
+from .models import ActivityLog, TelemetryEvent
 
 
 @admin.register(TelemetryEvent)
@@ -18,4 +18,19 @@ class TelemetryEventAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "user", "action")
+    list_filter = ("action", "created_at")
+    date_hierarchy = "created_at"
+    search_fields = ("user__username", "action")
+    readonly_fields = ("user", "action", "details", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False

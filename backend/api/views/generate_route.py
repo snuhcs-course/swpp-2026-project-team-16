@@ -14,6 +14,7 @@ from api.route_algorithm.briefing import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from api.route_algorithm.classes import GeoJSONPoint
 from api.services.place_translation import translate_names
 from api.route_algorithm.preferences import MAX_PREFERENCE_TEXT_LENGTH, validate_options
+from api.activity import log_activity
 
 
 ROUTE_TIMEOUT_SECONDS = 35
@@ -241,6 +242,23 @@ def generate_route_api(request):
             "temporary_route_id": temporary_route.id,
             "route": route.to_dict(),
         })
+
+    log_activity(
+        request.user,
+        "route_generated",
+        start=list(starting_point.coordinates),
+        end=list(end_point.coordinates) if end_point else None,
+        start_name=stored_start,
+        end_name=stored_end,
+        requested_distance_m=distance,
+        preferences=preferences,
+        preference_text=preference_text,
+        language=language,
+        options=[
+            {"temporary_route_id": option["temporary_route_id"], "distance_m": option["route"]["distance"]}
+            for option in options
+        ],
+    )
 
 
     return Response(

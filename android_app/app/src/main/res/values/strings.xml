@@ -593,6 +593,9 @@
     <string name="settings_phone_off">Notifications for this app are off on your phone. Turn them on to get push notifications.</string>
     <string name="settings_open_phone_settings">Open phone notification settings</string>
     <string name="settings_all_notifications">All notifications</string>
+    <string name="settings_activity_title">Activity records</string>
+    <string name="settings_activity_hint">To run and improve RunTime, we keep a record of what you do in the app: the start, destination and distance of routes you generate, the distance, time and pace of runs you finish, and the posts, comments, reviews and group messages you write. Only RunTime staff can see it. It is deleted when you delete your account. Routes generated without logging in are kept without any account information.</string>
+    <string name="signup_activity_notice">By signing up, you agree that RunTime keeps a record of your activity, such as the routes you generate, your runs and what you write, to run and improve the service. You can read more in Settings.</string>
     <string name="settings_telemetry">Optional usage telemetry</string>
     <string name="settings_telemetry_hint">We use event counts to improve route creation, place search, pace plans, runs, and reports. Events are not linked to your account. We do not collect exact location, search text, or written plans. Events are queued and sent only after you opt in. You can turn this off any time; unsent events are deleted. Standard server connection logs may still include network details such as your IP address.</string>
     <string name="settings_telemetry_consent">Share usage telemetry</string>

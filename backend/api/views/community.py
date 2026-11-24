@@ -15,6 +15,7 @@ from api.services.notifications import notify
 from api.services.recommendation import POPULAR_DAYS, reason_text, score_routes
 from api.services.run_coach import validate_plan, validate_splits
 from api.models import Route, RouteReview, RouteRun, RunningGroup, SharedRoute, TemporaryRoute, UserSavedRoute
+from api.activity import log_activity, route_line_endpoints
 
 
 MAX_TITLE_LENGTH = 60
@@ -257,6 +258,26 @@ def route_runs(request):
         off_route_seconds=off_route_seconds,
     )
     shared_route = SharedRoute.objects.filter(route=route).first()
+    start, end = route_line_endpoints(route.route)
+    log_activity(
+        request.user,
+        "run_recorded",
+        run_id=run.id,
+        route_id=route.id,
+        temporary_route_id=temporary_route_id,
+        free_run=bool(path),
+        group_id=group.id if group else None,
+        distance_m=distance_m,
+        duration_s=duration_s,
+        average_pace_s_per_km=round(duration_s * 1000 / distance_m) if distance_m else None,
+        average_speed_kmh=round(distance_m * 3.6 / duration_s, 2) if duration_s else None,
+        route_distance_m=route.distance,
+        start=start,
+        end=end,
+        splits=splits,
+        off_route_count=off_route_count,
+        off_route_seconds=off_route_seconds,
+    )
 
     return Response(
         {
@@ -356,6 +377,7 @@ def shared_routes_list(request):
     except IntegrityError:
         return _error("This route is already shared.", status.HTTP_409_CONFLICT)
 
+    log_activity(request.user, "route_shared", shared_route_id=shared_route.id, route_id=route.id, title=title.strip(), description=description.strip())
     shared_route = _shared_routes().get(id=shared_route.id)
     return Response(
         {"status": "success", "data": _shared_route_data(shared_route, request.user, include_route=True, language=request_language(request))},
@@ -419,6 +441,7 @@ def shared_route_reviews(request, shared_route_id):
         return _error("You already reviewed this route.", status.HTTP_409_CONFLICT)
 
     notify(shared_route.shared_by, "route_review", actor=request.user, shared_route=shared_route, text=comment)
+    log_activity(request.user, "route_reviewed", shared_route_id=shared_route.id, review_id=review.id, rating=rating, comment=comment)
     return Response({"status": "success", "data": _review_data(review, request.user)}, status=status.HTTP_201_CREATED)
 
 
@@ -456,4 +479,5 @@ def run_detail(request, run_id):
         return _error("Rating must be a whole number from 1 to 5.", status.HTTP_400_BAD_REQUEST)
     run.rating = rating
     run.save(update_fields=["rating"])
+    log_activity(request.user, "run_rated", run_id=run.id, rating=rating)
     return Response({"status": "success", "data": {"id": run.id, "rating": run.rating}}, status=status.HTTP_200_OK)

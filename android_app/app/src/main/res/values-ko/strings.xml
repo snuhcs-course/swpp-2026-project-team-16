@@ -581,6 +581,9 @@
     <string name="settings_phone_off">휴대폰에서 이 앱의 알림이 꺼져 있어요. 켜야 푸시 알림을 받을 수 있어요.</string>
     <string name="settings_open_phone_settings">휴대폰 알림 설정 열기</string>
     <string name="settings_all_notifications">모든 알림</string>
+    <string name="settings_activity_title">활동 기록</string>
+    <string name="settings_activity_hint">RunTime 운영과 개선을 위해 앱에서 한 활동을 기록합니다. 만든 경로의 출발지·도착지·거리, 완료한 러닝의 거리·시간·페이스, 작성한 글·댓글·리뷰·모임 메시지가 포함됩니다. 이 기록은 RunTime 운영진만 볼 수 있고, 계정을 삭제하면 함께 삭제됩니다. 로그인하지 않고 만든 경로는 계정 정보 없이 보관합니다.</string>
+    <string name="signup_activity_notice">가입하면 서비스 운영과 개선을 위해 만든 경로, 러닝 기록, 작성한 글 등 활동 기록이 보관되는 데 동의하게 됩니다. 자세한 내용은 설정에서 볼 수 있어요.</string>
     <string name="settings_telemetry">선택적 사용 통계</string>
     <string name="settings_telemetry_hint">코스 생성, 장소 검색, 페이스 계획, 러닝, 리포트 개선을 위해 이벤트 건수를 사용합니다. 이벤트는 계정과 연결하지 않습니다. 정확한 위치, 검색어, 작성한 계획은 수집하지 않습니다. 동의한 경우에만 대기열에 저장하고 전송하며, 언제든 동의를 끌 수 있습니다. 끄면 미전송 데이터는 삭제됩니다. 단, 서버의 일반 접속 로그에는 IP 주소 같은 네트워크 정보가 남을 수 있습니다.</string>
     <string name="settings_telemetry_consent">사용 통계 공유</string>

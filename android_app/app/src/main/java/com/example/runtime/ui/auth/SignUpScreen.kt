@@ -60,7 +60,14 @@ fun SignUpScreen(
             onValueChange = { passwordConfirm = it },
             label = stringResource(R.string.label_password_confirm)
         )
-        Spacer(modifier = Modifier.height(Spacing.l))
+        Spacer(modifier = Modifier.height(Spacing.m))
+        Text(
+            stringResource(R.string.signup_activity_notice),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(Spacing.m))
         PrimaryAuthButton(
             text = stringResource(R.string.action_sign_up),
             isLoading = uiState.isLoading,

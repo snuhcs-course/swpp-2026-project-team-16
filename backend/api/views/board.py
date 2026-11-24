@@ -17,6 +17,7 @@ from api.models import (
     PostScrap,
 )
 from api.services.notifications import notify
+from api.activity import log_activity
 
 
 MAX_TITLE_LENGTH = 100
@@ -168,6 +169,7 @@ def posts_list(request):
     if error:
         return _error(error, status.HTTP_400_BAD_REQUEST)
     post = Post.objects.create(author=request.user, **fields)
+    log_activity(request.user, "post_created", post_id=post.id, title=post.title, body=post.body)
     return Response(
         {"status": "success", "data": _post_data(_get_post(post.id), request.user)},
         status=status.HTTP_201_CREATED,
@@ -277,7 +279,8 @@ def post_comments(request, post_id):
             return _error(f"Comment must be 1 to {MAX_COMMENT_LENGTH} characters.", status.HTTP_400_BAD_REQUEST)
         if not isinstance(anonymous, bool):
             return _error("anonymous must be true or false.", status.HTTP_400_BAD_REQUEST)
-        Comment.objects.create(post=post, author=request.user, body=body.strip(), anonymous=anonymous)
+        comment = Comment.objects.create(post=post, author=request.user, body=body.strip(), anonymous=anonymous)
+        log_activity(request.user, "comment_created", post_id=post.id, comment_id=comment.id, body=comment.body, anonymous=anonymous)
         if post.author_id != request.user.id:
             notify(post.author, "post_comment", actor=None if anonymous else request.user, post=post, text=body.strip())
         code = status.HTTP_201_CREATED
