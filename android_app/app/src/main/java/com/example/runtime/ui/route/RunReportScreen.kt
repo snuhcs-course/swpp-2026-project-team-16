@@ -76,6 +76,7 @@ fun RunReportScreen(
     runRating: Int? = null,
     onRate: (Int) -> Unit = {},
     onRetryReport: () -> Unit,
+    onRetryRecord: () -> Unit = {},
     onPlanNextRun: (RunPlan) -> Unit,
     onDone: () -> Unit,
     shareAction: @Composable () -> Unit,
@@ -137,7 +138,7 @@ fun RunReportScreen(
         }
 
         ReportCard(title = stringResource(R.string.report_coach_comment)) {
-            CoachComment(isLoggedIn, recordState, reportState, onRetryReport)
+            CoachComment(isLoggedIn, recordState, reportState, onRetryReport, onRetryRecord)
         }
 
         if (isLoggedIn && recordState is RunRecordState.Saved) {
@@ -457,6 +458,7 @@ private fun CoachComment(
     recordState: RunRecordState,
     reportState: ReportState,
     onRetry: () -> Unit,
+    onRetryRecord: () -> Unit,
 ) {
     when {
         !isLoggedIn -> Text(
@@ -474,11 +476,15 @@ private fun CoachComment(
             )
             TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
         }
-        recordState is RunRecordState.Failed -> Text(
-            stringResource(R.string.report_record_failed),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        recordState is RunRecordState.Failed -> Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.report_record_failed),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onRetryRecord) { Text(stringResource(R.string.action_retry)) }
+        }
         else -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             Text(

@@ -25,6 +25,7 @@ import com.example.runtime.testing.MainDispatcherRule
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.data.run.RunMetrics
 import com.example.runtime.data.run.RunTrackingState
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,8 +41,9 @@ class RunViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val api = RunApi()
+    private val online = MutableStateFlow(true)
     private var now = 0L
-    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api), clock = { now }, retryDelayMs = 0) }
+    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api), clock = { now }, retryDelayMs = 0, online = online) }
     private val straightRoute = listOf(GeoJsonLineString(listOf(listOf(126.95, 37.46), listOf(126.96, 37.46))))
 
     @After
@@ -351,6 +353,32 @@ class RunViewModelTest {
         viewModel.finish(RunResult(3010, 1200, path = listOf(listOf(127.0, 37.5))), isLoggedIn = true)
 
         assertNull(api.runs.single().path)
+    }
+
+    @Test
+    fun finish_savesTheRunOnceTheConnectionIsBack() {
+        api.failRun = true
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 42))
+        viewModel.finish(RunResult(1000, 300), isLoggedIn = true)
+        assertTrue(viewModel.recordState is RunRecordState.Failed)
+
+        api.failRun = false
+        online.value = false
+        online.value = true
+
+        assertTrue(viewModel.recordState is RunRecordState.Saved)
+        assertEquals(2, api.runs.size)
+    }
+
+    @Test
+    fun reconnecting_doesNotSaveTheRunTwice() {
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 42))
+        viewModel.finish(RunResult(1000, 300), isLoggedIn = true)
+
+        online.value = false
+        online.value = true
+
+        assertEquals(1, api.runs.size)
     }
 
     @Test

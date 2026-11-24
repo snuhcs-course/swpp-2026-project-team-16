@@ -531,6 +531,7 @@ fun RunTimeApp() {
                                                 runRating = runViewModel.runRating,
                                                 onRate = runViewModel::rateRun,
                                                 onRetryReport = runViewModel::loadReport,
+                                                onRetryRecord = runViewModel::retryRecord,
                                                 onPlanNextRun = { plan ->
                                                     routeViewModel.applyPlan(plan)
                                                     currentScreen = "route_input"
