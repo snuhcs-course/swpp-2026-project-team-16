@@ -5,6 +5,7 @@ on:
     branches:
       - iteration-3-demo
       - iteration-4-demo
+      - iteration-5-demo
   workflow_dispatch:
 
 jobs:
