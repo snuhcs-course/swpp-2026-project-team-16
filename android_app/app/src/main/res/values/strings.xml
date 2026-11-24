@@ -30,7 +30,7 @@
     <string name="menu">Menu</string>
     <string name="action_not_now">Not now</string>
     <string name="login_prompt_title">Log in to continue</string>
-    <string name="login_prompt_trial_used">You\'ve tried RunTime once. Log in or sign up to generate more routes.</string>
+    <string name="login_prompt_trial_used">You\'ve used your free route. Log in or sign up to generate more routes. You can still choose Free run to run without an account.</string>
     <string name="login_prompt_save">Log in to save this route. You\'ll come back here and it will be saved.</string>
     <string name="guest_my_page_title">Save the routes you like</string>
     <string name="guest_my_page_message">Log in to save routes, rename them, and find them here anytime.</string>
