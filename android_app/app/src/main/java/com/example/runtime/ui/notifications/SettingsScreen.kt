@@ -191,6 +191,14 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(Spacing.l))
+            Text(stringResource(R.string.settings_activity_title), style = MaterialTheme.typography.titleLarge)
+            Text(
+                stringResource(R.string.settings_activity_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(Spacing.l))
             Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(Spacing.s))
             OutlinedButton(

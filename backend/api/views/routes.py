@@ -8,6 +8,7 @@ from rest_framework import status
 
 from api.models import UserSavedRoute, Route, TemporaryRoute
 from api.services.language import request_language
+from api.activity import log_activity
 
 
 User = get_user_model()
@@ -105,6 +106,7 @@ def saved_routes_list(request):
                     name=name or "",
                 )
 
+            log_activity(request.user, "route_saved", route_id=route.id, temporary_route_id=temporary_route_id, name=name or "", distance_m=route.distance)
             return Response({'status': 'success', 'message': 'Temporary route saved successfully.', 'route_id': route.id}, status=status.HTTP_201_CREATED)
 
         elif route_id:
@@ -122,6 +124,8 @@ def saved_routes_list(request):
             if not created and name is not None:
                 saved_route.name = name
                 saved_route.save(update_fields=["name"])
+            if created:
+                log_activity(request.user, "route_saved", route_id=route.id, name=name or "", distance_m=route.distance)
 
             return Response(
                 {

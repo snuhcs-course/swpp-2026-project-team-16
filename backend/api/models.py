@@ -167,6 +167,39 @@ class TelemetryEvent(models.Model):
         return f"{self.event_name}: {self.outcome} ({self.received_at:%Y-%m-%d})"
 
 
+class ActivityLog(models.Model):
+    ACTIONS = [
+        ("signed_up", "Signed up"),
+        ("logged_in", "Logged in"),
+        ("route_generated", "Generated a route"),
+        ("route_saved", "Saved a route"),
+        ("run_recorded", "Finished a run"),
+        ("run_rated", "Rated a run"),
+        ("route_shared", "Shared a route"),
+        ("route_reviewed", "Reviewed a route"),
+        ("post_created", "Wrote a post"),
+        ("comment_created", "Wrote a comment"),
+        ("group_created", "Created a group"),
+        ("group_joined", "Joined a group"),
+        ("group_left", "Left a group"),
+        ("group_message", "Sent a group message"),
+        ("followed", "Followed a user"),
+        ("unfollowed", "Unfollowed a user"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="activity_logs")
+    action = models.CharField(max_length=32, choices=ACTIONS, db_index=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["user", "created_at"], name="activity_user_date_idx")]
+
+    def __str__(self):
+        return f"{self.user_id or 'guest'}: {self.action} ({self.created_at:%Y-%m-%d %H:%M})"
+
+
 class RouteReview(models.Model):
     shared_route = models.ForeignKey(SharedRoute, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="route_reviews")

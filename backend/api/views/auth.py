@@ -18,6 +18,7 @@ from api.views.profile import MAX_DISPLAY_NAME_LENGTH, NICKNAME_TAKEN, get_profi
 from google.auth.exceptions import GoogleAuthError, TransportError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from api.activity import log_activity
 
 
 User = get_user_model()
@@ -140,6 +141,7 @@ def register_user(request):
     token = Token.objects.create(
         user=user
     )
+    log_activity(user, "signed_up", method="password", display_name=display_name or "")
 
 
     return Response(
@@ -181,6 +183,7 @@ def login_user(request):
 
 
     token, created = Token.objects.get_or_create(user=user)
+    log_activity(user, "logged_in", method="password")
 
 
     return Response(
@@ -262,6 +265,7 @@ def google_login(request):
         )
 
     token, _ = Token.objects.get_or_create(user=user)
+    log_activity(user, "signed_up" if created else "logged_in", method="google")
 
     return Response(
         {
