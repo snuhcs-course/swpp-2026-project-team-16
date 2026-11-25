@@ -509,7 +509,7 @@
     <string name="report_status_slow">%1$ds slow</string>
     <string name="report_log_in_for_coach">Log in to get a coach comment and a next-run suggestion.</string>
     <string name="report_comment_failed">Couldn\'t load the comment.</string>
-    <string name="report_record_failed">The run wasn\'t saved, so there\'s no comment yet. Save it again below.</string>
+    <string name="report_record_failed">The run wasn\'t saved. It will be saved automatically when you\'re back online, or tap Retry.</string>
     <string name="report_comment_loading">Your coach is looking at the run…</string>
     <string name="purpose_fitness">Stay fit</string>
     <string name="purpose_race">Train for a race</string>

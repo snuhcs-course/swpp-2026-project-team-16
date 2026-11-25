@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.runtime.R
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GeoJsonLineString
+import com.example.runtime.data.remote.NetworkStatus
 import com.example.runtime.data.remote.NoConnectivityException
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.RunPlan
@@ -28,6 +29,9 @@ import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -81,6 +85,7 @@ class RunViewModel(
     private val routeRepository: RouteRepository = RouteRepository(),
     private val clock: () -> Long = SystemClock::elapsedRealtime,
     private val retryDelayMs: Long = RETURN_ROUTE_RETRY_DELAY_MS,
+    private val online: Flow<Boolean> = NetworkStatus.online,
 ) : ViewModel() {
 
     var routePoints by mutableStateOf<List<RouteCoordinate>>(emptyList())
@@ -468,6 +473,16 @@ class RunViewModel(
     init {
         viewModelScope.launch {
             RunTrackingState.metrics.collect(::onMetrics)
+        }
+        viewModelScope.launch {
+            online.distinctUntilChanged().filter { it }.collect { retryAfterReconnect() }
+        }
+    }
+
+    private fun retryAfterReconnect() {
+        when {
+            recordState is RunRecordState.Failed -> retryRecord()
+            reportState == ReportState.Failed -> loadReport()
         }
     }
 
