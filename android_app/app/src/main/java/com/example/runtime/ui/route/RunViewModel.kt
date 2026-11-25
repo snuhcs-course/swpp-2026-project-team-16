@@ -14,6 +14,8 @@ import com.example.runtime.data.remote.NoConnectivityException
 import com.example.runtime.data.remote.RecordRunRequest
 import com.example.runtime.data.remote.RunPlan
 import com.example.runtime.data.remote.RunReport
+import com.example.runtime.data.remote.LiveRunCoachHill
+import com.example.runtime.data.remote.LiveRunCoachRequest
 import com.example.runtime.data.repository.CoachRepository
 import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
@@ -26,11 +28,15 @@ import com.example.runtime.data.telemetry.Telemetry
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.ui.common.toUiText
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import java.io.IOException
 
 data class RunTarget(
@@ -97,8 +103,13 @@ class RunViewModel(
     private var offRouteSince: Long? = null
     private var voiceGuide = RouteVoiceGuide(emptyList(), 0.0)
     private var uphillVoiceGuide = UphillVoiceGuide(emptyList())
+    private var lastCoachedKilometer = 0
+    private var runSessionId = 0L
+    private val liveCoachMutex = Mutex()
+    private val liveCoachJobs = mutableListOf<Job>()
 
     var speakCue: (messageId: Int, distanceMeters: Int?) -> Unit = { _, _ -> }
+    var speakCoachCue: (message: String) -> Unit = {}
 
     val isRunActive: Boolean
         get() = target != null && result == null && RunTrackingState.metrics.value.isTracking
@@ -138,7 +149,76 @@ class RunViewModel(
             }
             isOffRoute = offRoute
         }
-        if (target != null && result == null) announce(metrics)
+        if (target != null && result == null) {
+            announce(metrics)
+            requestKilometerCoaching(metrics)
+        }
+    }
+
+    private fun requestKilometerCoaching(metrics: RunMetrics) {
+        if (!metrics.isTracking) return
+        val completedKilometer = (metrics.distanceMeters / METERS_PER_KILOMETER).toInt().coerceAtMost(MAX_COACHED_KILOMETERS)
+        if (completedKilometer <= lastCoachedKilometer) return
+        lastCoachedKilometer = completedKilometer
+
+        val runTarget = target ?: return
+        val cumulativeSplits = RunTrackingState.splitTimes.value.take(completedKilometer)
+        if (cumulativeSplits.size < completedKilometer) return
+        var previousElapsed = 0L
+        val splitPaces = cumulativeSplits.map { elapsed ->
+            val pace = (elapsed - previousElapsed).toInt()
+            previousElapsed = elapsed
+            pace
+        }
+        if (splitPaces.any { it <= 0 }) return
+
+        val nextSectionStart = completedKilometer * METERS_PER_KILOMETER.toInt()
+        val plan = runTarget.plan
+        val nextPaceSection = plan?.paceSegments?.firstOrNull {
+            nextSectionStart >= it.startMeters && nextSectionStart < it.endMeters
+        }
+        val nextPaceMin = nextPaceSection?.paceMinSeconds ?: plan?.paceMinSeconds
+        val nextPaceMax = nextPaceSection?.paceMaxSeconds ?: plan?.paceMaxSeconds
+        val nearbyHills = runTarget.uphillSections
+            .filter { it.endMeters >= nextSectionStart && it.startMeters <= nextSectionStart + HILL_LOOKAHEAD_METERS }
+            .take(MAX_UPCOMING_HILLS)
+            .map {
+                LiveRunCoachHill(
+                    distanceAheadMeters = (it.startMeters - nextSectionStart).coerceAtLeast(0),
+                    lengthMeters = (it.endMeters - it.startMeters).coerceAtLeast(1),
+                )
+            }
+        val request = LiveRunCoachRequest(
+            completedKilometer = completedKilometer,
+            distanceMeters = metrics.distanceMeters.roundToInt(),
+            elapsedSeconds = metrics.elapsedSeconds,
+            splitPacesSeconds = splitPaces,
+            plan = plan,
+            nextTargetPaceMinSeconds = nextPaceMin,
+            nextTargetPaceMaxSeconds = nextPaceMax,
+            upcomingHills = nearbyHills,
+        )
+        val sessionId = runSessionId
+        val job = viewModelScope.launch {
+            liveCoachMutex.withLock {
+                if (sessionId != runSessionId || result != null) return@withLock
+                try {
+                    val message = coachRepository.liveRunCoaching(request).message
+                    if (sessionId == runSessionId && result == null) speakCoachCue(message)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // The regular kilometer split has already been spoken; a failed AI request is non-blocking.
+                }
+            }
+        }
+        liveCoachJobs += job
+    }
+
+    private fun cancelLiveCoachRequests() {
+        runSessionId += 1
+        liveCoachJobs.forEach { it.cancel() }
+        liveCoachJobs.clear()
     }
 
     private fun announce(metrics: RunMetrics) {
@@ -263,6 +343,8 @@ class RunViewModel(
 
     fun start(target: RunTarget): Boolean {
         if (isRunActive) return false
+        cancelLiveCoachRequests()
+        lastCoachedKilometer = 0
         this.target = target
         setRoute(target.lines)
         routeProgress = RouteProgress(0.0, Double.POSITIVE_INFINITY, progressMatcher.routeLengthMeters)
@@ -281,6 +363,7 @@ class RunViewModel(
     }
 
     fun finish(result: RunResult, isLoggedIn: Boolean) {
+        cancelLiveCoachRequests()
         this.result = result
         Telemetry.track("run_session", "completed")
         if (isLoggedIn) recordRun(result)
@@ -401,6 +484,13 @@ class RunViewModel(
             recordState is RunRecordState.Failed -> retryRecord()
             reportState == ReportState.Failed -> loadReport()
         }
+    }
+
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+        const val MAX_COACHED_KILOMETERS = 60
+        const val HILL_LOOKAHEAD_METERS = 2000
+        const val MAX_UPCOMING_HILLS = 5
     }
 }
 

@@ -918,6 +918,56 @@ The LLM only reads the text into a run type, distance and route preferences. The
 
 ---
 
+## Live Kilometer Coaching
+
+### Endpoint
+
+```
+POST /api/v1/runs/live-coaching/
+```
+
+### Authentication
+
+Optional. Requests are rate-limited to 12 per minute per user or client IP.
+
+### Request
+
+```json
+{
+    "completed_km": 2,
+    "distance_m": 2010,
+    "elapsed_s": 740,
+    "split_paces_s": [360, 380],
+    "plan": {
+        "distance_m": 5000,
+        "pace_min_s": 360,
+        "pace_max_s": 390,
+        "pace_segments": [
+            {"start_m": 0, "end_m": 2000, "pace_min_s": 360, "pace_max_s": 380},
+            {"start_m": 2000, "end_m": 5000, "pace_min_s": 370, "pace_max_s": 390}
+        ]
+    },
+    "next_target_pace_min_s": 370,
+    "next_target_pace_max_s": 390,
+    "upcoming_hills": [{"distance_ahead_m": 180, "length_m": 300}]
+}
+```
+
+`completed_km` is between 1 and 60. `split_paces_s` contains the completed kilometer paces in seconds per kilometer. `plan` may be null. The next target pace values must both be provided or both be null. `upcoming_hills` contains up to five nearby uphill sections. No GPS coordinates are sent.
+
+### Response
+
+```json
+{
+    "status": "success",
+    "data": {"message": "다음 구간은 목표 범위 안에서 차분하게 이어가세요."}
+}
+```
+
+The message is one or two short sentences for text-to-speech. Provider failures return `503`; the app skips the AI cue while keeping the kilometer summary available.
+
+---
+
 ## Record Run
 
 ### Endpoint
