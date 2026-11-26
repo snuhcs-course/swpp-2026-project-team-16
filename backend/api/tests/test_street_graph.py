@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+import networkx as nx
 from django.test import SimpleTestCase
 
 from api.route_algorithm import street_graph
@@ -45,11 +46,13 @@ OSM_XML = f"""<?xml version="1.0" encoding="UTF-8"?>
 
 
 class WalkFilterTests(SimpleTestCase):
-    def test_matches_osmnx_walk_filter(self):
+    def test_excludes_unsafe_road_classes_from_walk_filter(self):
         self.assertTrue(is_walkable({"highway": "footway"}))
         self.assertTrue(is_walkable({"highway": "residential", "sidewalk": "both"}))
         self.assertFalse(is_walkable({"building": "yes"}))
         self.assertFalse(is_walkable({"highway": "motorway_link"}))
+        self.assertFalse(is_walkable({"highway": "trunk"}))
+        self.assertFalse(is_walkable({"highway": "trunk_link"}))
         self.assertFalse(is_walkable({"highway": "cycleway"}))
         self.assertFalse(is_walkable({"highway": "path", "foot": "no"}))
         self.assertFalse(is_walkable({"highway": "service", "access": "private"}))
@@ -98,6 +101,27 @@ class LocalStreetGraphTests(SimpleTestCase):
 
 
 class StreetGraphTests(SimpleTestCase):
+    @mock.patch("api.route_algorithm.street_graph.simplify", side_effect=lambda graph: graph)
+    @mock.patch("api.route_algorithm.street_graph.ox.graph.graph_from_point")
+    def test_download_graph_removes_trunk_edges(self, graph_from_point, simplify_graph):
+        graph = nx.MultiDiGraph()
+        graph.add_node(1, x=126.95, y=37.46)
+        graph.add_node(2, x=126.951, y=37.46)
+        graph.add_node(3, x=126.952, y=37.46)
+        graph.add_node(4, x=126.953, y=37.46)
+        graph.add_edge(1, 2, highway="trunk", length=100)
+        graph.add_edge(2, 3, highway="footway", length=100)
+        # Test fixtures may omit OSM tags entirely; these edges are not trunk roads.
+        graph.add_edge(3, 4, length=100)
+        graph_from_point.return_value = graph
+
+        result = street_graph.download_graph((37.46, 126.95), 500)
+
+        self.assertFalse(result.has_edge(1, 2))
+        self.assertTrue(result.has_edge(2, 3))
+        self.assertTrue(result.has_edge(3, 4))
+        graph_from_point.assert_called_once_with((37.46, 126.95), dist=500, network_type="walk", simplify=False)
+
     @mock.patch("api.route_algorithm.street_graph.download_graph", return_value="downloaded")
     @mock.patch("api.route_algorithm.street_graph.local_graph", return_value=None)
     def test_falls_back_to_overpass_without_local_graph(self, local, download):

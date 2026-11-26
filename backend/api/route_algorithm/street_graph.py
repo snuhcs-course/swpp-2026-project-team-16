@@ -19,8 +19,11 @@ SOURCE_URL = "https://download.bbbike.org/osm/bbbike/Seoul/Seoul.osm.gz"
 EXCLUDED_WALK_TAGS = {
     "area": "yes",
     "access": "private",
+    # OSMnx's generic walk preset can still include trunk roads. Exclude them
+    # explicitly so a missing/incorrectly tagged bridge sidewalk cannot send a
+    # generated running route onto the vehicle carriageway.
     "highway": "abandoned|bus_guideway|construction|cycleway|motor|no|planned|platform"
-               "|proposed|raceway|razed|rest_area|services",
+               "|proposed|raceway|razed|rest_area|services|trunk",
     "foot": "no",
     "service": "private",
     "sidewalk": "separate",
@@ -32,9 +35,16 @@ _EXCLUDED_PATTERNS = {key: re.compile(pattern) for key, pattern in EXCLUDED_WALK
 
 
 def is_walkable(tags: dict) -> bool:
-    return "highway" in tags and not any(
-        key in tags and pattern.search(tags[key]) for key, pattern in _EXCLUDED_PATTERNS.items()
-    )
+    if "highway" not in tags:
+        return False
+    for key, pattern in _EXCLUDED_PATTERNS.items():
+        if key not in tags:
+            continue
+        value = tags[key]
+        values = value if isinstance(value, (list, tuple, set)) else (value,)
+        if any(pattern.search(str(item)) for item in values):
+            return False
+    return True
 
 
 def mark_traffic_signals(graph):
@@ -53,6 +63,18 @@ def simplify(raw_graph):
 
 def download_graph(center, radius):
     raw_graph = ox.graph.graph_from_point(center, dist=radius, network_type="walk", simplify=False)
+    # OSMnx's built-in `walk` network type already filters its standard
+    # exclusions. Add the road class that it can still include and that is
+    # unsafe for running: trunk roads (including trunk_link).
+    for u, v, key, data in list(raw_graph.edges(keys=True, data=True)):
+        highway = data.get("highway", ())
+        highway_values = highway if isinstance(highway, (list, tuple, set)) else (highway,)
+        if any(re.search(r"trunk", str(value)) for value in highway_values):
+            raw_graph.remove_edge(u, v, key)
+    raw_graph.remove_nodes_from(list(nx.isolates(raw_graph)))
+    if raw_graph.number_of_nodes() == 0:
+        raise ValueError("No walkable street network found in the requested area")
+    raw_graph = truncate.largest_component(raw_graph, strongly=False)
     return simplify(raw_graph)
 
 

@@ -171,7 +171,7 @@
     <string name="run_voice_turn_now_uturn">지금 유턴하세요.</string>
     <string name="run_voice_arrived">코스 끝에 도착했어요.</string>
     <string name="run_voice_uphill_approaching">약 %1$d미터 앞에 오르막이 있어요. 페이스를 여유 있게 가져가세요.</string>
-    <string name="run_voice_kilometer_summary">띵동. 구간 %1$d, 총 %2$d킬로미터. 운동 시간 %3$s, 평균 페이스 %4$s입니다.</string>
+    <string name="run_voice_kilometer_summary">구간 %1$d, 총 %2$d킬로미터. 운동 시간 %3$s, 평균 페이스 %4$s입니다.</string>
     <string name="run_voice_duration_minutes">%1$d분 %2$d초</string>
     <string name="run_voice_duration_hours">%1$d시간 %2$d분 %3$d초</string>
     <string name="run_voice_pace">%1$d분 %2$d초</string>
@@ -451,7 +451,7 @@
     <string name="pace_maker_alert_fast">빠를 때</string>
     <string name="pace_maker_alert_none">받지 않음</string>
     <string name="pace_maker_segments_label">구간별 목표를 다르게 하고 싶나요? 자유롭게 적어보세요</string>
-    <string name="pace_maker_segments_placeholder">예: 처음 2km는 6:00, 다음 2km는 5:45, 마지막 1km는 5:30으로 달리고 싶어</string>
+    <string name="pace_maker_segments_placeholder">예시: 처음 1km는 페이스 6:30으로 천천히, 마지막 1km는 페이스 5:20으로 올려서 달리고 싶어</string>
     <string name="pace_maker_segments_title">구간별 페이스 목표</string>
     <string name="pace_segment_number">%1$d구간</string>
     <string name="pace_segment_distance">%1$s–%2$skm</string>

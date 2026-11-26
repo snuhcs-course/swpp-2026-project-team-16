@@ -387,7 +387,7 @@ private fun PaceMakerSection(routeViewModel: RouteViewModel, showPlanBuilder: Bo
             value = routeViewModel.goalText,
             onValueChange = routeViewModel::onGoalTextChange,
             label = { Text(stringResource(R.string.pace_maker_segments_label)) },
-            placeholder = if (!goalFocused && routeViewModel.goalText.isEmpty()) {
+            placeholder = if (goalFocused && routeViewModel.goalText.isEmpty()) {
                 { Text(stringResource(R.string.pace_maker_segments_placeholder)) }
             } else null,
             supportingText = {

@@ -17,6 +17,8 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -118,6 +120,7 @@ class RunTrackingService : Service() {
     private val paceAlertController = PaceAlertController()
     private var textToSpeech: TextToSpeech? = null
     private var textToSpeechReady = false
+    private var kilometerTone: ToneGenerator? = null
     private var pendingPaceAlert: PaceAlert? = null
     private val pendingNavigationCues = ArrayDeque<String>()
     private var lastSpeedLocation: Location? = null
@@ -161,6 +164,7 @@ class RunTrackingService : Service() {
         locationManager = getSystemService(LocationManager::class.java)
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         sensorManager = getSystemService(SensorManager::class.java)
+        kilometerTone = ToneGenerator(AudioManager.STREAM_MUSIC, KILOMETER_TONE_VOLUME)
         createNotificationChannel()
     }
 
@@ -551,7 +555,8 @@ class RunTrackingService : Service() {
         val paceSeconds = pacePerKilometer % 60
         val pace = getString(R.string.run_voice_pace, paceMinutes, paceSeconds)
         val message = getString(R.string.run_voice_kilometer_summary, milestone.kilometer, milestone.kilometer, duration, pace)
-        speakNavigationMessage(message)
+        kilometerTone?.startTone(ToneGenerator.TONE_PROP_BEEP, KILOMETER_TONE_DURATION_MS)
+        handler.postDelayed({ speakNavigationMessage(message) }, KILOMETER_TONE_GAP_MS)
     }
 
     private fun speakNavigationMessage(message: String) {
@@ -614,6 +619,8 @@ class RunTrackingService : Service() {
         handler.removeCallbacks(ticker)
         textToSpeech?.shutdown()
         textToSpeech = null
+        kilometerTone?.release()
+        kilometerTone = null
         super.onDestroy()
     }
 
@@ -658,6 +665,9 @@ class RunTrackingService : Service() {
 
         private const val NOTIFICATION_CHANNEL_ID = "run_tracking"
         private const val NOTIFICATION_ID = 4102
+        private const val KILOMETER_TONE_VOLUME = 70
+        private const val KILOMETER_TONE_DURATION_MS = 120
+        private const val KILOMETER_TONE_GAP_MS = 180L
         private const val TIMER_INTERVAL_MS = 1_000L
         private const val NOTIFICATION_UPDATE_INTERVAL_MS = 5_000L
         private const val LOCATION_INTERVAL_MS = 1_000L
