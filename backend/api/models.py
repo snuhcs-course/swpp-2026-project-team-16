@@ -134,6 +134,9 @@ class TelemetryEvent(models.Model):
         ("pace_plan", "Pace plan"),
         ("run_session", "Run session"),
         ("run_report", "Run report"),
+        ("live_run_coaching", "Live run coaching"),
+        ("app_session", "App session"),
+        ("app_anr", "App ANR"),
         ("app_crash", "App crash"),
     ]
     OUTCOMES = [
@@ -141,6 +144,7 @@ class TelemetryEvent(models.Model):
         ("succeeded", "Succeeded"),
         ("failed", "Failed"),
         ("completed", "Completed"),
+        ("anr", "ANR detected"),
         ("crashed", "Crashed"),
     ]
     FAILURE_CATEGORIES = [

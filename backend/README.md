@@ -58,9 +58,9 @@ http://127.0.0.1:8000/
 
 ## Optional product telemetry
 
-Usage telemetry is off by default. A runner must enable **Share usage telemetry** in app Settings before events are queued or uploaded. The server accepts only allow-listed event names, outcomes, operation duration, coarse failure categories, and app version. Events are not linked to an account. Exact location, route coordinates, place names/search text, written plans, credentials, device identifiers, and crash stack traces are excluded. Standard server access logs can still record connection metadata such as IP addresses.
+Usage telemetry is off by default. A runner must enable **Share usage telemetry** before events are queued or uploaded. The server accepts only allow-listed feature outcomes, operation duration, coarse failure categories, app sessions, app version, and crash/ANR signals. Events are not linked to an account. Exact location, route coordinates, place names/search text, written plans, credentials, device identifiers, error messages, and stack traces are excluded. Standard server access logs can still record connection metadata such as IP addresses.
 
-After applying migrations, staff can view aggregate task outcomes and latency at `/telemetry/dashboard/`. The dashboard includes project evaluation targets for success and latency; these are course goals, not production guarantees. Run completion is shown as a diagnostic metric. Events are rate-limited. Schedule the following command (for example, daily) to enforce the 90-day retention period:
+After applying migrations, staff can view aggregate feature usage, success rates, response times, crash counts, and the ANR event rate at `/telemetry/dashboard/`. Android ANRs are detected from process-exit records on the next app launch. Since events are anonymous, the dashboard shows ANR events per app-session start as an aggregate proxy, not unique sessions affected. The dashboard includes project evaluation targets for success, latency, and an ANR rate below 1%; these are course goals, not production guarantees. Run completion is shown as a diagnostic metric. Events are rate-limited. Schedule the following command (for example, daily) to enforce the 90-day retention period:
 
 ```sh
 python manage.py purge_telemetry_events --days 90
@@ -83,7 +83,7 @@ Free-run endpoints come from the saved route, which trims the first and last 200
 
 Staff can browse the log by user and action at `/activity/`. It is also read-only in the Django admin.
 
-The app's custom crash signal captures uncaught Android app crashes without a stack trace or exception message. It does not capture ANRs or native process crashes; use Android vitals/Play Console for those signals.
+The app's custom crash signal captures uncaught Android app crashes without a stack trace or exception message. Android ANRs are reported from `ApplicationExitInfo` on the next launch. Native crashes and ANRs that do not result in a recorded process exit may not be captured; use Android vitals/Play Console for authoritative release-wide diagnostics.
 
 ## API Documentation
 
