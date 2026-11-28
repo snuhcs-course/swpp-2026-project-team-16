@@ -233,6 +233,7 @@ class RunningGroup(models.Model):
     start_longitude = models.FloatField()
     is_private = models.BooleanField(default=False)
     password = models.CharField(max_length=128, blank=True, default="")
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

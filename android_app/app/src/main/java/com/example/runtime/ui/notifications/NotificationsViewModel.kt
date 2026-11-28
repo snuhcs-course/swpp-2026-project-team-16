@@ -20,6 +20,8 @@ enum class NotificationKind(val apiValue: String, @StringRes val label: Int, @St
     GROUP_INVITE("group_invite", R.string.notification_kind_group_invite, R.string.notification_kind_group_invite_desc),
     GROUP_JOIN("group_join", R.string.notification_kind_group_join, R.string.notification_kind_group_join_desc),
     GROUP_MESSAGE("group_message", R.string.notification_kind_group_message, R.string.notification_kind_group_message_desc),
+    GROUP_CANCELLED("group_cancelled", R.string.notification_kind_group_cancelled, R.string.notification_kind_group_cancelled_desc),
+    GROUP_REMINDER("group_reminder", R.string.notification_kind_group_reminder, R.string.notification_kind_group_reminder_desc),
     POST_LIKE("post_like", R.string.notification_kind_post_like, R.string.notification_kind_post_like_desc),
     POST_COMMENT("post_comment", R.string.notification_kind_post_comment, R.string.notification_kind_post_comment_desc),
     ROUTE_REVIEW("route_review", R.string.notification_kind_route_review, R.string.notification_kind_route_review_desc),

@@ -607,6 +607,10 @@
     <string name="notification_kind_group_join_desc">내가 연 그룹에 누군가 참가했을 때</string>
     <string name="notification_kind_group_message">그룹 채팅</string>
     <string name="notification_kind_group_message_desc">참가한 그룹에 새 메시지가 올 때</string>
+    <string name="notification_kind_group_cancelled">그룹 취소</string>
+    <string name="notification_kind_group_cancelled_desc">참가한 그룹을 호스트가 취소했을 때</string>
+    <string name="notification_kind_group_reminder">그룹 러닝 알림</string>
+    <string name="notification_kind_group_reminder_desc">참가한 그룹 러닝이 시작하기 10분 전에</string>
     <string name="notification_kind_post_like">글 좋아요</string>
     <string name="notification_kind_post_like_desc">내 글에 좋아요가 눌렸을 때</string>
     <string name="notification_kind_post_comment">글 댓글</string>

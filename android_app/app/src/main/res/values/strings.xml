@@ -619,6 +619,10 @@
     <string name="notification_kind_group_join_desc">When someone joins a group you host</string>
     <string name="notification_kind_group_message">Group chat</string>
     <string name="notification_kind_group_message_desc">New messages in groups you joined</string>
+    <string name="notification_kind_group_cancelled">Group cancellations</string>
+    <string name="notification_kind_group_cancelled_desc">When the host cancels a group you joined</string>
+    <string name="notification_kind_group_reminder">Group run reminders</string>
+    <string name="notification_kind_group_reminder_desc">10 minutes before a group run you joined starts</string>
     <string name="notification_kind_post_like">Post likes</string>
     <string name="notification_kind_post_like_desc">When someone likes your post</string>
     <string name="notification_kind_post_comment">Post comments</string>

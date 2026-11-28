@@ -138,6 +138,45 @@ class NotificationTriggerTests(NotificationTestBase):
         self.assertEqual(self.kinds(carol), ["group_invite"])
         self.assertEqual(self.kinds(self.bob), [])
 
+    def make_group(self, meet_in):
+        route = Route.objects.create(created_by=self.alice, distance=3000, briefing="b", route=LINE)
+        now = timezone.now()
+        group = RunningGroup.objects.create(
+            host=self.alice, route=route, title="Crew", capacity=4,
+            meet_at=now + meet_in, join_deadline=now + meet_in - timedelta(hours=1),
+            start_latitude=37.0, start_longitude=127.0,
+        )
+        for user in (self.alice, self.bob):
+            GroupMember.objects.create(group=group, user=user)
+        return group
+
+    def test_cancelling_a_group_notifies_members_but_not_the_host(self, _):
+        group = self.make_group(timedelta(days=1))
+        self.log_in(self.alice)
+
+        response = self.client.delete(f"/api/v1/groups/{group.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RunningGroup.objects.exists())
+        self.assertEqual(self.kinds(self.alice), [])
+        notification = Notification.objects.get(recipient=self.bob)
+        self.assertEqual((notification.kind, notification.group_id, notification.text), ("group_cancelled", None, "Crew"))
+        self.assertEqual(render(notification, "ko"), ("그룹 취소", "alice님이 'Crew' 그룹을 취소했어요."))
+        self.assertEqual(render(notification, "en")[1], "alice cancelled 'Crew'.")
+        self.assertNotIn("group_id", push_payload(notification, "en"))
+        self.log_in(self.bob)
+        items = self.client.get("/api/v1/notifications/?language=en").data["data"]["items"]
+        self.assertEqual((items[0]["kind"], items[0]["group_id"]), ("group_cancelled", None))
+
+    def test_deleting_a_past_group_does_not_notify(self, _):
+        group = self.make_group(timedelta(hours=-1))
+        self.log_in(self.alice)
+
+        self.client.delete(f"/api/v1/groups/{group.id}/")
+
+        self.assertFalse(RunningGroup.objects.exists())
+        self.assertFalse(Notification.objects.exists())
+
     def test_route_review(self, _):
         route = Route.objects.create(created_by=self.alice, distance=3000, briefing="b", route=LINE)
         shared = SharedRoute.objects.create(route=route, shared_by=self.alice, title="Loop")
