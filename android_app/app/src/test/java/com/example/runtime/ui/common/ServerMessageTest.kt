@@ -25,6 +25,9 @@ class ServerMessageTest {
             "Multiple accounts use this email" to R.string.error_google_multiple_accounts,
             "Authentication credentials were not provided." to R.string.error_auth_required,
             "This nickname is already taken." to R.string.error_nickname_taken,
+            "You can't follow this user." to R.string.error_follow_blocked,
+            "You can't block yourself." to R.string.error_block_self,
+            "You can't invite this user." to R.string.error_invite_blocked,
         )
         for ((message, resource) in cases) {
             assertEquals(message, UiText.Resource(resource), httpError(400, message).toUiText())

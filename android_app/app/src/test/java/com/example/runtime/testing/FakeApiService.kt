@@ -46,6 +46,8 @@ import com.example.runtime.data.remote.RunReport
 import com.example.runtime.data.remote.LiveRunCoachRequest
 import com.example.runtime.data.remote.LiveRunCoachResponse
 import com.example.runtime.data.remote.RunningStyle
+import com.example.runtime.data.remote.BlockState
+import com.example.runtime.data.remote.BlockedUser
 import com.example.runtime.data.remote.BoardComment
 import com.example.runtime.data.remote.BoardPost
 import com.example.runtime.data.remote.CommentRequest
@@ -105,6 +107,9 @@ open class FakeApiService : ApiService {
     override suspend fun userProfile(username: String): ApiResponse<UserProfile> = unexpected()
     override suspend fun follow(username: String): ApiResponse<FollowState> = unexpected()
     override suspend fun unfollow(username: String): ApiResponse<FollowState> = unexpected()
+    override suspend fun block(username: String): ApiResponse<BlockState> = unexpected()
+    override suspend fun unblock(username: String): ApiResponse<BlockState> = unexpected()
+    override suspend fun blockedUsers(): ApiResponse<List<BlockedUser>> = unexpected()
     override suspend fun followers(username: String): ApiResponse<List<FollowUser>> = unexpected()
     override suspend fun following(username: String): ApiResponse<List<FollowUser>> = unexpected()
     override suspend fun sharedRoute(sharedRouteId: Int): ApiResponse<SharedRoute> = unexpected()

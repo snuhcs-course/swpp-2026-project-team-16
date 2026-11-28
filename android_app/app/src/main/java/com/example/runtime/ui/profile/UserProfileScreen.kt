@@ -17,8 +17,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,10 +33,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,10 +79,15 @@ fun UserProfileScreen(
     onLogInRequired: () -> Unit,
     initialList: FollowListType? = null,
     onInitialListShown: () -> Unit = {},
+    onBlockChanged: (username: String, blocked: Boolean) -> Unit = { _, _ -> },
 ) {
     var selectedTab by rememberSaveable(username) { mutableIntStateOf(TAB_ROUTES) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showBlockDialog by remember { mutableStateOf(false) }
     val messages = LocalAppMessages.current
     val followError = viewModel.followError?.asString()
+    val blockedMessage = stringResource(R.string.user_blocked, username)
+    val unblockedMessage = stringResource(R.string.user_unblocked, username)
 
     LaunchedEffect(username) { viewModel.load(username) }
     LaunchedEffect(followError) { followError?.let { messages?.show(it) } }
@@ -96,7 +109,34 @@ fun UserProfileScreen(
             IconButton(onClick = onBack) {
                 Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.action_back))
             }
-            Text(username, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                username,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (profile != null && !profile.isMe && isLoggedIn) {
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.menu))
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(if (profile.isBlocked) R.string.action_unblock else R.string.action_block),
+                                    color = if (profile.isBlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                showBlockDialog = true
+                            },
+                        )
+                    }
+                }
+            }
         }
 
         if (profile == null) {
@@ -118,6 +158,8 @@ fun UserProfileScreen(
             isFollowWorking = viewModel.isFollowWorking,
             onFollow = { if (isLoggedIn) viewModel.toggleFollow() else onLogInRequired() },
             onOpenList = viewModel::openList,
+            isBlockWorking = viewModel.isBlockWorking,
+            onUnblock = { showBlockDialog = true },
         )
 
         TabRow(selectedTabIndex = selectedTab, containerColor = MaterialTheme.colorScheme.background) {
@@ -178,6 +220,37 @@ fun UserProfileScreen(
         }
     }
 
+    val blockTarget = profile
+    if (showBlockDialog && blockTarget != null) {
+        val name = blockTarget.displayName.ifBlank { blockTarget.username }
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = {
+                Text(stringResource(if (blockTarget.isBlocked) R.string.unblock_dialog_title else R.string.block_dialog_title, name))
+            },
+            text = {
+                Text(stringResource(if (blockTarget.isBlocked) R.string.unblock_dialog_message else R.string.block_dialog_message))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBlockDialog = false
+                    viewModel.toggleBlock { blockedUsername, blocked ->
+                        messages?.show(if (blocked) blockedMessage else unblockedMessage)
+                        onBlockChanged(blockedUsername, blocked)
+                    }
+                }) {
+                    Text(
+                        stringResource(if (blockTarget.isBlocked) R.string.action_unblock else R.string.action_block),
+                        color = if (blockTarget.isBlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockDialog = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+
     viewModel.listType?.let { type ->
         FollowListSheet(
             type = type,
@@ -199,6 +272,8 @@ private fun ProfileHeader(
     isFollowWorking: Boolean,
     onFollow: () -> Unit,
     onOpenList: (FollowListType) -> Unit,
+    isBlockWorking: Boolean,
+    onUnblock: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.m, vertical = Spacing.s)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -228,7 +303,23 @@ private fun ProfileHeader(
             Spacer(Modifier.height(Spacing.s))
             Text(profile.statusMessage, style = MaterialTheme.typography.bodyMedium)
         }
-        if (!profile.isMe) {
+        if (profile.isBlocked) {
+            Spacer(Modifier.height(Spacing.m))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(R.string.profile_blocked),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(Spacing.m),
+                )
+            }
+            Spacer(Modifier.height(Spacing.s))
+            OutlinedButton(onClick = onUnblock, enabled = !isBlockWorking, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.action_unblock))
+            }
+        } else if (!profile.isMe) {
             Spacer(Modifier.height(Spacing.m))
             val label = stringResource(if (profile.isFollowing) R.string.action_unfollow else R.string.action_follow)
             if (profile.isFollowing) {

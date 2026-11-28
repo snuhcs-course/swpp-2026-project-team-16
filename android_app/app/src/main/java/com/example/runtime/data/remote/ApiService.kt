@@ -160,6 +160,15 @@ interface ApiService {
     @DELETE("api/v1/users/{username}/follow/")
     suspend fun unfollow(@Path("username") username: String): ApiResponse<FollowState>
 
+    @POST("api/v1/users/{username}/block/")
+    suspend fun block(@Path("username") username: String): ApiResponse<BlockState>
+
+    @DELETE("api/v1/users/{username}/block/")
+    suspend fun unblock(@Path("username") username: String): ApiResponse<BlockState>
+
+    @GET("api/v1/users/my_profile/blocks/")
+    suspend fun blockedUsers(): ApiResponse<List<BlockedUser>>
+
     @GET("api/v1/users/{username}/followers/")
     suspend fun followers(@Path("username") username: String): ApiResponse<List<FollowUser>>
 

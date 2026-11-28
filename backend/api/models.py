@@ -189,6 +189,8 @@ class ActivityLog(models.Model):
         ("group_message", "Sent a group message"),
         ("followed", "Followed a user"),
         ("unfollowed", "Unfollowed a user"),
+        ("blocked", "Blocked a user"),
+        ("unblocked", "Unblocked a user"),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="activity_logs")
@@ -352,6 +354,19 @@ class Follow(models.Model):
             models.UniqueConstraint(fields=["follower", "followee"], name="unique_follow"),
             models.CheckConstraint(condition=~models.Q(follower=models.F("followee")), name="no_self_follow"),
         ]
+
+
+class Block(models.Model):
+    blocker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="blocks")
+    blocked = models.ForeignKey(User, on_delete=models.CASCADE, related_name="blocked_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["blocker", "blocked"], name="unique_block"),
+            models.CheckConstraint(condition=~models.Q(blocker=models.F("blocked")), name="no_self_block"),
+        ]
+        ordering = ["-created_at", "-id"]
 
 
 class GroupInvite(models.Model):

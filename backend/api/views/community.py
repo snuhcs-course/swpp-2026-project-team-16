@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
+from api.services.blocks import blocked_ids
 from api.services.language import request_language
 from api.services.free_route import free_route_line, validate_path
 from api.services.notifications import notify
@@ -302,6 +303,9 @@ def shared_routes_list(request):
         if route_filter not in ROUTE_FILTERS:
             return _error(f"filter must be one of: {', '.join(ROUTE_FILTERS)}", status.HTTP_400_BAD_REQUEST)
         shared_routes = _shared_routes(sort)
+        blocked = blocked_ids(request.user)
+        if blocked:
+            shared_routes = shared_routes.exclude(shared_by_id__in=blocked)
         if route_filter == "following":
             if not request.user.is_authenticated:
                 return _auth_required()
@@ -416,6 +420,9 @@ def shared_route_reviews(request, shared_route_id):
 
     if request.method == "GET":
         reviews = shared_route.reviews.select_related("user")
+        blocked = blocked_ids(request.user)
+        if blocked:
+            reviews = reviews.exclude(user_id__in=blocked)
         return Response(
             {"status": "success", "data": [_review_data(review, request.user) for review in reviews]},
             status=status.HTTP_200_OK,

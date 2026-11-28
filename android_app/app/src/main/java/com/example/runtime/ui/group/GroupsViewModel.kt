@@ -326,6 +326,10 @@ class GroupsViewModel(
         messages = (messages + newer.filterNot { it.id in known }).sortedBy { it.id }
     }
 
+    fun hideMessagesFrom(username: String) {
+        messages = messages.filterNot { it.author == username }
+    }
+
     fun send(groupId: Int, text: String, onSent: () -> Unit) {
         val trimmed = text.trim()
         if (trimmed.isEmpty() || isSending) return

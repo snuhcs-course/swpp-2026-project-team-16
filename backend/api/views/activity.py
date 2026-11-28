@@ -65,7 +65,7 @@ def summarize(log):
         return f"#{d.get('group_id')} {_short(d.get('title'))}"
     if action == "group_message":
         return f"group #{d.get('group_id')} · {_short(d.get('text'))}"
-    if action in ("followed", "unfollowed"):
+    if action in ("followed", "unfollowed", "blocked", "unblocked"):
         return d.get("username", "")
     if action in ("signed_up", "logged_in"):
         return d.get("method", "")

@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.models import Follow
+from api.models import Block, Follow, GroupInvite
+from api.services.blocks import blocked_between, has_blocked
 from api.services.language import request_language
 from api.services.notifications import notify
 from api.views.board import _post_data, _visible_posts
@@ -83,9 +85,12 @@ def user_profile(request, username):
     language = request_language(request)
     now = timezone.now()
     profile = get_profile(target)
+    is_blocked = viewer.is_authenticated and has_blocked(viewer, target)
     shared_routes = _shared_routes().filter(shared_by=target)[:PROFILE_ITEM_LIMIT]
     groups = _groups().filter(host=target, meet_at__gt=now).order_by("meet_at", "id")[:PROFILE_ITEM_LIMIT]
     posts = _visible_posts().filter(author=target, anonymous=False).order_by("-created_at", "-id")[:PROFILE_ITEM_LIMIT]
+    if is_blocked:
+        shared_routes, groups, posts = [], [], []
     data = {
         "username": target.username,
         "display_name": profile.display_name,
@@ -93,6 +98,7 @@ def user_profile(request, username):
         "avatar_url": avatar_url(target),
         "is_me": viewer.is_authenticated and viewer.id == target.id,
         **_follow_state(target, viewer),
+        "is_blocked": is_blocked,
         "shared_routes": [_shared_route_data(route, viewer, language=language) for route in shared_routes],
         "groups": [_group_data(group, viewer, now, language=language) for group in groups],
         "posts": [_post_data(post, viewer) for post in posts],
@@ -110,6 +116,8 @@ def user_follow(request, username):
     if target.id == request.user.id:
         return _error("You can't follow yourself.", status.HTTP_400_BAD_REQUEST)
     if request.method == "POST":
+        if blocked_between(request.user, target):
+            return _error("You can't follow this user.", status.HTTP_403_FORBIDDEN)
         try:
             _, created = Follow.objects.get_or_create(follower=request.user, followee=target)
         except IntegrityError:
@@ -145,3 +153,56 @@ def user_followers(request, username):
 @api_view(["GET"])
 def user_following(request, username):
     return _follow_list(request, username, followers=False)
+
+
+def _block_state(target, viewer):
+    return {
+        **_follow_state(target, viewer),
+        "is_blocked": Block.objects.filter(blocker=viewer, blocked=target).exists(),
+    }
+
+
+@api_view(["POST", "DELETE"])
+def user_block(request, username):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    target = _get_user(username)
+    if target is None:
+        return _user_not_found()
+    if target.id == request.user.id:
+        return _error("You can't block yourself.", status.HTTP_400_BAD_REQUEST)
+    me = request.user
+    if request.method == "POST":
+        with transaction.atomic():
+            _, created = Block.objects.get_or_create(blocker=me, blocked=target)
+            if created:
+                Follow.objects.filter(
+                    Q(follower=me, followee=target) | Q(follower=target, followee=me)
+                ).delete()
+                GroupInvite.objects.filter(
+                    Q(inviter=me, invitee=target) | Q(inviter=target, invitee=me)
+                ).delete()
+        if created:
+            log_activity(me, "blocked", username=target.username)
+    else:
+        deleted, _ = Block.objects.filter(blocker=me, blocked=target).delete()
+        if deleted:
+            log_activity(me, "unblocked", username=target.username)
+    return Response({"status": "success", "data": _block_state(target, me)}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def my_blocks(request):
+    if not request.user.is_authenticated:
+        return _auth_required()
+    blocks = Block.objects.filter(blocker=request.user).select_related("blocked")
+    data = [
+        {
+            "username": block.blocked.username,
+            "display_name": get_profile(block.blocked).display_name,
+            "avatar_url": avatar_url(block.blocked),
+            "blocked_at": block.created_at,
+        }
+        for block in blocks
+    ]
+    return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)

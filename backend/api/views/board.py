@@ -16,6 +16,7 @@ from api.models import (
     PostReport,
     PostScrap,
 )
+from api.services.blocks import blocked_ids, has_blocked
 from api.services.notifications import notify
 from api.activity import log_activity
 
@@ -44,21 +45,26 @@ def _hidden_comment_ids():
     return Comment.objects.annotate(report_count=Count("reports")).filter(report_count__gte=REPORTS_TO_HIDE).values("id")
 
 
-def _visible_posts():
-    return (
+def _visible_posts(user=None):
+    blocked = blocked_ids(user)
+    comment_filter = ~Q(comments__id__in=_hidden_comment_ids())
+    if blocked:
+        comment_filter &= ~Q(comments__author_id__in=blocked)
+    posts = (
         Post.objects.select_related("author")
         .annotate(
             report_count=Count("reports", distinct=True),
             like_count=Count("likes", distinct=True),
             scrap_count=Count("scraps", distinct=True),
-            comment_count=Count("comments", filter=~Q(comments__id__in=_hidden_comment_ids()), distinct=True),
+            comment_count=Count("comments", filter=comment_filter, distinct=True),
         )
         .filter(report_count__lt=REPORTS_TO_HIDE)
     )
+    return posts.exclude(author_id__in=blocked) if blocked else posts
 
 
-def _get_post(post_id):
-    return _visible_posts().filter(id=post_id).first()
+def _get_post(post_id, user=None):
+    return _visible_posts(user).filter(id=post_id).first()
 
 
 def _post_data(post, user):
@@ -94,6 +100,7 @@ def _comments_data(post, user):
     for comment in comments:
         if comment.anonymous and comment.author_id != post.author_id and comment.author_id not in numbers:
             numbers[comment.author_id] = len(numbers) + 1
+    blocked = blocked_ids(user)
     reported = set()
     if user.is_authenticated:
         reported = set(CommentReport.objects.filter(user=user, comment__post=post).values_list("comment_id", flat=True))
@@ -110,7 +117,7 @@ def _comments_data(post, user):
             "created_at": comment.created_at,
         }
         for comment in comments
-        if comment.report_count < REPORTS_TO_HIDE
+        if comment.report_count < REPORTS_TO_HIDE and comment.author_id not in blocked
     ]
 
 
@@ -146,7 +153,7 @@ def posts_list(request):
             return _error(f"filter must be one of: {', '.join(FILTERS)}", status.HTTP_400_BAD_REQUEST)
         query = (request.query_params.get("q") or "").strip()[:MAX_QUERY_LENGTH]
 
-        posts = _visible_posts()
+        posts = _visible_posts(request.user)
         if post_filter != "all" and not request.user.is_authenticated:
             return _auth_required()
         if post_filter == "scraps":
@@ -171,14 +178,14 @@ def posts_list(request):
     post = Post.objects.create(author=request.user, **fields)
     log_activity(request.user, "post_created", post_id=post.id, title=post.title, body=post.body)
     return Response(
-        {"status": "success", "data": _post_data(_get_post(post.id), request.user)},
+        {"status": "success", "data": _post_data(_get_post(post.id, request.user), request.user)},
         status=status.HTTP_201_CREATED,
     )
 
 
 @api_view(["GET", "PATCH", "DELETE"])
 def posts_detail(request, post_id):
-    post = _get_post(post_id)
+    post = _get_post(post_id, request.user)
     if post is None:
         return _post_not_found()
 
@@ -204,7 +211,7 @@ def posts_detail(request, post_id):
             setattr(post, name, value)
         post.save(update_fields=[*fields, "updated_at"])
     return Response(
-        {"status": "success", "data": _post_data(_get_post(post.id), request.user)},
+        {"status": "success", "data": _post_data(_get_post(post.id, request.user), request.user)},
         status=status.HTTP_200_OK,
     )
 
@@ -212,7 +219,7 @@ def posts_detail(request, post_id):
 def _toggle(request, post_id, model, own_error=None):
     if not request.user.is_authenticated:
         return _auth_required()
-    post = _get_post(post_id)
+    post = _get_post(post_id, request.user)
     if post is None:
         return _post_not_found()
     if own_error and post.author_id == request.user.id:
@@ -230,7 +237,7 @@ def _toggle(request, post_id, model, own_error=None):
     else:
         model.objects.filter(post=post, user=request.user).delete()
         code = status.HTTP_200_OK
-    return Response({"status": "success", "data": _post_data(_get_post(post.id), request.user)}, status=code)
+    return Response({"status": "success", "data": _post_data(_get_post(post.id, request.user), request.user)}, status=code)
 
 
 @api_view(["POST", "DELETE"])
@@ -247,7 +254,7 @@ def post_scrap(request, post_id):
 def post_report(request, post_id):
     if not request.user.is_authenticated:
         return _auth_required()
-    post = _get_post(post_id)
+    post = _get_post(post_id, request.user)
     if post is None:
         return _post_not_found()
     if post.author_id == request.user.id:
@@ -266,7 +273,7 @@ def post_report(request, post_id):
 
 @api_view(["GET", "POST"])
 def post_comments(request, post_id):
-    post = _get_post(post_id)
+    post = _get_post(post_id, request.user)
     if post is None:
         return _post_not_found()
 
@@ -281,7 +288,7 @@ def post_comments(request, post_id):
             return _error("anonymous must be true or false.", status.HTTP_400_BAD_REQUEST)
         comment = Comment.objects.create(post=post, author=request.user, body=body.strip(), anonymous=anonymous)
         log_activity(request.user, "comment_created", post_id=post.id, comment_id=comment.id, body=comment.body, anonymous=anonymous)
-        if post.author_id != request.user.id:
+        if post.author_id != request.user.id and not has_blocked(post.author, request.user):
             notify(post.author, "post_comment", actor=None if anonymous else request.user, post=post, text=body.strip())
         code = status.HTTP_201_CREATED
     else:
@@ -290,14 +297,14 @@ def post_comments(request, post_id):
     return Response({"status": "success", "data": _comments_data(post, request.user)}, status=code)
 
 
-def _get_comment(comment_id):
+def _get_comment(comment_id, user=None):
     comment = (
         Comment.objects.select_related("post")
         .annotate(report_count=Count("reports"))
         .filter(id=comment_id, report_count__lt=REPORTS_TO_HIDE)
         .first()
     )
-    if comment is None or _get_post(comment.post_id) is None:
+    if comment is None or comment.author_id in blocked_ids(user) or _get_post(comment.post_id, user) is None:
         return None
     return comment
 
@@ -306,7 +313,7 @@ def _get_comment(comment_id):
 def comment_detail(request, comment_id):
     if not request.user.is_authenticated:
         return _auth_required()
-    comment = _get_comment(comment_id)
+    comment = _get_comment(comment_id, request.user)
     if comment is None:
         return _error("Comment not found.", status.HTTP_404_NOT_FOUND)
     if comment.author_id != request.user.id:
@@ -320,7 +327,7 @@ def comment_detail(request, comment_id):
 def comment_report(request, comment_id):
     if not request.user.is_authenticated:
         return _auth_required()
-    comment = _get_comment(comment_id)
+    comment = _get_comment(comment_id, request.user)
     if comment is None:
         return _error("Comment not found.", status.HTTP_404_NOT_FOUND)
     if comment.author_id == request.user.id:

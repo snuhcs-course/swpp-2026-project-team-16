@@ -30,6 +30,8 @@ class UserProfileViewModel(
         private set
     var followError by mutableStateOf<UiText?>(null)
         private set
+    var isBlockWorking by mutableStateOf(false)
+        private set
     var listType by mutableStateOf<FollowListType?>(null)
         private set
     var listUsers by mutableStateOf<List<FollowUser>?>(null)
@@ -87,6 +89,47 @@ class UserProfileViewModel(
             } finally {
                 isFollowWorking = false
             }
+        }
+    }
+
+    fun toggleBlock(onChanged: (username: String, blocked: Boolean) -> Unit = { _, _ -> }) {
+        val current = profile ?: return
+        if (current.isMe || isBlockWorking) return
+        isBlockWorking = true
+        followError = null
+        viewModelScope.launch {
+            try {
+                val state = if (current.isBlocked) repository.unblock(current.username) else repository.block(current.username)
+                val updated = profile?.takeIf { it.username == current.username }
+                if (updated != null) {
+                    profile = updated.copy(
+                        isBlocked = state.isBlocked,
+                        isFollowing = state.isFollowing,
+                        followerCount = state.followerCount,
+                        followingCount = state.followingCount,
+                    )
+                }
+                onChanged(current.username, state.isBlocked)
+                if (updated != null) reloadContent(current.username)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                followError = e.toUiText()
+            } finally {
+                isBlockWorking = false
+            }
+        }
+    }
+
+    private suspend fun reloadContent(username: String) {
+        try {
+            val loaded = repository.profile(username)
+            if (profile?.username == username) profile = loaded
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            profile = profile?.takeIf { it.username == username && it.isBlocked }
+                ?.copy(sharedRoutes = emptyList(), groups = emptyList(), posts = emptyList()) ?: profile
         }
     }
 

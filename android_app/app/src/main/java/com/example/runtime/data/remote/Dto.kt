@@ -110,6 +110,7 @@ data class UserProfile(
     @SerialName("follower_count") val followerCount: Int = 0,
     @SerialName("following_count") val followingCount: Int = 0,
     @SerialName("is_following") val isFollowing: Boolean = false,
+    @SerialName("is_blocked") val isBlocked: Boolean = false,
     @SerialName("shared_routes") val sharedRoutes: List<SharedRoute> = emptyList(),
     val groups: List<RunningGroup> = emptyList(),
     val posts: List<BoardPost> = emptyList(),
@@ -120,6 +121,22 @@ data class FollowState(
     @SerialName("follower_count") val followerCount: Int,
     @SerialName("following_count") val followingCount: Int,
     @SerialName("is_following") val isFollowing: Boolean,
+)
+
+@Serializable
+data class BlockState(
+    @SerialName("follower_count") val followerCount: Int,
+    @SerialName("following_count") val followingCount: Int,
+    @SerialName("is_following") val isFollowing: Boolean,
+    @SerialName("is_blocked") val isBlocked: Boolean,
+)
+
+@Serializable
+data class BlockedUser(
+    val username: String,
+    @SerialName("display_name") val displayName: String = "",
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("blocked_at") val blockedAt: String = "",
 )
 
 @Serializable
