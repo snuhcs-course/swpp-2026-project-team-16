@@ -308,6 +308,10 @@ fun RunTimeApp() {
                 groupReturnScreen = from
                 currentScreen = if (target.kind == "group_message") "group_chat" else "group_detail"
             }
+            "group_cancelled" -> if (from != "notifications") {
+                notificationsReturnScreen = from
+                currentScreen = "notifications"
+            }
             "post_like", "post_comment" -> target.postId?.let { postId ->
                 selectedPostId = postId
                 postReturnScreen = from

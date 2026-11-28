@@ -9,7 +9,7 @@ from api.models import DeviceToken, Notification
 
 logger = logging.getLogger(__name__)
 
-KINDS = ("follow", "group_invite", "group_join", "group_message", "post_like", "post_comment", "route_review")
+KINDS = ("follow", "group_invite", "group_join", "group_message", "group_cancelled", "post_like", "post_comment", "route_review")
 FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
 FCM_URL = "https://fcm.googleapis.com/v1/projects/{project}/messages:send"
 FCM_TIMEOUT_SECONDS = 10
@@ -21,6 +21,7 @@ TITLES = {
         "group_invite": "그룹 초대",
         "group_join": "그룹 참가",
         "group_message": "{group}",
+        "group_cancelled": "그룹 취소",
         "post_like": "좋아요",
         "post_comment": "새 댓글",
         "route_review": "새 리뷰",
@@ -30,6 +31,7 @@ TITLES = {
         "group_invite": "Group invite",
         "group_join": "New member",
         "group_message": "{group}",
+        "group_cancelled": "Group cancelled",
         "post_like": "New like",
         "post_comment": "New comment",
         "route_review": "New review",
@@ -42,6 +44,7 @@ BODIES = {
         "group_invite": "{actor}님이 '{group}' 그룹에 초대했어요.",
         "group_join": "{actor}님이 '{group}' 그룹에 참가했어요.",
         "group_message": "{actor}: {text}",
+        "group_cancelled": "{actor}님이 '{text}' 그룹을 취소했어요.",
         "post_like": "{actor}님이 '{post}' 글을 좋아해요.",
         "post_comment": "{actor}님이 '{post}' 글에 댓글을 남겼어요: {text}",
         "route_review": "{actor}님이 '{route}' 코스에 리뷰를 남겼어요.",
@@ -51,6 +54,7 @@ BODIES = {
         "group_invite": "{actor} invited you to '{group}'.",
         "group_join": "{actor} joined '{group}'.",
         "group_message": "{actor}: {text}",
+        "group_cancelled": "{actor} cancelled '{text}'.",
         "post_like": "{actor} liked your post '{post}'.",
         "post_comment": "{actor} commented on '{post}': {text}",
         "route_review": "{actor} reviewed your route '{route}'.",
