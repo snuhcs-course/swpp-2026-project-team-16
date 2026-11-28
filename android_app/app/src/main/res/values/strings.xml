@@ -41,6 +41,23 @@
     <string name="error_password_short">Password must be at least 8 characters.</string>
     <string name="error_email_exists">Email already exists.</string>
     <string name="error_password_mismatch">Passwords do not match.</string>
+    <string name="forgot_password">Forgot your password?</string>
+    <string name="title_reset_password">Reset your password</string>
+    <string name="reset_password_email_hint">Enter the email you signed up with. We\'ll send you a 6-digit code.</string>
+    <string name="action_send_code">Send code</string>
+    <string name="reset_password_code_hint">If an account uses %1$s, we sent a 6-digit code to it. The code expires in 10 minutes.</string>
+    <string name="label_reset_code">6-digit code:</string>
+    <string name="label_new_password">New password:</string>
+    <string name="label_new_password_confirm">Confirm new password:</string>
+    <string name="action_change_password">Change password</string>
+    <string name="action_resend_code">Send a new code</string>
+    <string name="action_use_other_email">Use a different email</string>
+    <string name="action_back_to_log_in">Back to log-in</string>
+    <string name="reset_password_code_resent">We sent a new code.</string>
+    <string name="reset_password_done">Your password has been changed. Log in with your new password.</string>
+    <string name="error_email_required">Enter your email.</string>
+    <string name="error_reset_code_format">Enter the 6-digit code.</string>
+    <string name="error_reset_code_invalid">The code is wrong or has expired. Request a new code if needed.</string>
 
     <string name="label_start_point">Start point</string>
     <string name="label_end_point">End point (optional)</string>

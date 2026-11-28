@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from api.views import activity, auth, board, challenges, coach, community, elevation, generate_route, groups, notifications, places, profile, routes, social, telemetry, weather
+from api.views import activity, auth, board, challenges, coach, community, elevation, generate_route, groups, notifications, password_reset, places, profile, routes, social, telemetry, weather
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -11,6 +11,8 @@ urlpatterns = [
     path("api/v1/auth/login/", auth.login_user, name="login_user"),
     path("api/v1/auth/google/", auth.google_login, name="google_login"),
     path("api/v1/auth/logout/", auth.logout_user, name="logout_user"),
+    path("api/v1/auth/password-reset/", password_reset.request_password_reset, name="request_password_reset"),
+    path("api/v1/auth/password-reset/confirm/", password_reset.confirm_password_reset, name="confirm_password_reset"),
 
     # User
     path("api/v1/users/my_profile/", auth.my_profile, name="my_profile"),

@@ -39,6 +39,23 @@
     <string name="error_password_short">비밀번호는 8자 이상이어야 합니다.</string>
     <string name="error_email_exists">이미 사용 중인 이메일입니다.</string>
     <string name="error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
+    <string name="forgot_password">비밀번호를 잊으셨나요?</string>
+    <string name="title_reset_password">비밀번호 재설정</string>
+    <string name="reset_password_email_hint">가입할 때 쓴 이메일을 입력해 주세요. 6자리 코드를 보내 드려요.</string>
+    <string name="action_send_code">코드 보내기</string>
+    <string name="reset_password_code_hint">%1$s을(를) 쓰는 계정이 있으면 6자리 코드를 보냈어요. 코드는 10분 동안 쓸 수 있어요.</string>
+    <string name="label_reset_code">6자리 코드:</string>
+    <string name="label_new_password">새 비밀번호:</string>
+    <string name="label_new_password_confirm">새 비밀번호 확인:</string>
+    <string name="action_change_password">비밀번호 바꾸기</string>
+    <string name="action_resend_code">코드 다시 보내기</string>
+    <string name="action_use_other_email">다른 이메일 쓰기</string>
+    <string name="action_back_to_log_in">로그인으로 돌아가기</string>
+    <string name="reset_password_code_resent">새 코드를 보냈어요.</string>
+    <string name="reset_password_done">비밀번호를 바꿨어요. 새 비밀번호로 로그인해 주세요.</string>
+    <string name="error_email_required">이메일을 입력해 주세요.</string>
+    <string name="error_reset_code_format">6자리 코드를 입력해 주세요.</string>
+    <string name="error_reset_code_invalid">코드가 틀렸거나 만료됐어요. 필요하면 새 코드를 받아 주세요.</string>
 
     <string name="label_start_point">출발지</string>
     <string name="label_end_point">도착지 (선택)</string>

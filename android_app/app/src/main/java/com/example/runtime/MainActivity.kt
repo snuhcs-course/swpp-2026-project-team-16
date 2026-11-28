@@ -38,6 +38,7 @@ import com.example.runtime.data.remote.SessionEvents
 import com.example.runtime.ui.auth.AuthViewModel
 import com.example.runtime.ui.auth.LoginPromptDialog
 import com.example.runtime.ui.auth.LoginScreen
+import com.example.runtime.ui.auth.PasswordResetScreen
 import com.example.runtime.ui.auth.SignUpScreen
 import com.example.runtime.ui.common.LocalAnimatedVisibilityScope
 import com.example.runtime.ui.common.LocalSharedTransitionScope
@@ -293,7 +294,7 @@ fun RunTimeApp() {
             if (isRunActive) currentScreen = "run_navigation"
             return@LaunchedEffect
         }
-        if (currentScreen in setOf("login", "signup") || !authViewModel.isLoggedIn) return@LaunchedEffect
+        if (currentScreen in setOf("login", "signup", "password_reset") || !authViewModel.isLoggedIn) return@LaunchedEffect
         NotificationNavigation.consume()
         target.notificationId?.let { notificationsViewModel.markRead(it) }
         val from = currentScreen
@@ -340,7 +341,7 @@ fun RunTimeApp() {
 
     LaunchedEffect(Unit) {
         SessionEvents.expired.collect {
-            if (currentScreen in setOf("splash", "login", "signup")) return@collect
+            if (currentScreen in setOf("splash", "login", "signup", "password_reset")) return@collect
             authViewModel.onSessionExpired {
                 routeViewModel.reset()
                 myPageViewModel.reset()
@@ -366,7 +367,7 @@ fun RunTimeApp() {
                     )
                 }
                 // Splash(화면2) 랑  Generating(화면5) 빼고 아래 메뉴바 표시
-                if (currentScreen !in setOf("splash", "generating", "login", "signup", "run_navigation", "group_chat", "group_create", "post_detail", "post_editor")) {
+                if (currentScreen !in setOf("splash", "generating", "login", "signup", "password_reset", "run_navigation", "group_chat", "group_create", "post_detail", "post_editor")) {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         NavigationBarItem(
                             selected = currentScreen == "calendar",
@@ -428,10 +429,15 @@ fun RunTimeApp() {
                                         authViewModel = authViewModel,
                                         onLoginSuccess = ::onAuthenticated,
                                         onSignUpClick = { currentScreen = "signup" },
+                                        onForgotPassword = { currentScreen = "password_reset" },
                                         onNotNow = {
                                             saveAfterLogin = false
                                             currentScreen = loginReturnScreen
                                         }
+                                    )
+                                    "password_reset" -> PasswordResetScreen(
+                                        viewModel = viewModel(),
+                                        onBackToLogin = { currentScreen = "login" }
                                     )
                                     "signup" -> SignUpScreen(
                                         authViewModel = authViewModel,

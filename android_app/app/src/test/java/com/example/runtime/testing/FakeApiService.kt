@@ -9,6 +9,8 @@ import com.example.runtime.data.remote.GenerateRouteRequest
 import com.example.runtime.data.remote.GeneratedRouteData
 import com.example.runtime.data.remote.GoogleLoginRequest
 import com.example.runtime.data.remote.LoginRequest
+import com.example.runtime.data.remote.PasswordResetConfirmRequest
+import com.example.runtime.data.remote.PasswordResetRequest
 import com.example.runtime.data.remote.Place
 import com.example.runtime.data.remote.PlaceName
 import com.example.runtime.data.remote.ProfileData
@@ -68,6 +70,8 @@ open class FakeApiService : ApiService {
     override suspend fun login(body: LoginRequest): ApiResponse<AuthData> = unexpected()
     override suspend fun googleLogin(body: GoogleLoginRequest): ApiResponse<AuthData> = unexpected()
     override suspend fun logout(authorization: String): ApiResponse<Unit> = unexpected()
+    override suspend fun requestPasswordReset(body: PasswordResetRequest): ApiResponse<Unit> = unexpected()
+    override suspend fun confirmPasswordReset(body: PasswordResetConfirmRequest): ApiResponse<Unit> = unexpected()
     override suspend fun myProfile(): ApiResponse<ProfileData> = unexpected()
     override suspend fun updateProfile(body: ProfileUpdateRequest): ApiResponse<ProfileData> = unexpected()
     override suspend fun uploadAvatar(avatar: MultipartBody.Part): ApiResponse<ProfileData> = unexpected()

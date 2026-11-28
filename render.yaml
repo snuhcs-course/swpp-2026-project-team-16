@@ -29,6 +29,18 @@ services:
         sync: false
       - key: TMAP_APP_KEY
         sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
       - key: FIREBASE_CREDENTIALS
         value: /etc/secrets/firebase.json
       - key: STREET_GRAPH_URL

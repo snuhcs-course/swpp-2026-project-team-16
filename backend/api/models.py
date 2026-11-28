@@ -386,3 +386,12 @@ class DeviceToken(models.Model):
     token = models.CharField(max_length=512, unique=True)
     language = models.CharField(max_length=5, default="ko")
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class PasswordResetCode(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_codes")
+    code_hash = models.CharField(max_length=128)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
