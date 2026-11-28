@@ -70,6 +70,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onAccountDeleted: () -> Unit,
+    onOpenBlockedUsers: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -200,6 +201,11 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(Spacing.l))
             Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(Spacing.s))
+            OutlinedButton(
+                onClick = onOpenBlockedUsers,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.blocked_users_title)) }
             Spacer(Modifier.height(Spacing.s))
             OutlinedButton(
                 onClick = { showLogoutDialog = true },

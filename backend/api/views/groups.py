@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from api.models import Follow, GroupInvite, GroupMember, GroupMessage, Route, RunningGroup
 from api.route_algorithm.briefing import DEFAULT_LANGUAGE
 from api.services.language import request_language
+from api.services.blocks import blocked_ids, blocked_between
 from api.services.notifications import notify
 from api.activity import log_activity
 
@@ -376,6 +377,9 @@ def group_messages(request, group_id):
 
     if request.method == "GET":
         messages = group.messages.select_related("user")
+        blocked = blocked_ids(request.user)
+        if blocked:
+            messages = messages.exclude(user_id__in=blocked)
         after = request.query_params.get("after")
         if after is not None:
             try:
@@ -444,6 +448,8 @@ def group_invites(request, group_id):
     invitee = User.objects.filter(username=request.data.get("username")).first()
     if invitee is None:
         return _error("User not found.", status.HTTP_404_NOT_FOUND)
+    if blocked_between(request.user, invitee):
+        return _error("You can't invite this user.", status.HTTP_403_FORBIDDEN)
     if invitee.id not in mutuals:
         return _error("You can only invite people who follow each other with you.", status.HTTP_403_FORBIDDEN)
     if group.members.filter(user=invitee).exists():

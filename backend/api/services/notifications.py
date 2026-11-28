@@ -5,6 +5,7 @@ import threading
 from django.db import connection, transaction
 
 from api.models import DeviceToken, Notification
+from api.services.blocks import has_blocked
 
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,8 @@ def render(notification, language):
 
 def notify(recipient, kind, actor=None, post=None, group=None, shared_route=None, text="", sender=None):
     if recipient is None or (actor is not None and recipient.id == actor.id):
+        return None
+    if has_blocked(recipient, actor):
         return None
     notification = Notification.objects.create(
         recipient=recipient,

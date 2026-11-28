@@ -209,6 +209,17 @@ class GroupsViewModelTest {
     }
 
     @Test
+    fun hideMessagesFrom_dropsMessagesByABlockedUser() {
+        viewModel.openChat(2)
+        viewModel.send(2, "mine") {}
+
+        viewModel.hideMessagesFrom("runner")
+
+        assertEquals(listOf(2), viewModel.messages.map { it.id })
+        viewModel.closeChat()
+    }
+
+    @Test
     fun delete_removesTheGroup() {
         viewModel.refresh()
         viewModel.loadDetail(1)
@@ -280,7 +291,7 @@ class GroupsViewModelTest {
             return ApiResponse(status = "success", data = message(2, body.text))
         }
 
-        private fun message(id: Int, text: String) = GroupMessage(id, "runner", text, "2026-11-02T01:00:00Z", isMine = id == 2)
+        private fun message(id: Int, text: String) = GroupMessage(id, if (id == 2) "me" else "runner", text, "2026-11-02T01:00:00Z", isMine = id == 2)
 
         private fun sample(id: Int) = RunningGroup(
             id = id,

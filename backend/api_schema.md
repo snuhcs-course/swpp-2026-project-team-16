@@ -1047,11 +1047,13 @@ All numbers are computed by the server. The LLM writes the comment and picks the
 GET /api/v1/users/<username>/profile/
 ```
 
-Authentication optional. Returns `username`, `display_name`, `status_message`, `avatar_url`, `is_me`, `follower_count`, `following_count`, `is_following`, and up to 20 each of:
+Authentication optional. Returns `username`, `display_name`, `status_message`, `avatar_url`, `is_me`, `follower_count`, `following_count`, `is_following`, `is_blocked` (whether the viewer blocked this user), and up to 20 each of:
 
 * `shared_routes`: routes the user shared
 * `groups`: upcoming groups the user hosts
 * `posts`: posts the user wrote with their name shown (anonymous posts are never included)
+
+When `is_blocked` is true the three lists are empty.
 
 ## Follow / Unfollow
 
@@ -1060,7 +1062,7 @@ POST   /api/v1/users/<username>/follow/
 DELETE /api/v1/users/<username>/follow/
 ```
 
-Authentication required. Returns `follower_count`, `following_count` and `is_following` of the target user. Following twice is a no-op. Following yourself returns 400.
+Authentication required. Returns `follower_count`, `following_count` and `is_following` of the target user. Following twice is a no-op. Following yourself returns 400. Following returns 403 when either user has blocked the other.
 
 ## Followers / Following
 
@@ -1080,6 +1082,38 @@ Authentication required for each:
 * `GET /api/v1/board/posts/?filter=following`: named posts by people you follow; anonymous posts are excluded
 
 `GET /api/v1/users/my_profile/` now also returns `follower_count` and `following_count`.
+
+---
+
+# Blocks
+
+## Block / Unblock
+
+```
+POST   /api/v1/users/<username>/block/
+DELETE /api/v1/users/<username>/block/
+```
+
+Authentication required. Returns `follower_count`, `following_count`, `is_following` and `is_blocked` of the target user. Blocking twice is a no-op. Blocking yourself returns 400 and a missing user returns 404.
+
+Blocking removes follows in both directions and pending group invites between the two users. Neither user can follow the other and the blocked user can't invite the blocker to a group until the block is removed.
+
+## My Blocked Users
+
+```
+GET /api/v1/users/my_profile/blocks/
+```
+
+Authentication required. Newest first, each with `username`, `display_name`, `avatar_url` and `blocked_at`.
+
+## Effects for the Blocker
+
+* Board posts and comments by blocked users are left out of lists and details, and `comment_count` skips their comments. Their posts return 404.
+* Group chat messages from blocked users are left out. Groups you both belong to are not changed.
+* Shared routes by blocked users are left out of `GET /api/v1/community/routes/`, and their reviews are left out of review lists.
+* No notifications are created when a blocked user follows, invites, likes, comments, reviews or messages you.
+
+The blocked user is not told and still sees your content.
 
 ---
 

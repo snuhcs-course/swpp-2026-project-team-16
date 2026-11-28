@@ -64,6 +64,8 @@ import com.example.runtime.ui.route.RouteInputScreen
 import com.example.runtime.ui.route.RunNavigationScreen
 import com.example.runtime.ui.route.RunReportScreen
 import com.example.runtime.ui.mypage.RunningStyleScreen
+import com.example.runtime.ui.profile.BlockedUsersScreen
+import com.example.runtime.ui.profile.BlockedUsersViewModel
 import com.example.runtime.ui.profile.UserProfileScreen
 import com.example.runtime.data.push.NotificationNavigation
 import com.example.runtime.data.push.NotificationTarget
@@ -164,6 +166,7 @@ fun RunTimeApp() {
     }
     val runningStyleViewModel: RunningStyleViewModel = viewModel()
     val userProfileViewModel: UserProfileViewModel = viewModel()
+    val blockedUsersViewModel: BlockedUsersViewModel = viewModel()
     val profileStack = remember { mutableStateListOf<String>() }
     var pendingFollowList by remember { mutableStateOf<FollowListType?>(null) }
     var profileReturnScreen by rememberSaveable { mutableStateOf("community") }
@@ -213,6 +216,7 @@ fun RunTimeApp() {
         notificationsViewModel.reset()
         calendarViewModel.reset()
         challengeViewModel.reset()
+        blockedUsersViewModel.reset()
         selectedRouteId = null
     }
 
@@ -278,6 +282,12 @@ fun RunTimeApp() {
         }
         if (profileStack.lastOrNull() != username) profileStack.add(username)
         currentScreen = "user_profile"
+    }
+
+    fun onBlockChanged(username: String, blocked: Boolean) {
+        if (blocked) groupsViewModel.hideMessagesFrom(username)
+        boardViewModel.refresh()
+        communityViewModel.refresh()
     }
 
     fun closeUser() {
@@ -767,7 +777,8 @@ fun RunTimeApp() {
                                             },
                                             onLogInRequired = { loginPrompt = LOGIN_PROMPT_FOLLOW },
                                             initialList = pendingFollowList,
-                                            onInitialListShown = { pendingFollowList = null }
+                                            onInitialListShown = { pendingFollowList = null },
+                                            onBlockChanged = ::onBlockChanged
                                         )
                                     } ?: run {
                                         currentScreen = profileReturnScreen
@@ -838,7 +849,14 @@ fun RunTimeApp() {
                                                 currentScreen = "route_input"
                                             }
                                             appMessages.show(accountDeletedMessage)
-                                        }
+                                        },
+                                        onOpenBlockedUsers = { currentScreen = "blocked_users" }
+                                    )
+                                    "blocked_users" -> BlockedUsersScreen(
+                                        viewModel = blockedUsersViewModel,
+                                        onBack = { currentScreen = "settings" },
+                                        onOpenUser = ::openUser,
+                                        onUnblocked = { username -> onBlockChanged(username, false) }
                                     )
                                     "running_style" -> RunningStyleScreen(
                                         viewModel = runningStyleViewModel,
