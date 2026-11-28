@@ -114,11 +114,30 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+SMTP_HOST = os.getenv("EMAIL_HOST", "").strip()
+
+if SMTP_HOST:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': SMTP_HOST,
+                'port': int(os.getenv("EMAIL_PORT") or 587),
+                'username': os.getenv("EMAIL_HOST_USER", ""),
+                'password': os.getenv("EMAIL_HOST_PASSWORD", ""),
+                'use_tls': (os.getenv("EMAIL_USE_TLS") or "true").lower() == "true",
+                'timeout': 10,
+            },
+        },
+    }
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        },
+    }
+
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL") or os.getenv("EMAIL_HOST_USER") or "RunTime <noreply@runtime.local>"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -126,6 +145,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "10/minute",
+        "password_reset": "5/hour",
+        "password_reset_confirm": "10/hour",
         "live_coach": "12/minute",
         "telemetry": "20/minute",
     },

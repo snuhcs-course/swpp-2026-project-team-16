@@ -341,6 +341,102 @@ Deletes the user's token. Each user has one token, so this logs the user out on 
 
 ---
 
+## Request Password Reset
+
+### Endpoint
+
+```
+POST /api/v1/auth/password-reset/
+```
+
+### Request
+
+```json
+{
+    "email": "anton@test.com"
+}
+```
+
+### Response
+
+`200 OK`
+
+```json
+{
+    "status": "success",
+    "message": "If an account uses this email, we sent a reset code."
+}
+```
+
+### Errors
+
+* `400 Bad Request`: `Enter a valid email address`
+* `429 Too Many Requests`: more than 5 requests per hour from one IP
+
+### Description
+
+Emails a 6-digit code for resetting the password.
+
+The endpoint:
+
+* finds the account whose email matches (case-insensitive) and that has a password (Google-only accounts are skipped)
+* deletes the account's older codes and creates a new one that expires in 10 minutes
+* stores only a hash of the code
+* writes the email in Korean or English from `Accept-Language` (Korean by default)
+* returns the same response whether or not an account was found, so the endpoint does not reveal which emails are registered
+
+Without the `EMAIL_HOST` environment variable, the email is printed to the server log instead of being sent.
+
+---
+
+## Confirm Password Reset
+
+### Endpoint
+
+```
+POST /api/v1/auth/password-reset/confirm/
+```
+
+### Request
+
+```json
+{
+    "email": "anton@test.com",
+    "code": "123456",
+    "new_password": "new-password123"
+}
+```
+
+### Response
+
+`200 OK`
+
+```json
+{
+    "status": "success",
+    "message": "Your password has been reset."
+}
+```
+
+### Errors
+
+* `400 Bad Request`: `All fields are required`, `Password must be at least 8 characters` or `The code is invalid or has expired.`
+* `429 Too Many Requests`: more than 10 requests per hour from one IP
+
+### Description
+
+Sets a new password with the emailed code.
+
+The endpoint:
+
+* checks the latest unused, unexpired code for the account
+* allows at most 5 wrong codes, after which the code stops working and a new one must be requested
+* applies the same password rule as sign-up
+* sets the new password and marks the code as used
+* deletes the account's token, so every device is logged out
+
+---
+
 # User Routes
 
 ## Get User Profile

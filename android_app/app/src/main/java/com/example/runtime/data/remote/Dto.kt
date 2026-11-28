@@ -48,6 +48,18 @@ data class GoogleLoginRequest(
 )
 
 @Serializable
+data class PasswordResetRequest(
+    val email: String,
+)
+
+@Serializable
+data class PasswordResetConfirmRequest(
+    val email: String,
+    val code: String,
+    @SerialName("new_password") val newPassword: String,
+)
+
+@Serializable
 data class AuthData(
     val username: String,
     val email: String,

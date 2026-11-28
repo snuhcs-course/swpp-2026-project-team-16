@@ -35,6 +35,12 @@ interface ApiService {
     @POST("api/v1/auth/logout/")
     suspend fun logout(@Header("Authorization") authorization: String): ApiResponse<Unit>
 
+    @POST("api/v1/auth/password-reset/")
+    suspend fun requestPasswordReset(@Body body: PasswordResetRequest): ApiResponse<Unit>
+
+    @POST("api/v1/auth/password-reset/confirm/")
+    suspend fun confirmPasswordReset(@Body body: PasswordResetConfirmRequest): ApiResponse<Unit>
+
     @GET("api/v1/users/my_profile/")
     suspend fun myProfile(): ApiResponse<ProfileData>
 

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.example.runtime.R
@@ -16,6 +17,7 @@ fun LoginScreen(
     authViewModel: AuthViewModel,
     onLoginSuccess: () -> Unit,
     onSignUpClick: () -> Unit,
+    onForgotPassword: () -> Unit,
     onNotNow: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -33,7 +35,17 @@ fun LoginScreen(
         AuthTextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.label_name))
         Spacer(modifier = Modifier.height(Spacing.m))
         PasswordField(value = password, onValueChange = { password = it }, label = stringResource(R.string.label_password))
-        Spacer(modifier = Modifier.height(Spacing.l))
+        TextButton(
+            onClick = {
+                authViewModel.clearError()
+                onForgotPassword()
+            },
+            enabled = !uiState.isLoading,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text(stringResource(R.string.forgot_password))
+        }
+        Spacer(modifier = Modifier.height(Spacing.s))
         PrimaryAuthButton(
             text = stringResource(R.string.action_log_in),
             isLoading = uiState.isLoading,
