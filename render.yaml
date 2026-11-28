@@ -31,6 +31,8 @@ services:
         sync: false
       - key: FIREBASE_CREDENTIALS
         value: /etc/secrets/firebase.json
+      - key: GROUP_REMINDERS
+        value: "1"
       - key: STREET_GRAPH_URL
         value: https://github.com/snuhcs-course/swpp-2026-project-team-16/releases/download/street-graph-v2/seoul_walk.pkl.gz
       - key: STREET_GRAPH_SHA256

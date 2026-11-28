@@ -303,7 +303,7 @@ fun RunTimeApp() {
                 invitesReturnScreen = from
                 currentScreen = "group_invites"
             }
-            "group_join", "group_message" -> target.groupId?.let { groupId ->
+            "group_join", "group_message", "group_reminder" -> target.groupId?.let { groupId ->
                 selectedGroupId = groupId
                 groupReturnScreen = from
                 currentScreen = if (target.kind == "group_message") "group_chat" else "group_detail"
