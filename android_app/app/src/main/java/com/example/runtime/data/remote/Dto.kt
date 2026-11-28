@@ -269,6 +269,9 @@ data class RunPlan(
     @SerialName("alert_on_slow") val alertOnSlow: Boolean = false,
     @SerialName("alert_on_fast") val alertOnFast: Boolean = false,
     @SerialName("pace_segments") val paceSegments: List<PaceSegment> = emptyList(),
+    val condition: String? = null,
+    val focus: String? = null,
+    @SerialName("coach_note") val coachNote: String = "",
 )
 
 @Serializable

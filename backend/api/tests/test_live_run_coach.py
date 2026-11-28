@@ -62,6 +62,24 @@ class LiveCoachValidationTests(SimpleTestCase):
         self.assertNotIn("latitude", prompt["user"])
         self.assertIn("Korean", prompt["system"])
 
+    def test_runner_goal_and_condition_reach_the_coach(self):
+        plan = {**VALID_CONTEXT["plan"], "condition": "low", "focus": "finish", "coach_note": "완주가 목표"}
+        context, error = validate_live_coach_request({**VALID_CONTEXT, "plan": plan})
+
+        self.assertIsNone(error)
+        prompt = build_live_coach_prompt(context, "ko")
+        self.assertIn("runner's focus: finishing the distance matters more than time", prompt["user"])
+        self.assertIn("runner's condition before the run: not good", prompt["user"])
+        self.assertIn("runner's note: 완주가 목표", prompt["user"])
+        self.assertIn("never suggest running faster than the target", prompt["system"])
+
+    def test_unknown_runner_context_is_dropped(self):
+        plan = {**VALID_CONTEXT["plan"], "condition": "bad", "focus": "finish", "coach_note": 5}
+        context, error = validate_live_coach_request({**VALID_CONTEXT, "plan": plan})
+
+        self.assertIsNone(error)
+        self.assertEqual((context["plan"]["condition"], context["plan"]["focus"], context["plan"]["coach_note"]), (None, "finish", ""))
+
     def test_cleans_llm_reply_to_one_or_two_plain_sentences(self):
         message = generate_live_coaching(
             VALID_CONTEXT,

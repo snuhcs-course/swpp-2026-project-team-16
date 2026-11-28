@@ -55,6 +55,14 @@ fun RunPlanCard(
             extraRows()
             PlanRow(stringResource(R.string.plan_distance), formatDistance(plan.distanceMeters))
             PlanRow(stringResource(R.string.plan_target_pace), stringResource(R.string.pace_range_per_km, plan.paceRangeText()))
+            when (plan.focus) {
+                "finish" -> PlanRow(stringResource(R.string.plan_focus), stringResource(R.string.plan_focus_finish))
+                "time" -> PlanRow(stringResource(R.string.plan_focus), stringResource(R.string.plan_focus_time))
+            }
+            when (plan.condition) {
+                "low" -> PlanRow(stringResource(R.string.plan_condition), stringResource(R.string.plan_condition_low))
+                "good" -> PlanRow(stringResource(R.string.plan_condition), stringResource(R.string.plan_condition_good))
+            }
             if (plan.alertOnSlow || plan.alertOnFast) {
                 val alertLabels = listOfNotNull(
                     if (plan.alertOnSlow) stringResource(R.string.pace_maker_alert_slow) else null,
