@@ -18,19 +18,23 @@ class AuthRepository(
 ) {
 
     suspend fun login(username: String, password: String): AuthData =
-        api.login(LoginRequest(username, password)).requireData().also { saveToken(it.token) }
+        api.login(LoginRequest(username, password)).requireData().also { saveSession(it) }
 
     suspend fun register(username: String, email: String, password: String, displayName: String = ""): AuthData =
-        api.register(RegisterRequest(username, email, password, displayName)).requireData().also { saveToken(it.token) }
+        api.register(RegisterRequest(username, email, password, displayName)).requireData().also { saveSession(it) }
 
     suspend fun googleLogin(idToken: String): AuthData =
-        api.googleLogin(GoogleLoginRequest(idToken)).requireData().also { saveToken(it.token) }
+        api.googleLogin(GoogleLoginRequest(idToken)).requireData().also { saveSession(it) }
 
     suspend fun restoreSession(): Boolean {
         val token = tokenStorage.load() ?: return false
         TokenStore.token = token
+        TokenStore.username = tokenStorage.loadUsername()
         return try {
-            api.myProfile()
+            api.myProfile().data?.username?.let { username ->
+                TokenStore.username = username
+                tokenStorage.saveUsername(username)
+            }
             true
         } catch (e: HttpException) {
             if (e.code() == 401) clearToken()
@@ -42,9 +46,11 @@ class AuthRepository(
         }
     }
 
-    private suspend fun saveToken(token: String) {
-        TokenStore.token = token
-        tokenStorage.save(token)
+    private suspend fun saveSession(auth: AuthData) {
+        TokenStore.token = auth.token
+        TokenStore.username = auth.username
+        tokenStorage.save(auth.token)
+        tokenStorage.saveUsername(auth.username)
     }
 
     suspend fun clearSession(): String? {
@@ -65,6 +71,7 @@ class AuthRepository(
 
     private suspend fun clearToken() {
         TokenStore.token = null
+        TokenStore.username = null
         tokenStorage.clear()
     }
 }

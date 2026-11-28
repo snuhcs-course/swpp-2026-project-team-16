@@ -81,6 +81,7 @@ import com.example.runtime.ui.notifications.NotificationsScreen
 import com.example.runtime.ui.notifications.NotificationsViewModel
 import com.example.runtime.ui.notifications.SettingsScreen
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
 import com.example.runtime.ui.profile.UserProfileViewModel
@@ -161,6 +162,19 @@ fun RunTimeApp() {
         runViewModel.speakCoachCue = { message ->
             RunTrackingService.speakNavigationText(appContext, message)
         }
+        runViewModel.stopTracking = {
+            appContext.startService(
+                Intent(appContext, RunTrackingService::class.java).setAction(RunTrackingService.ACTION_STOP)
+            )
+        }
+    }
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, runViewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) runViewModel.saveSnapshot()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val runningStyleViewModel: RunningStyleViewModel = viewModel()
     val userProfileViewModel: UserProfileViewModel = viewModel()
@@ -257,6 +271,14 @@ fun RunTimeApp() {
                 currentScreen = "notifications"
             }
         } else null
+
+    LaunchedEffect(Unit) {
+        if (currentScreen != "splash" && !authViewModel.isLoggedIn) authViewModel.restoreSession {}
+    }
+
+    LaunchedEffect(authViewModel.isLoggedIn, currentScreen == "splash") {
+        if (authViewModel.isLoggedIn && currentScreen != "splash") runViewModel.checkForInterruptedRun()
+    }
 
     LaunchedEffect(currentScreen, authViewModel.isLoggedIn) {
         if (authViewModel.isLoggedIn && currentScreen in setOf("calendar", "community", "challenge")) {
@@ -897,6 +919,34 @@ fun RunTimeApp() {
                         }
                     },
                     onDismiss = { loginPrompt = null }
+                )
+            }
+            runViewModel.interruptedRun?.takeIf { currentScreen != "splash" }?.let { snapshot ->
+                AlertDialog(
+                    onDismissRequest = {},
+                    title = { Text(stringResource(R.string.run_interrupted_title)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                R.string.run_interrupted_message,
+                                com.example.runtime.ui.common.formatDistance(snapshot.distanceMeters.roundToInt()),
+                                com.example.runtime.ui.common.formatDuration(snapshot.elapsedSeconds),
+                            )
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            if (runViewModel.recoverInterruptedRun()) {
+                                runReturnScreen = "route_input"
+                                currentScreen = "run_navigation"
+                            }
+                        }) { Text(stringResource(R.string.run_interrupted_save)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = runViewModel::discardInterruptedRun) {
+                            Text(stringResource(R.string.run_interrupted_discard))
+                        }
+                    },
                 )
             }
             if (showTelemetryConsentPrompt) {

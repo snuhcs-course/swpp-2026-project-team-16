@@ -21,7 +21,11 @@ import com.example.runtime.data.repository.CommunityRepository
 import com.example.runtime.data.repository.RouteRepository
 import com.example.runtime.data.remote.GeoJsonPoint
 import com.example.runtime.data.remote.Place
+import com.example.runtime.data.remote.TokenStore
 import com.example.runtime.data.run.RunMetrics
+import com.example.runtime.data.run.RunSnapshot
+import com.example.runtime.data.run.RunSnapshotStore
+import com.example.runtime.data.run.RunStorage
 import com.example.runtime.data.run.RunTrackingState
 import com.example.runtime.data.run.PaceAlertSettings
 import com.example.runtime.data.telemetry.Telemetry
@@ -86,6 +90,9 @@ class RunViewModel(
     private val clock: () -> Long = SystemClock::elapsedRealtime,
     private val retryDelayMs: Long = RETURN_ROUTE_RETRY_DELAY_MS,
     private val online: Flow<Boolean> = NetworkStatus.online,
+    private val snapshotStore: RunSnapshotStore = RunStorage.snapshots,
+    private val currentUser: () -> String? = { TokenStore.username },
+    private val wallClock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
     var routePoints by mutableStateOf<List<RouteCoordinate>>(emptyList())
@@ -110,6 +117,15 @@ class RunViewModel(
 
     var speakCue: (messageId: Int, distanceMeters: Int?) -> Unit = { _, _ -> }
     var speakCoachCue: (message: String) -> Unit = {}
+    var stopTracking: () -> Unit = {}
+
+    private var snapshotOwner: String? = null
+    private var snapshotStartedAt: Long? = null
+    private var lastSnapshotAt: Long? = null
+    private var lastSnapshotPaused = false
+
+    var interruptedRun by mutableStateOf<RunSnapshot?>(null)
+        private set
 
     val isRunActive: Boolean
         get() = target != null && result == null && RunTrackingState.metrics.value.isTracking
@@ -152,8 +168,122 @@ class RunViewModel(
         if (target != null && result == null) {
             announce(metrics)
             requestKilometerCoaching(metrics)
+            snapshotIfDue(metrics)
         }
     }
+
+    private fun snapshotIfDue(metrics: RunMetrics) {
+        if (!metrics.isTracking || snapshotOwner == null) return
+        val justPaused = metrics.isPaused && !lastSnapshotPaused
+        lastSnapshotPaused = metrics.isPaused
+        val last = lastSnapshotAt
+        if (last != null && clock() - last < SNAPSHOT_INTERVAL_MS && !justPaused) return
+        writeSnapshot(metrics)
+    }
+
+    fun saveSnapshot() {
+        val metrics = RunTrackingState.metrics.value
+        if (target == null || result != null || !metrics.isTracking) return
+        writeSnapshot(metrics)
+    }
+
+    private fun writeSnapshot(metrics: RunMetrics) {
+        val owner = snapshotOwner ?: return
+        val runTarget = target ?: return
+        val now = wallClock()
+        val startedAt = snapshotStartedAt ?: (now - metrics.elapsedSeconds * 1000L).also { snapshotStartedAt = it }
+        lastSnapshotAt = clock()
+        val (count, seconds) = offRouteTotals()
+        snapshotStore.save(
+            RunSnapshot(
+                owner = owner,
+                routeId = runTarget.routeId,
+                temporaryRouteId = runTarget.temporaryRouteId,
+                groupId = runTarget.groupId,
+                plan = runTarget.plan,
+                isFree = runTarget.isFree,
+                startName = runTarget.startName,
+                distanceMeters = metrics.distanceMeters,
+                elapsedSeconds = metrics.elapsedSeconds,
+                splitTimes = RunTrackingState.splitTimes.value,
+                offRouteCount = count,
+                offRouteSeconds = seconds,
+                path = if (runTarget.isFree) currentPath() else emptyList(),
+                startedAtMillis = startedAt,
+                savedAtMillis = now,
+            ),
+        )
+    }
+
+    private fun currentPath(): List<List<Double>> =
+        RunTrackingState.trail.value.map { listOf(it.longitude, it.latitude) }
+
+    fun checkForInterruptedRun() {
+        if (interruptedRun != null || isRunActive) return
+        val snapshot = snapshotStore.load() ?: return
+        val user = currentUser() ?: return
+        if (snapshot.owner != user || wallClock() - snapshot.savedAtMillis > MAX_SNAPSHOT_AGE_MS) {
+            snapshotStore.clear()
+            return
+        }
+        interruptedRun = snapshot
+    }
+
+    fun recoverInterruptedRun(): Boolean {
+        val snapshot = interruptedRun ?: return false
+        interruptedRun = null
+        val live = RunTrackingState.metrics.value
+        val orphaned = live.isTracking && target == null
+        val latest = if (orphaned && live.elapsedSeconds >= snapshot.elapsedSeconds) {
+            snapshot.copy(
+                distanceMeters = live.distanceMeters,
+                elapsedSeconds = live.elapsedSeconds,
+                splitTimes = RunTrackingState.splitTimes.value,
+                path = if (snapshot.isFree) currentPath() else emptyList(),
+                savedAtMillis = wallClock(),
+            )
+        } else {
+            snapshot
+        }
+        if (orphaned) stopTracking()
+        start(latest.toTarget())
+        cancelLiveCoachRequests()
+        snapshotOwner = null
+        snapshotStore.clear()
+        val recovered = latest.toResult()
+        result = recovered
+        Telemetry.track("run_session", "completed")
+        recordRun(recovered)
+        return true
+    }
+
+    fun discardInterruptedRun() {
+        interruptedRun ?: return
+        interruptedRun = null
+        if (RunTrackingState.metrics.value.isTracking && target == null) stopTracking()
+        snapshotStore.clear()
+    }
+
+    private fun RunSnapshot.toTarget() = RunTarget(
+        lines = emptyList(),
+        distanceMeters = plan?.distanceMeters ?: 0,
+        routeId = routeId,
+        temporaryRouteId = temporaryRouteId,
+        startName = startName,
+        groupId = groupId,
+        plan = plan,
+        isFree = isFree,
+    )
+
+    private fun RunSnapshot.toResult() = RunResult(
+        distanceMeters = distanceMeters.roundToInt(),
+        elapsedSeconds = elapsedSeconds,
+        splitTimes = splitTimes,
+        offRouteCount = offRouteCount,
+        offRouteSeconds = offRouteSeconds,
+        finishedAtMillis = savedAtMillis,
+        path = path,
+    )
 
     private fun requestKilometerCoaching(metrics: RunMetrics) {
         if (!metrics.isTracking) return
@@ -368,12 +498,18 @@ class RunViewModel(
         runRating = null
         saveRouteState = SaveRouteState.Idle
         savedRunId = null
+        snapshotOwner = currentUser()
+        snapshotStartedAt = null
+        lastSnapshotAt = null
+        lastSnapshotPaused = false
         return true
     }
 
     fun finish(result: RunResult, isLoggedIn: Boolean) {
         cancelLiveCoachRequests()
         this.result = result
+        snapshotOwner = null
+        snapshotStore.clear()
         Telemetry.track("run_session", "completed")
         if (isLoggedIn) recordRun(result)
     }
@@ -384,22 +520,7 @@ class RunViewModel(
         recordState = RunRecordState.Saving
         viewModelScope.launch {
             recordState = try {
-                val record = repository.recordRun(
-                    RecordRunRequest(
-                        routeId = target.routeId,
-                        temporaryRouteId = target.temporaryRouteId.takeIf { target.routeId == null },
-                        distanceMeters = result.distanceMeters,
-                        durationSeconds = result.elapsedSeconds,
-                        groupId = target.groupId,
-                        plan = target.plan,
-                        splits = result.splitDurations,
-                        offRouteCount = result.offRouteCount,
-                        offRouteSeconds = result.offRouteSeconds,
-                        path = result.path.takeIf { target.isFree },
-                    ).let { request ->
-                        if (target.isFree) request.copy(routeId = null, temporaryRouteId = null) else request
-                    },
-                )
+                val record = repository.recordRun(recordRequest(target, result))
                 savedRunId = record.id
                 RunRecordState.Saved(record.routeId, record.sharedRouteId)
             } catch (e: CancellationException) {
@@ -409,6 +530,21 @@ class RunViewModel(
             }
             if (recordState is RunRecordState.Saved) loadReport()
         }
+    }
+
+    private fun recordRequest(target: RunTarget, result: RunResult) = RecordRunRequest(
+        routeId = target.routeId,
+        temporaryRouteId = target.temporaryRouteId.takeIf { target.routeId == null },
+        distanceMeters = result.distanceMeters,
+        durationSeconds = result.elapsedSeconds,
+        groupId = target.groupId,
+        plan = target.plan,
+        splits = result.splitDurations,
+        offRouteCount = result.offRouteCount,
+        offRouteSeconds = result.offRouteSeconds,
+        path = result.path.takeIf { target.isFree },
+    ).let { request ->
+        if (target.isFree) request.copy(routeId = null, temporaryRouteId = null) else request
     }
 
     fun retryRecord() {
@@ -500,6 +636,8 @@ class RunViewModel(
         const val MAX_COACHED_KILOMETERS = 60
         const val HILL_LOOKAHEAD_METERS = 2000
         const val MAX_UPCOMING_HILLS = 5
+        const val SNAPSHOT_INTERVAL_MS = 10_000L
+        const val MAX_SNAPSHOT_AGE_MS = 24 * 60 * 60 * 1000L
     }
 }
 

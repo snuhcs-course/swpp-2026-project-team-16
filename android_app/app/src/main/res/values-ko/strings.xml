@@ -192,6 +192,10 @@
     <string name="run_continue">계속 달리기</string>
     <string name="run_close">닫기</string>
     <string name="run_in_progress">이미 진행 중인 러닝이 있어요.</string>
+    <string name="run_interrupted_title">이전 러닝이 중단됐어요</string>
+    <string name="run_interrupted_message">러닝 중에 앱이 종료됐어요. 마지막으로 기록된 %1$s · %2$s까지 저장할까요?</string>
+    <string name="run_interrupted_save">저장하기</string>
+    <string name="run_interrupted_discard">삭제하기</string>
     <string name="run_ongoing">러닝 중: %1$s, %2$s</string>
     <string name="run_ongoing_paused">일시 정지: %1$s, %2$s</string>
     <string name="run_ongoing_open">돌아가기</string>
