@@ -18,6 +18,9 @@ import java.util.concurrent.TimeUnit
 object TokenStore {
     @Volatile
     var token: String? = null
+
+    @Volatile
+    var username: String? = null
 }
 
 object SessionEvents {

@@ -26,6 +26,8 @@ import com.example.runtime.testing.FakeApiService
 import com.example.runtime.testing.MainDispatcherRule
 import com.example.runtime.ui.common.UiText
 import com.example.runtime.data.run.RunMetrics
+import com.example.runtime.data.run.RunSnapshot
+import com.example.runtime.data.run.RunSnapshotStore
 import com.example.runtime.data.run.RunTrackingState
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -45,7 +47,22 @@ class RunViewModelTest {
     private val api = RunApi()
     private val online = MutableStateFlow(true)
     private var now = 0L
-    private val viewModel by lazy { RunViewModel(CommunityRepository(api), CoachRepository(api), RouteRepository(api), clock = { now }, retryDelayMs = 0, online = online) }
+    private val snapshots = FakeSnapshotStore()
+    private var user: String? = "runner"
+    private var wallNow = 1_000_000L
+    private val viewModel by lazy {
+        RunViewModel(
+            CommunityRepository(api),
+            CoachRepository(api),
+            RouteRepository(api),
+            clock = { now },
+            retryDelayMs = 0,
+            online = online,
+            snapshotStore = snapshots,
+            currentUser = { user },
+            wallClock = { wallNow },
+        )
+    }
     private val straightRoute = listOf(GeoJsonLineString(listOf(listOf(126.95, 37.46), listOf(126.96, 37.46))))
 
     @After
@@ -473,6 +490,194 @@ class RunViewModelTest {
 
         assertEquals(listOf(42), api.savedRouteIds)
         assertEquals(SaveRouteState.Saved, viewModel.saveRouteState)
+    }
+
+    @Test
+    fun snapshot_isSavedWhileTrackingAndThrottled() {
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 42, groupId = 5, plan = PLAN))
+        RunTrackingState.recordSplits(1000.0, 360L)
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 1000.0, elapsedSeconds = 360L))
+
+        val saved = snapshots.snapshot
+        assertEquals("runner", saved?.owner)
+        assertEquals(42, saved?.routeId)
+        assertEquals(5, saved?.groupId)
+        assertEquals(PLAN, saved?.plan)
+        assertEquals(1000.0, saved?.distanceMeters ?: 0.0, 0.0)
+        assertEquals(360L, saved?.elapsedSeconds)
+        assertEquals(listOf(360L), saved?.splitTimes)
+        assertEquals(wallNow, saved?.savedAtMillis)
+        assertEquals(1, snapshots.saves)
+
+        now = 5_000
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 1020.0, elapsedSeconds = 365L))
+        assertEquals(1, snapshots.saves)
+
+        now = 10_000
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 1050.0, elapsedSeconds = 370L))
+        assertEquals(2, snapshots.saves)
+        assertEquals(1050.0, snapshots.snapshot?.distanceMeters ?: 0.0, 0.0)
+    }
+
+    @Test
+    fun snapshot_isSavedRightAwayWhenPaused() {
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 42))
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 100.0, elapsedSeconds = 30L))
+        now = 1_000
+
+        RunTrackingState.update(RunMetrics(isTracking = true, isPaused = true, distanceMeters = 110.0, elapsedSeconds = 31L))
+
+        assertEquals(2, snapshots.saves)
+        assertEquals(110.0, snapshots.snapshot?.distanceMeters ?: 0.0, 0.0)
+    }
+
+    @Test
+    fun snapshot_keepsTheFreeRunPath() {
+        viewModel.start(RunTarget(emptyList(), 0, isFree = true))
+        RunTrackingState.update(RunMetrics(isTracking = true))
+        RunTrackingState.appendTrail(37.5, 127.0)
+        now = 10_000
+
+        viewModel.saveSnapshot()
+
+        assertEquals(listOf(listOf(127.0, 37.5)), snapshots.snapshot?.path)
+        assertTrue(snapshots.snapshot?.isFree == true)
+    }
+
+    @Test
+    fun snapshot_isNotSavedForGuests() {
+        user = null
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 42))
+
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 100.0, elapsedSeconds = 30L))
+
+        assertNull(snapshots.snapshot)
+        assertEquals(0, snapshots.saves)
+    }
+
+    @Test
+    fun snapshot_isClearedWhenTheRunFinishes() {
+        viewModel.start(RunTarget(straightRoute, 880, routeId = 42))
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 100.0, elapsedSeconds = 30L))
+
+        viewModel.finish(RunResult(100, 30), isLoggedIn = true)
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 120.0, elapsedSeconds = 40L))
+
+        assertNull(snapshots.snapshot)
+    }
+
+    @Test
+    fun interruptedRun_isOfferedToItsOwnerAndSavedWithTheSameRequest() {
+        val finished = RunViewModel(
+            CommunityRepository(api),
+            CoachRepository(api),
+            RouteRepository(api),
+            clock = { now },
+            online = online,
+            snapshotStore = FakeSnapshotStore(),
+            currentUser = { user },
+        )
+        finished.start(RunTarget(emptyList(), 3000, temporaryRouteId = 7, groupId = 5, plan = PLAN))
+        finished.finish(
+            RunResult(3010, 1200, splitTimes = listOf(390, 790), offRouteCount = 1, offRouteSeconds = 40),
+            isLoggedIn = true,
+        )
+        val expected = api.runs.single()
+        snapshots.save(
+            RunSnapshot(
+                owner = "runner",
+                temporaryRouteId = 7,
+                groupId = 5,
+                plan = PLAN,
+                distanceMeters = 3010.2,
+                elapsedSeconds = 1200,
+                splitTimes = listOf(390, 790),
+                offRouteCount = 1,
+                offRouteSeconds = 40,
+                savedAtMillis = wallNow - 60_000,
+            ),
+        )
+
+        viewModel.checkForInterruptedRun()
+        assertEquals(1200L, viewModel.interruptedRun?.elapsedSeconds)
+
+        assertTrue(viewModel.recoverInterruptedRun())
+
+        assertEquals(expected, api.runs.last())
+        assertEquals(2, api.runs.size)
+        assertNull(viewModel.interruptedRun)
+        assertNull(snapshots.snapshot)
+        assertEquals(3010, viewModel.result?.distanceMeters)
+        assertEquals(PLAN, viewModel.target?.plan)
+        assertTrue(viewModel.recordState is RunRecordState.Saved)
+        assertEquals(ReportState.Loaded(REPORT), viewModel.reportState)
+    }
+
+    @Test
+    fun interruptedRun_ofAnotherUserOrTooOldIsDropped() {
+        snapshots.save(RunSnapshot(owner = "someone", savedAtMillis = wallNow))
+        viewModel.checkForInterruptedRun()
+        assertNull(viewModel.interruptedRun)
+        assertNull(snapshots.snapshot)
+
+        snapshots.save(RunSnapshot(owner = "runner", savedAtMillis = wallNow - 25 * 60 * 60 * 1000L))
+        viewModel.checkForInterruptedRun()
+        assertNull(viewModel.interruptedRun)
+        assertNull(snapshots.snapshot)
+    }
+
+    @Test
+    fun interruptedRun_waitsForTheUserToBeKnown() {
+        user = null
+        snapshots.save(RunSnapshot(owner = "runner", savedAtMillis = wallNow))
+
+        viewModel.checkForInterruptedRun()
+
+        assertNull(viewModel.interruptedRun)
+        assertEquals("runner", snapshots.snapshot?.owner)
+    }
+
+    @Test
+    fun interruptedRun_canBeDiscarded() {
+        snapshots.save(RunSnapshot(owner = "runner", distanceMeters = 500.0, savedAtMillis = wallNow))
+        viewModel.checkForInterruptedRun()
+
+        viewModel.discardInterruptedRun()
+
+        assertNull(viewModel.interruptedRun)
+        assertNull(snapshots.snapshot)
+        assertTrue(api.runs.isEmpty())
+    }
+
+    @Test
+    fun interruptedRun_stillTrackedInThisProcessUsesTheLatestMetrics() {
+        var stopped = false
+        viewModel.stopTracking = { stopped = true }
+        snapshots.save(RunSnapshot(owner = "runner", routeId = 42, distanceMeters = 500.0, elapsedSeconds = 200, savedAtMillis = wallNow))
+        RunTrackingState.update(RunMetrics(isTracking = true, distanceMeters = 800.0, elapsedSeconds = 300L))
+        viewModel.checkForInterruptedRun()
+
+        viewModel.recoverInterruptedRun()
+
+        assertTrue(stopped)
+        assertEquals(800, api.runs.single().distanceMeters)
+        assertEquals(300L, api.runs.single().durationSeconds)
+    }
+
+    private class FakeSnapshotStore : RunSnapshotStore {
+        var snapshot: RunSnapshot? = null
+        var saves = 0
+
+        override fun load(): RunSnapshot? = snapshot
+
+        override fun save(snapshot: RunSnapshot) {
+            this.snapshot = snapshot
+            saves++
+        }
+
+        override fun clear() {
+            snapshot = null
+        }
     }
 
     private class RunApi : FakeApiService() {
