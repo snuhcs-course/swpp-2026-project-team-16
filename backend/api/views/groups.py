@@ -302,7 +302,11 @@ def groups_detail(request, group_id):
         return _auth_required()
     if group.host_id != request.user.id:
         return _error("Only the host can delete this group.", status.HTTP_403_FORBIDDEN)
-    group.delete()
+    with transaction.atomic():
+        if group.meet_at > timezone.now():
+            for member in group.members.select_related("user").exclude(user_id=group.host_id):
+                notify(member.user, "group_cancelled", actor=request.user, text=group.title)
+        group.delete()
     return Response({"status": "success"}, status=status.HTTP_200_OK)
 
 
