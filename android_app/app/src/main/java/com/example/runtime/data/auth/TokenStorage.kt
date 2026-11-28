@@ -11,14 +11,24 @@ private val Context.authDataStore by preferencesDataStore(name = "auth")
 class TokenStorage(private val context: Context) {
 
     private val tokenKey = stringPreferencesKey("token")
+    private val usernameKey = stringPreferencesKey("username")
 
     suspend fun load(): String? = context.authDataStore.data.first()[tokenKey]
+
+    suspend fun loadUsername(): String? = context.authDataStore.data.first()[usernameKey]
+
+    suspend fun saveUsername(username: String) {
+        context.authDataStore.edit { it[usernameKey] = username }
+    }
 
     suspend fun save(token: String) {
         context.authDataStore.edit { it[tokenKey] = token }
     }
 
     suspend fun clear() {
-        context.authDataStore.edit { it.remove(tokenKey) }
+        context.authDataStore.edit {
+            it.remove(tokenKey)
+            it.remove(usernameKey)
+        }
     }
 }

@@ -196,6 +196,10 @@
     <string name="run_continue">Continue</string>
     <string name="run_close">Close</string>
     <string name="run_in_progress">A run is already in progress.</string>
+    <string name="run_interrupted_title">Your last run was interrupted</string>
+    <string name="run_interrupted_message">The app closed during your run. Save the %1$s and %2$s recorded so far?</string>
+    <string name="run_interrupted_save">Save run</string>
+    <string name="run_interrupted_discard">Discard</string>
     <string name="run_ongoing">Running: %1$s, %2$s</string>
     <string name="run_ongoing_paused">Paused: %1$s, %2$s</string>
     <string name="run_ongoing_open">Back to run</string>
