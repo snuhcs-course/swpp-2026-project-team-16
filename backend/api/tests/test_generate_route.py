@@ -1,3 +1,4 @@
+import threading
 import time
 from unittest import mock
 
@@ -5,6 +6,7 @@ import requests
 from osmnx._errors import InsufficientResponseError
 from rest_framework.test import APITestCase
 
+from api.views.generate_route import _create_routes_with_connection_cleanup
 from api.route_algorithm.algorithm import create_routes
 from api.route_algorithm.llm import LLMError
 from api.tests.fakes import SNU, fake_elevations, grid_graph
@@ -191,11 +193,24 @@ class GenerateRouteErrorTests(FakeMapTestCase):
             time.sleep(0.5)
             return grid_graph()
 
+        # The API returns at the timeout, but its worker thread continues.
+        # Wait for that worker to finish before this test's LLM mock is removed,
+        # otherwise its late briefing calls can leak into the next test.
+        worker_finished = threading.Event()
+
+        def tracked_worker(**kwargs):
+            try:
+                return _create_routes_with_connection_cleanup(**kwargs)
+            finally:
+                worker_finished.set()
+
         self.download.side_effect = slow_download
-        with mock.patch("api.views.generate_route.ROUTE_TIMEOUT_SECONDS", 0.1):
-            response = self.client.post(URL, body(), format="json")
+        with mock.patch("api.views.generate_route._create_routes_with_connection_cleanup", side_effect=tracked_worker):
+            with mock.patch("api.views.generate_route.ROUTE_TIMEOUT_SECONDS", 0.1):
+                response = self.client.post(URL, body(), format="json")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(
             response.data["message"],
             "Route generation is taking too long. Please try again in a moment.",
         )
+        self.assertTrue(worker_finished.wait(timeout=3), "Timed-out route worker did not finish")

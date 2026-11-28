@@ -175,7 +175,7 @@
     <string name="run_voice_turn_now_uturn">Make a U-turn now.</string>
     <string name="run_voice_arrived">You have reached the end of the route.</string>
     <string name="run_voice_uphill_approaching">An uphill section starts in about %1$d meters. Ease into it.</string>
-    <string name="run_voice_kilometer_summary">Beep. Split %1$d. Total %2$d kilometers. Elapsed time: %3$s. Average pace: %4$s per kilometer.</string>
+    <string name="run_voice_kilometer_summary">Split %1$d. Total %2$d kilometers. Elapsed time: %3$s. Average pace: %4$s per kilometer.</string>
     <string name="run_voice_duration_minutes">%1$d minutes %2$d seconds</string>
     <string name="run_voice_duration_hours">%1$d hours %2$d minutes %3$d seconds</string>
     <string name="run_voice_pace">%1$d minutes %2$d seconds</string>
@@ -462,7 +462,7 @@
     <string name="pace_maker_alert_fast">Too fast</string>
     <string name="pace_maker_alert_none">No alerts</string>
     <string name="pace_maker_segments_label">Want different targets for each section? Describe them</string>
-    <string name="pace_maker_segments_placeholder">e.g. Run the first 2 km at 6:00, the next 2 km at 5:45, and the last 1 km at 5:30</string>
+    <string name="pace_maker_segments_placeholder">Example: Run the first 1 km slowly at 6:30/km, then speed up to 5:20/km for the last 1 km</string>
     <string name="pace_maker_segments_title">Section pace targets</string>
     <string name="pace_segment_number">Section %1$d</string>
     <string name="pace_segment_distance">%1$s–%2$s km</string>
