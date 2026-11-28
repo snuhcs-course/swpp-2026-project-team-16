@@ -127,6 +127,7 @@
     <string name="error_network">서버에 연결할 수 없습니다.</string>
     <string name="error_unknown">문제가 발생했습니다.</string>
     <string name="error_request_failed">요청에 실패했습니다 (%1$d)</string>
+    <string name="error_too_many_attempts">시도 횟수가 너무 많아요. 잠시 후 다시 시도해 주세요.</string>
     <string name="error_empty_response">서버 응답이 비어 있습니다.</string>
     <string name="error_all_fields_required">모든 항목을 입력하세요.</string>
     <string name="error_auth_required">다시 로그인해 주세요.</string>

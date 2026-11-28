@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
@@ -11,6 +12,7 @@ PROFILE_URL = "/api/v1/users/my_profile/"
 
 class NicknameTests(APITestCase):
     def setUp(self):
+        cache.clear()
         User = get_user_model()
         self.alice = User.objects.create_user(username="alice", email="a@test.com", password="password123")
         Profile.objects.create(user=self.alice, display_name="Runner Kim")

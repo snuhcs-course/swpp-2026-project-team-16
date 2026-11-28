@@ -131,6 +131,7 @@
     <string name="error_network">Cannot reach the server.</string>
     <string name="error_unknown">Something went wrong.</string>
     <string name="error_request_failed">Request failed (%1$d)</string>
+    <string name="error_too_many_attempts">Too many attempts. Please wait a minute and try again.</string>
     <string name="error_empty_response">Empty response from server.</string>
     <string name="error_all_fields_required">All fields are required.</string>
     <string name="error_auth_required">Please log in again.</string>

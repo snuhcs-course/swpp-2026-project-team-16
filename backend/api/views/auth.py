@@ -6,9 +6,10 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.throttling import SimpleRateThrottle
 
 from rest_framework.authtoken.models import Token
 
@@ -28,6 +29,19 @@ MAX_USERNAME_LENGTH = 150
 DEFAULT_GOOGLE_USERNAME = "runner"
 USERNAME_INVALID_CHARS = re.compile(r"[^\w.@+-]")
 GOOGLE_SIGN_UP_ATTEMPTS = 3
+
+
+class ClientIpRateThrottle(SimpleRateThrottle):
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
+class LoginThrottle(ClientIpRateThrottle):
+    scope = "login"
+
+
+class RegisterThrottle(ClientIpRateThrottle):
+    scope = "register"
 
 
 def _username_taken(name):
@@ -68,6 +82,7 @@ def _create_google_user(email, name):
 
 
 @api_view(["POST"])
+@throttle_classes([RegisterThrottle])
 def register_user(request):
 
     username = request.data.get("username")
@@ -159,6 +174,7 @@ def register_user(request):
 
 
 @api_view(["POST"])
+@throttle_classes([LoginThrottle])
 def login_user(request):
 
     username = request.data.get("username")
@@ -200,6 +216,7 @@ def login_user(request):
 
 
 @api_view(["POST"])
+@throttle_classes([LoginThrottle])
 def google_login(request):
     credential = request.data.get("credential")
 

@@ -1,6 +1,7 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
@@ -16,6 +17,9 @@ LOGIN_URL = "/api/v1/auth/login/"
 
 
 class RegisterTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
     def register(self, **overrides):
         body = {"username": "runner", "email": "r@test.com", "password": "password123", **overrides}
         return self.client.post(REGISTER_URL, body, format="json")
@@ -66,6 +70,7 @@ class LogoutTests(APITestCase):
 
 class GoogleLoginTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = get_user_model().objects.create_user(username="runner", email="r@test.com", password="password123")
 
     def test_existing_user_gets_token(self):
@@ -142,6 +147,7 @@ class GoogleLoginTests(APITestCase):
 
 class LoginTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = get_user_model().objects.create_user(
             username="runner",
             email="r@test.com",
@@ -187,8 +193,54 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, 401)
 
 
+class AuthThrottleTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        get_user_model().objects.create_user(username="runner", email="r@test.com", password="password123")
+
+    def log_in(self, password="wrong-password", **extra):
+        return self.client.post(LOGIN_URL, {"username": "runner", "password": password}, format="json", **extra)
+
+    def test_login_is_limited_per_ip(self):
+        for _ in range(10):
+            self.assertEqual(self.log_in().status_code, 401)
+
+        self.assertEqual(self.log_in(password="password123").status_code, 429)
+        self.assertEqual(self.log_in(REMOTE_ADDR="10.0.0.2").status_code, 401)
+
+    def test_token_does_not_bypass_login_limit(self):
+        user = get_user_model().objects.create_user(username="other", password="password123")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=user).key}")
+        for _ in range(10):
+            self.log_in()
+
+        self.assertEqual(self.log_in().status_code, 429)
+
+    def test_google_login_shares_the_login_limit(self):
+        for _ in range(10):
+            self.log_in()
+
+        with mock.patch(VERIFY, return_value={"email": "r@test.com", "email_verified": True}):
+            response = self.client.post(GOOGLE_URL, {"credential": "id-token"}, format="json")
+
+        self.assertEqual(response.status_code, 429)
+
+    def test_register_is_limited_per_ip(self):
+        for number in range(20):
+            body = {"username": f"runner{number}", "email": f"r{number}@test.com", "password": "password123"}
+            self.assertEqual(self.client.post(REGISTER_URL, body, format="json").status_code, 201)
+
+        body = {"username": "late", "email": "late@test.com", "password": "password123"}
+        response = self.client.post(REGISTER_URL, body, format="json")
+
+        self.assertEqual(response.status_code, 429)
+        self.assertFalse(get_user_model().objects.filter(username="late").exists())
+
+
 class ProfileTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = get_user_model().objects.create_user(
             username="runner",
             email="r@test.com",
