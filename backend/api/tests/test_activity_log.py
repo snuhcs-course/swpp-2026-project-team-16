@@ -1,6 +1,7 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
@@ -26,6 +27,7 @@ def actions(user=None):
 
 class ActivityLogTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = get_user_model().objects.create_user(username="runner", password="pass-1234")
         self.token = Token.objects.create(user=self.user)
 

@@ -128,5 +128,7 @@ REST_FRAMEWORK = {
         "anon": "10/minute",
         "live_coach": "12/minute",
         "telemetry": "20/minute",
+        "login": "10/minute",
+        "register": "20/hour",
     },
 }

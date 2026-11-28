@@ -76,12 +76,18 @@ private val serverMessages = mapOf(
     "You can't review a route you shared." to R.string.review_own_route,
 )
 
+private const val HTTP_TOO_MANY_REQUESTS = 429
+
 private fun serverText(message: String): UiText =
     serverMessages[message]?.let { UiText.Resource(it) } ?: UiText.Plain(message)
 
 fun Throwable.toUiText(): UiText = when (this) {
-    is HttpException -> serverMessage()?.let(::serverText)
-        ?: UiText.Resource(R.string.error_request_failed, listOf(code()))
+    is HttpException -> if (code() == HTTP_TOO_MANY_REQUESTS) {
+        UiText.Resource(R.string.error_too_many_attempts)
+    } else {
+        serverMessage()?.let(::serverText)
+            ?: UiText.Resource(R.string.error_request_failed, listOf(code()))
+    }
     is NoConnectivityException, is UnknownHostException -> UiText.Resource(R.string.error_offline)
     is IOException -> UiText.Resource(R.string.error_network)
     is EmptyResponseException -> serverMessage?.let(::serverText)

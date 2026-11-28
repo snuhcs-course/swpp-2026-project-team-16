@@ -43,6 +43,13 @@ class ServerMessageTest {
     }
 
     @Test
+    fun mapsThrottledRequests() {
+        val body = """{"detail": "Request was throttled. Expected available in 42 seconds."}"""
+        val error = HttpException(Response.error<Unit>(429, body.toResponseBody("application/json".toMediaType())))
+        assertEquals(UiText.Resource(R.string.error_too_many_attempts), error.toUiText())
+    }
+
+    @Test
     fun mapsNetworkErrors() {
         assertEquals(UiText.Resource(R.string.error_network), IOException("timeout").toUiText())
     }
