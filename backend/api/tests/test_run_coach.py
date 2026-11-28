@@ -10,6 +10,7 @@ from api.models import Route, RouteRun
 from api.route_algorithm.llm import LLMError
 from api.services.run_coach import (
     RunningStyle,
+    build_comment_prompt,
     build_goal_prompt,
     fallback_comment,
     generate_comment,
@@ -157,6 +158,73 @@ class PlanTests(SimpleTestCase):
         reply = '{"run_type":"tempo","distance_km":1,"explicit_pace_s":null,"route_preferences":[],"intensity":"빠르게","summary":"마지막 구간을 빠르게 달려요."}'
         plan = plan_from_goal("마지막 1km는 빠르게", RunningStyle(), 3000, "ko", llm=lambda _: reply)
         self.assertEqual(plan["distance_m"], 3000)
+
+    def test_low_condition_and_finish_focus_ease_the_selected_pace(self):
+        reply = json.dumps({
+            "run_type": "easy",
+            "distance_km": 5,
+            "explicit_pace_s": None,
+            "pace_segments": [{"start_km": 2, "end_km": 3, "pace_s": 300}],
+            "condition": "low",
+            "focus": "finish",
+            "coach_note": "완주 우선, 컨디션 저조",
+            "route_preferences": [],
+            "intensity": "편하게",
+            "summary": "중간 1km만 5:00으로 달려요.",
+        })
+        plan = plan_from_goal(
+            "기록보다는 완주가 목표고 컨디션이 별로야. 중간에 1km 정도는 5:00으로",
+            RunningStyle(), 5000, "ko", llm=lambda _: reply, pace_min_s=350, pace_max_s=390,
+        )
+
+        self.assertEqual((plan["pace_min_s"], plan["pace_max_s"]), (380, 450))
+        self.assertEqual(plan["condition"], "low")
+        self.assertEqual(plan["focus"], "finish")
+        self.assertEqual(plan["coach_note"], "완주 우선, 컨디션 저조")
+        self.assertEqual(plan["pace_segments"], [{"start_m": 2000, "end_m": 3000, "pace_min_s": 270, "pace_max_s": 330}])
+
+    def test_unknown_condition_and_focus_leave_the_pace_alone(self):
+        reply = '{"run_type":"easy","distance_km":5,"condition":"normal","focus":"fun","route_preferences":[]}'
+        plan = plan_from_goal("5km", RunningStyle(), 5000, "ko", llm=lambda _: reply, pace_min_s=350, pace_max_s=390)
+
+        self.assertEqual((plan["pace_min_s"], plan["pace_max_s"]), (350, 390))
+        self.assertIsNone(plan["condition"])
+        self.assertIsNone(plan["focus"])
+
+    def test_fallback_reads_condition_and_focus_from_keywords(self):
+        plan = plan_from_goal(
+            "오늘 컨디션이 안 좋아서 완주만 할래", RunningStyle(), 5000, "ko",
+            llm=failing_llm, pace_min_s=350, pace_max_s=390,
+        )
+        self.assertEqual((plan["condition"], plan["focus"]), ("low", "finish"))
+        self.assertEqual((plan["pace_min_s"], plan["pace_max_s"]), (380, 450))
+
+        plan = plan_from_goal("이번엔 기록 단축이 목표", RunningStyle(), 5000, "ko", llm=failing_llm)
+        self.assertEqual((plan["condition"], plan["focus"]), (None, "time"))
+
+    def test_eased_pace_stays_within_limits(self):
+        plan = plan_from_goal("피곤해, 완주만", RunningStyle(), 5000, "ko", llm=failing_llm, pace_min_s=880, pace_max_s=890)
+        self.assertEqual((plan["pace_min_s"], plan["pace_max_s"]), (900, 900))
+
+    def test_goal_prompt_asks_for_condition_focus_and_vague_sections(self):
+        system = build_goal_prompt("중간에 1km는 5:00", RunningStyle(), "ko", 5000)["system"]
+        self.assertIn('"condition"', system)
+        self.assertIn('"focus"', system)
+        self.assertIn("centered in the total", system)
+
+    def test_validate_plan_keeps_runner_context_and_drops_unknown_values(self):
+        plan, error = validate_plan({**RECOVERY_PLAN, "condition": "low", "focus": "finish", "coach_note": " 완주 "})
+        self.assertIsNone(error)
+        self.assertEqual((plan["condition"], plan["focus"], plan["coach_note"]), ("low", "finish", "완주"))
+
+        plan, _ = validate_plan({**RECOVERY_PLAN, "condition": "great", "focus": 3, "coach_note": None})
+        self.assertEqual((plan["condition"], plan["focus"], plan["coach_note"]), (None, None, ""))
+
+    def test_comment_prompt_knows_the_runner_wanted_to_finish(self):
+        facts = report_facts(RECOVERY_PLAN, [430, 440], 2000, 870)
+        prompt = build_comment_prompt({**RECOVERY_PLAN, "focus": "finish", "condition": "low"}, facts, "ko")
+        self.assertIn("finishing the distance matters more than time", prompt["user"])
+        self.assertIn("condition before the run: not good", prompt["user"])
 
     def test_validate_plan(self):
         self.assertEqual(validate_plan(None), (None, None))

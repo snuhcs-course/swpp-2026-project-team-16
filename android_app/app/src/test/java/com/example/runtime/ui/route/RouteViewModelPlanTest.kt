@@ -92,6 +92,25 @@ class RouteViewModelPlanTest {
     }
 
     @Test
+    fun remakingAPlanEasedForConditionStartsFromThePaceTheRunnerChose() {
+        api.reply = PLAN.copy(paceMinSeconds = 390, paceMaxSeconds = 450, condition = "low", focus = "finish")
+        viewModel.onPaceMakerEnabledChange(true)
+        viewModel.onGoalTextChange("컨디션이 별로라 완주만")
+        viewModel.updatePaceRange(360f..420f)
+
+        viewModel.requestPlan()
+        assertEquals(390, viewModel.paceMinSeconds)
+        assertEquals(450, viewModel.paceMaxSeconds)
+
+        viewModel.requestPlan()
+        assertEquals(listOf(360 to 420, 360 to 420), api.requests.map { it.paceMinSeconds to it.paceMaxSeconds })
+
+        viewModel.clearPlan()
+        assertEquals(360, viewModel.paceMinSeconds)
+        assertEquals(420, viewModel.paceMaxSeconds)
+    }
+
+    @Test
     fun paceRangeSnapsToTenSecondStepsAcrossTheTwoToTenMinuteRange() {
         viewModel.updatePaceRange(123f..596f)
 
@@ -117,12 +136,13 @@ class RouteViewModelPlanTest {
 
     private class PlanApi : FakeApiService() {
         var fail = false
+        var reply = PLAN
         val requests = mutableListOf<RunPlanRequest>()
 
         override suspend fun planRun(body: RunPlanRequest): ApiResponse<RunPlan> {
             requests += body
             if (fail) throw IOException("offline")
-            return ApiResponse(status = "success", data = PLAN)
+            return ApiResponse(status = "success", data = reply)
         }
     }
 

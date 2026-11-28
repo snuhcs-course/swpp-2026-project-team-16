@@ -907,14 +907,24 @@ Optional. When logged in, the runner's style is used.
         "pace_max_s": 440,
         "intensity": "Very easy, you can hold a conversation",
         "route_preferences": ["flat"],
-        "summary": "Heavy legs after intervals, so an easy recovery run."
+        "summary": "Heavy legs after intervals, so an easy recovery run.",
+        "condition": "low",
+        "focus": "finish",
+        "coach_note": "Heavy legs, just finish"
     }
 }
 ```
 
 ### Description
 
-The LLM only reads the text into a run type, distance and route preferences. The pace range is computed by the server from the run type and the runner's comfortable pace. If the LLM fails, keywords in the text are used instead.
+The LLM only reads the text into a run type, distance, route preferences, pace sections, and the runner's condition and focus. The pace range is computed by the server from the selected range, or from the run type and the runner's comfortable pace.
+
+- `condition` is `low`, `good` or null. `low` moves both pace edges 30 s/km slower.
+- `focus` is `finish`, `time` or null. `finish` moves the slow edge another 30 s/km slower.
+- Pace sections the runner wrote are kept as written.
+- `coach_note` is a short restatement of the goal for the live coach and the run report.
+
+If the LLM fails, keywords in the text are used instead.
 
 ---
 
@@ -953,7 +963,7 @@ Optional. Requests are rate-limited to 12 per minute per user or client IP.
 }
 ```
 
-`completed_km` is between 1 and 60. `split_paces_s` contains the completed kilometer paces in seconds per kilometer. `plan` may be null. The next target pace values must both be provided or both be null. `upcoming_hills` contains up to five nearby uphill sections. No GPS coordinates are sent.
+`completed_km` is between 1 and 60. `split_paces_s` contains the completed kilometer paces in seconds per kilometer. `plan` may be null. `plan` may also carry `condition`, `focus` and `coach_note` from the run plan; when the focus is finishing or the condition is low, the coach does not suggest running faster than the target. The next target pace values must both be provided or both be null. `upcoming_hills` contains up to five nearby uphill sections. No GPS coordinates are sent.
 
 ### Response
 

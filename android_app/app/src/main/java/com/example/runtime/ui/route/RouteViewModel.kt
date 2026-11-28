@@ -110,6 +110,8 @@ class RouteViewModel(
         private set
     var paceMaxSeconds by mutableStateOf(DEFAULT_PACE_MAX_SECONDS)
         private set
+    private var selectedPaceMinSeconds = DEFAULT_PACE_MIN_SECONDS
+    private var selectedPaceMaxSeconds = DEFAULT_PACE_MAX_SECONDS
     var alertOnSlow by mutableStateOf(false)
         private set
     var alertOnFast by mutableStateOf(false)
@@ -190,6 +192,8 @@ class RouteViewModel(
         paceMakerEnabled = false
         paceMinSeconds = DEFAULT_PACE_MIN_SECONDS
         paceMaxSeconds = DEFAULT_PACE_MAX_SECONDS
+        selectedPaceMinSeconds = DEFAULT_PACE_MIN_SECONDS
+        selectedPaceMaxSeconds = DEFAULT_PACE_MAX_SECONDS
         alertOnSlow = false
         alertOnFast = false
         runPlan = null
@@ -249,6 +253,8 @@ class RouteViewModel(
         val max = (range.endInclusive / 10f).roundToInt() * 10
         paceMinSeconds = min.coerceIn(MIN_PACE_SECONDS, MAX_PACE_SECONDS - 10)
         paceMaxSeconds = max.coerceIn(paceMinSeconds + 10, MAX_PACE_SECONDS)
+        selectedPaceMinSeconds = paceMinSeconds
+        selectedPaceMaxSeconds = paceMaxSeconds
         updatePlanSettings()
     }
 
@@ -295,8 +301,8 @@ class RouteViewModel(
                 val plan = coachRepository.planRun(
                         text = text,
                         distanceMeters = distanceMeters,
-                        paceMinSeconds = paceMinSeconds,
-                        paceMaxSeconds = paceMaxSeconds,
+                        paceMinSeconds = selectedPaceMinSeconds,
+                        paceMaxSeconds = selectedPaceMaxSeconds,
                         alertOnSlow = alertOnSlow,
                         alertOnFast = alertOnFast,
                     )
@@ -317,6 +323,10 @@ class RouteViewModel(
         paceMakerEnabled = true
         paceMinSeconds = plan.paceMinSeconds
         paceMaxSeconds = plan.paceMaxSeconds
+        if (plan.condition == null && plan.focus == null) {
+            selectedPaceMinSeconds = plan.paceMinSeconds
+            selectedPaceMaxSeconds = plan.paceMaxSeconds
+        }
         alertOnSlow = plan.alertOnSlow
         alertOnFast = plan.alertOnFast
         runPlan = plan
@@ -328,6 +338,8 @@ class RouteViewModel(
     }
 
     fun clearPlan() {
+        paceMinSeconds = selectedPaceMinSeconds
+        paceMaxSeconds = selectedPaceMaxSeconds
         runPlan = null
         planState = PlanState.Idle
     }
