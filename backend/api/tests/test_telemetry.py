@@ -32,6 +32,23 @@ class TelemetryCollectionTests(TestCase):
         self.assertEqual((stored.event_name, stored.outcome, stored.duration_ms), ("route_generation", "succeeded", 2400))
         self.assertFalse(any(field.name in {"user", "device_id", "latitude", "longitude"} for field in stored._meta.fields))
 
+    def test_accepts_live_coaching_sessions_and_anr_events(self):
+        response = self.client.post(
+            self.url,
+            {"events": [
+                self.event(event_name="live_run_coaching", outcome="started", duration_ms=None),
+                self.event(event_name="live_run_coaching", outcome="succeeded", duration_ms=1800),
+                self.event(event_name="app_session", outcome="started", duration_ms=None),
+                self.event(event_name="app_anr", outcome="anr", duration_ms=None),
+            ]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.data["accepted"], 4)
+        self.assertEqual(TelemetryEvent.objects.filter(event_name="live_run_coaching").count(), 2)
+        self.assertTrue(TelemetryEvent.objects.filter(event_name="app_anr", outcome="anr").exists())
+
     def test_rejects_identifiers_free_text_and_unknown_fields(self):
         response = self.client.post(
             self.url,
@@ -89,6 +106,15 @@ class TelemetryDashboardTests(TestCase):
         TelemetryEvent.objects.create(event_name="route_generation", outcome="succeeded", duration_ms=2000, app_version="1.0")
         TelemetryEvent.objects.create(event_name="route_generation", outcome="failed", duration_ms=4000, failure_category="server", app_version="1.0")
         TelemetryEvent.objects.create(event_name="app_crash", outcome="crashed", failure_category="unknown", app_version="1.0")
+        TelemetryEvent.objects.create(event_name="app_session", outcome="started", app_version="1.0")
+        TelemetryEvent.objects.create(event_name="app_session", outcome="started", app_version="1.0")
+        TelemetryEvent.objects.bulk_create([
+            TelemetryEvent(event_name="app_session", outcome="started", app_version="1.0")
+            for _ in range(198)
+        ])
+        TelemetryEvent.objects.create(event_name="app_anr", outcome="anr", app_version="1.0")
+        TelemetryEvent.objects.create(event_name="live_run_coaching", outcome="started", app_version="1.0")
+        TelemetryEvent.objects.create(event_name="live_run_coaching", outcome="succeeded", duration_ms=1800, app_version="1.0")
         old_event = TelemetryEvent.objects.create(event_name="route_generation", outcome="succeeded", app_version="0.9")
         TelemetryEvent.objects.filter(pk=old_event.pk).update(received_at=now - timedelta(days=100))
 
@@ -102,4 +128,8 @@ class TelemetryDashboardTests(TestCase):
         self.assertContains(response, "≤ 30 s")
         self.assertContains(response, "Server: 1")
         self.assertContains(response, "Reported crashes")
+        self.assertContains(response, "ANR rate")
+        self.assertContains(response, "0.5%")
+        self.assertContains(response, "Live run coaching")
+        self.assertContains(response, "≤ 10 s")
         self.assertNotContains(response, "0.9")

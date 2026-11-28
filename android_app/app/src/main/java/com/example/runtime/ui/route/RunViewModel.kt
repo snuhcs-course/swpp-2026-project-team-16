@@ -202,12 +202,21 @@ class RunViewModel(
         val job = viewModelScope.launch {
             liveCoachMutex.withLock {
                 if (sessionId != runSessionId || result != null) return@withLock
+                val startedAt = Telemetry.startTime()
+                Telemetry.track("live_run_coaching", "started")
                 try {
                     val message = coachRepository.liveRunCoaching(request).message
+                    Telemetry.track("live_run_coaching", "succeeded", Telemetry.startTime() - startedAt)
                     if (sessionId == runSessionId && result == null) speakCoachCue(message)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Telemetry.track(
+                        "live_run_coaching",
+                        "failed",
+                        Telemetry.startTime() - startedAt,
+                        Telemetry.failureCategory(e),
+                    )
                     // The regular kilometer split has already been spoken; a failed AI request is non-blocking.
                 }
             }

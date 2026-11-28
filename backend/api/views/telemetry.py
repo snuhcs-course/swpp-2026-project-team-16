@@ -24,6 +24,9 @@ EVENT_OUTCOMES = {
     "pace_plan": {"started", "succeeded", "failed"},
     "run_session": {"started", "completed", "failed"},
     "run_report": {"started", "succeeded", "failed"},
+    "live_run_coaching": {"started", "succeeded", "failed"},
+    "app_session": {"started"},
+    "app_anr": {"anr"},
     "app_crash": {"crashed"},
 }
 SUCCESS_TARGETS = {
@@ -119,6 +122,7 @@ def telemetry_dashboard(request):
     app_versions = events.values("app_version").annotate(
         total=Count("id"),
         crashes=Count("id", filter=Q(outcome="crashed")),
+        anrs=Count("id", filter=Q(outcome="anr")),
     ).order_by("app_version")
 
     rows = []
@@ -128,6 +132,7 @@ def telemetry_dashboard(request):
         failed = counts.get((event_name, "failed"), 0)
         completed = counts.get((event_name, "completed"), 0)
         crashed = counts.get((event_name, "crashed"), 0)
+        anr = counts.get((event_name, "anr"), 0)
         reasons = [
             f"{label}: {count}"
             for category, label in TelemetryEvent.FAILURE_CATEGORIES
@@ -143,6 +148,7 @@ def telemetry_dashboard(request):
             "failed": failed,
             "completed": completed,
             "crashed": crashed,
+            "anr": anr,
             "failure_reasons": ", ".join(reasons) if reasons else "—",
             "reported_results": denominator,
             "success_percent": success_percent,
@@ -150,15 +156,22 @@ def telemetry_dashboard(request):
             "success_label": f"{success_percent}%" if success_percent is not None else "—",
             "completion_label": f"{completion_percent}% completed" if completion_percent is not None else "—",
             "success_target": f"≥ {SUCCESS_TARGETS[event_name]}%" if event_name in SUCCESS_TARGETS else "—",
-            "latency_target": {"route_generation": "≤ 30 s", "place_search": "≤ 3 s", "authentication": "≤ 5 s", "pace_plan": "≤ 10 s", "run_report": "≤ 10 s"}.get(event_name, "—"),
+            "latency_target": {"route_generation": "≤ 30 s", "place_search": "≤ 3 s", "authentication": "≤ 5 s", "pace_plan": "≤ 10 s", "run_report": "≤ 10 s", "live_run_coaching": "≤ 10 s"}.get(event_name, "—"),
             "average_duration_ms": round(avg_durations[event_name]) if avg_durations.get(event_name) is not None else None,
         })
+
+    app_session_count = counts.get(("app_session", "started"), 0)
+    anr_count = counts.get(("app_anr", "anr"), 0)
+    anr_rate = round(100 * anr_count / app_session_count, 2) if app_session_count else None
 
     return render(request, "api/telemetry_dashboard.html", {
         "days": days,
         "rows": rows,
         "total_events": events.count(),
         "crash_count": counts.get(("app_crash", "crashed"), 0),
+        "app_session_count": app_session_count,
+        "anr_count": anr_count,
+        "anr_rate": anr_rate,
         "app_versions": app_versions,
         "since": cutoff,
     })
